@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -5,7 +6,7 @@ import {
 } from '../types';
 import { geminiService } from './geminiService';
 import { 
-  db, auth, collection, addDoc, doc, getDoc, serverTimestamp, 
+  db, auth, collection, addDoc, doc, getDoc, setDoc, serverTimestamp, 
   onSnapshot, query, orderBy, limit, signInWithPopup, signOut, 
   onAuthStateChanged, googleProvider, User
 } from './firebase';
@@ -17,7 +18,7 @@ class ConservatoryStore {
   private pendingAction: PendingAction | null = null;
   private user: User | null = null;
   private listeners: (() => void)[] = [];
-  private unsubscribeFirestore: (() => void) | null = null;
+  private unsubscribes: (() => void)[] = [];
 
   constructor() {
     this.loadLocal();
@@ -30,13 +31,15 @@ class ConservatoryStore {
       if (user) {
         this.initFirestoreSync();
       } else {
-        if (this.unsubscribeFirestore) {
-          this.unsubscribeFirestore();
-          this.unsubscribeFirestore = null;
-        }
+        this.clearSync();
       }
       this.notify();
     });
+  }
+
+  private clearSync() {
+    this.unsubscribes.forEach(unsub => unsub());
+    this.unsubscribes = [];
   }
 
   async login() {
@@ -51,6 +54,7 @@ class ConservatoryStore {
   async logout() {
     try {
       await signOut(auth);
+      this.clearSync();
     } catch (e) {
       console.error("Logout failed", e);
     }
@@ -82,18 +86,16 @@ class ConservatoryStore {
   }
 
   private initFirestoreSync() {
-    if (this.unsubscribeFirestore) return;
+    this.clearSync();
 
     try {
-      const q = query(collection(db, 'events'), orderBy('timestamp', 'asc'), limit(500));
-      
-      this.unsubscribeFirestore = onSnapshot(q, (snapshot) => {
+      // 1. Sync Events
+      const qEvents = query(collection(db, 'events'), orderBy('timestamp', 'desc'), limit(100));
+      const unsubEvents = onSnapshot(qEvents, (snapshot) => {
         const cloudEvents: AppEvent[] = [];
-        
         snapshot.forEach((doc) => {
           const data = doc.data();
           const ts = data.timestamp?.toMillis ? data.timestamp.toMillis() : Date.now();
-          
           cloudEvents.push({
             id: doc.id,
             timestamp: ts,
@@ -108,27 +110,39 @@ class ConservatoryStore {
             }
           });
         });
-
-        const pendingEvents = this.events.filter(e => e.status === EventStatus.PENDING || e.status === EventStatus.ERROR);
-        this.events = [...pendingEvents, ...cloudEvents.reverse()];
-        this.replayEvents(cloudEvents);
+        
+        // Merge with local pending/error events
+        const localPending = this.events.filter(e => e.status === EventStatus.PENDING || e.status === EventStatus.ERROR);
+        this.events = [...localPending, ...cloudEvents];
         this.persistLocal();
-      }, (error) => {
-        console.error("Firestore Sync Error:", error);
       });
+
+      // 2. Sync Entities (Materialized View)
+      const qEntities = query(collection(db, 'entities'), orderBy('updated_at', 'desc'));
+      const unsubEntities = onSnapshot(qEntities, (snapshot) => {
+        const cloudEntities: Entity[] = [];
+        snapshot.forEach((doc) => {
+          cloudEntities.push({ id: doc.id, ...doc.data() } as Entity);
+        });
+        this.entities = cloudEntities;
+        this.persistLocal();
+      });
+
+      // 3. Sync Groups
+      const qGroups = query(collection(db, 'groups'), orderBy('name', 'asc'));
+      const unsubGroups = onSnapshot(qGroups, (snapshot) => {
+        const cloudGroups: EntityGroup[] = [];
+        snapshot.forEach((doc) => {
+          cloudGroups.push({ id: doc.id, ...doc.data() } as EntityGroup);
+        });
+        this.groups = cloudGroups;
+        this.persistLocal();
+      });
+
+      this.unsubscribes.push(unsubEvents, unsubEntities, unsubGroups);
     } catch (e) {
       console.error("Failed to init Firestore sync", e);
     }
-  }
-
-  private replayEvents(chronologicalEvents: AppEvent[]) {
-    this.entities = [];
-    chronologicalEvents.forEach(e => {
-      if (e.domain_event) {
-        this.applyEvent(e.domain_event);
-      }
-    });
-    this.notify();
   }
 
   private notify() {
@@ -244,21 +258,9 @@ class ConservatoryStore {
     const eventType = intent === 'ACCESSION_ENTITY' ? 'ENTITY_ACCESSIONED' : 
                       intent === 'MODIFY_HABITAT' ? 'MODIFY_HABITAT' : 'OBSERVATION_LOGGED';
 
-    const rawPayload = { ...this.pendingAction };
-    const safePayload = JSON.parse(JSON.stringify(rawPayload));
-    
+    const safePayload = JSON.parse(JSON.stringify(this.pendingAction));
     delete safePayload.status;
     delete safePayload.isAmbiguous;
-
-    if (intent === 'MODIFY_HABITAT') {
-        safePayload.generatedId = uuidv4();
-    }
-    if (intent === 'ACCESSION_ENTITY' && safePayload.candidates) {
-        safePayload.candidates = safePayload.candidates.map((c: any) => ({
-            ...c,
-            generatedId: uuidv4()
-        }));
-    }
 
     const tempId = uuidv4();
     const domainEvent: DomainEvent = {
@@ -286,14 +288,49 @@ class ConservatoryStore {
     this.persistLocal();
 
     try {
-      const { status, isAmbiguous, ...payloadToSave } = safePayload;
-      
+      // 1. Save to Event Log
       await addDoc(collection(db, 'events'), {
         type: eventType,
         timestamp: serverTimestamp(),
-        payload: payloadToSave,
+        payload: safePayload,
         metadata: domainEvent.metadata
       });
+
+      // 2. Direct Materialization (Simulating cloud projection for immediate multi-user sync)
+      if (intent === 'MODIFY_HABITAT') {
+        const id = uuidv4();
+        await setDoc(doc(db, 'entities', id), {
+          name: safePayload.habitatParams?.name || `New Habitat`,
+          type: EntityType.HABITAT,
+          aliases: [],
+          traits: [{ type: 'AQUATIC', parameters: { salinity: safePayload.habitatParams?.type === 'Saltwater' ? 'marine' : 'fresh' } }],
+          confidence: 1,
+          enrichment_status: 'none',
+          created_at: Date.now(),
+          updated_at: Date.now()
+        });
+      } else if (intent === 'ACCESSION_ENTITY') {
+        for (const cand of safePayload.candidates || []) {
+          const id = uuidv4();
+          let type = EntityType.ORGANISM;
+          if (cand.traits?.some((t: any) => t.type === 'PHOTOSYNTHETIC')) type = EntityType.PLANT;
+          if (cand.traits?.some((t: any) => t.type === 'COLONY')) type = EntityType.COLONY;
+
+          await setDoc(doc(db, 'entities', id), {
+            name: cand.commonName,
+            scientificName: cand.scientificName,
+            habitat_id: safePayload.targetHabitatId,
+            traits: cand.traits || [],
+            type,
+            quantity: cand.quantity,
+            confidence: 0.9,
+            aliases: [],
+            enrichment_status: 'pending',
+            created_at: Date.now(),
+            updated_at: Date.now()
+          });
+        }
+      }
     } catch (e: any) {
       console.error("Persistence Failed", e);
       const idx = this.events.findIndex(e => e.id === tempId);
@@ -305,75 +342,37 @@ class ConservatoryStore {
     }
   }
 
-  private applyEvent(event: DomainEvent) {
-    const { type, payload } = event;
-
-    if (type === 'MODIFY_HABITAT') {
-      const id = payload.generatedId || event.eventId; 
-      if (this.entities.some(e => e.id === id)) return;
-
-      this.entities.push({
-        id,
-        name: payload.habitatParams?.name || `New Habitat`,
-        type: EntityType.HABITAT,
-        aliases: [],
-        traits: [
-            { type: 'AQUATIC', parameters: { salinity: payload.habitatParams?.type === 'Saltwater' ? 'marine' : 'fresh' } }
-        ],
-        confidence: 1,
-        enrichment_status: 'none',
-        created_at: new Date(event.timestamp).getTime(),
-        updated_at: new Date(event.timestamp).getTime(),
-        habitat_id: undefined
-      });
-    } 
-    else if (type === 'ENTITY_ACCESSIONED') {
-      const targetId = payload.targetHabitatId;
-      
-      payload.candidates?.forEach((cand: any) => {
-        const id = cand.generatedId || uuidv4();
-        if (this.entities.some(e => e.id === id)) return;
-
-        let type = EntityType.ORGANISM;
-        if (cand.traits?.some((t: any) => t.type === 'PHOTOSYNTHETIC')) type = EntityType.PLANT;
-        if (cand.traits?.some((t: any) => t.type === 'COLONY')) type = EntityType.COLONY;
-
-        this.entities.push({
-          id,
-          name: cand.commonName,
-          scientificName: cand.scientificName,
-          habitat_id: targetId,
-          traits: cand.traits || [],
-          type,
-          quantity: cand.quantity,
-          confidence: 0.9,
-          aliases: [],
-          enrichment_status: 'pending',
-          created_at: new Date(event.timestamp).getTime(),
-          updated_at: new Date(event.timestamp).getTime()
-        });
-      });
-    }
-  }
-
   discardPending() {
     this.pendingAction = null;
     this.persistLocal();
   }
 
-  updateEntity(id: string, updates: Partial<Entity>) {
-    const idx = this.entities.findIndex(e => e.id === id);
-    if (idx !== -1) {
-      this.entities[idx] = { ...this.entities[idx], ...updates, updated_at: Date.now() };
-      this.persistLocal();
+  async updateEntity(id: string, updates: Partial<Entity>) {
+    try {
+      const entityRef = doc(db, 'entities', id);
+      await setDoc(entityRef, { ...updates, updated_at: Date.now() }, { merge: true });
+    } catch (e) {
+      console.error("Failed to update entity in Firestore", e);
+      // Fallback local update if offline
+      const idx = this.entities.findIndex(e => e.id === id);
+      if (idx !== -1) {
+        this.entities[idx] = { ...this.entities[idx], ...updates, updated_at: Date.now() };
+        this.persistLocal();
+      }
     }
   }
 
-  addGroup(name: string) {
-    const newGroup = { id: uuidv4(), name };
-    this.groups.push(newGroup);
-    this.persistLocal();
-    return newGroup;
+  async addGroup(name: string) {
+    const id = uuidv4();
+    const group = { id, name };
+    try {
+      await setDoc(doc(db, 'groups', id), group);
+    } catch (e) {
+      console.error("Failed to add group to Firestore", e);
+      this.groups.push(group);
+      this.persistLocal();
+    }
+    return group;
   }
 
   async testConnection(): Promise<{ success: boolean; error?: string; code?: string }> {
@@ -391,31 +390,9 @@ class ConservatoryStore {
     } catch (e: any) {
       const errorMsg = e.message || "Unknown Connection Error";
       const code = e.code;
-
       if (code === 'permission-denied' || errorMsg.includes("permission-denied")) {
-        // Since we checked this.user, this most likely means either a disabled API or bad security rules
-        if (errorMsg.includes("API has not been used") || errorMsg.includes("disabled")) {
-          return { 
-            success: false, 
-            error: "Cloud Firestore API is not enabled for project 'the-conservatory-d858b'. Visit the Cloud Console to enable it.", 
-            code: 'API_DISABLED' 
-          };
-        }
-        return { 
-          success: false, 
-          error: "Permission Denied. Check your Security Rules.", 
-          code: 'PERMISSION_DENIED' 
-        };
+        return { success: false, error: "Permission Denied", code: 'PERMISSION_DENIED' };
       }
-
-      if (errorMsg.includes("offline")) {
-        return { 
-          success: false, 
-          error: "Firestore is currently offline.", 
-          code: 'OFFLINE' 
-        };
-      }
-      
       return { success: false, error: errorMsg, code };
     }
   }

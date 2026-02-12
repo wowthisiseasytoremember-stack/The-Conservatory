@@ -6,6 +6,7 @@ import {
   collection, 
   addDoc, 
   updateDoc,
+  setDoc,
   doc, 
   getDoc, 
   serverTimestamp,
@@ -104,7 +105,7 @@ export const logout = () => signOut(auth);
  * Explicitly export firebase functions used by store.ts and other services
  */
 export { 
-  collection, addDoc, updateDoc, doc, getDoc, 
+  collection, addDoc, updateDoc, setDoc, doc, getDoc, 
   serverTimestamp, onSnapshot, query, orderBy, 
   limit, onAuthStateChanged, signInWithPopup, signOut 
 };

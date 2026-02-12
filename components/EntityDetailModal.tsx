@@ -8,7 +8,8 @@ interface EntityDetailModalProps {
   groups: EntityGroup[];
   onClose: () => void;
   onUpdate: (updates: Partial<Entity>) => void;
-  onAddGroup: (name: string) => EntityGroup;
+  // Adjusted to be async to match the store's implementation
+  onAddGroup: (name: string) => Promise<EntityGroup>;
 }
 
 interface GbifData {
@@ -80,9 +81,10 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
     onUpdate({ group_id: groupId });
   };
 
-  const handleCreateGroup = () => {
+  const handleCreateGroup = async () => {
     if (newGroupName.trim()) {
-      const g = onAddGroup(newGroupName.trim());
+      // Use await since the prop is now async
+      const g = await onAddGroup(newGroupName.trim());
       setGroup(g.id);
       setNewGroupName('');
       setIsCreatingGroup(false);

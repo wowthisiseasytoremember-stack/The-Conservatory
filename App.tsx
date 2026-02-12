@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useConservatory } from './services/store';
 import { VoiceButton } from './components/VoiceButton';
@@ -9,7 +10,7 @@ import { ConfirmationCard } from './components/ConfirmationCard';
 import { DevTools } from './components/DevTools';
 import { AIChatBot } from './components/AIChatBot';
 import { FirebaseConfigModal } from './components/FirebaseConfigModal';
-import { Leaf, LayoutGrid, Activity, Settings, AlertCircle, ExternalLink, WifiOff, ShieldAlert, LogOut, LogIn } from 'lucide-react';
+import { Leaf, LayoutGrid, Activity, Settings, AlertCircle, ExternalLink, ShieldAlert, LogOut, LogIn, Wifi, WifiOff } from 'lucide-react';
 import { IdentifyResult, Entity, RackContainer } from './types';
 
 const App: React.FC = () => {
@@ -46,6 +47,10 @@ const App: React.FC = () => {
       }
     };
     checkDb();
+    
+    // Refresh connection status every 30 seconds
+    const interval = setInterval(checkDb, 30000);
+    return () => clearInterval(interval);
   }, [testConnection, user]);
 
   const handlePhotoConfirm = (result: IdentifyResult) => {
@@ -102,52 +107,6 @@ const App: React.FC = () => {
         <FirebaseConfigModal onClose={() => setIsSettingsOpen(false)} />
       )}
 
-      {/* API Disabled Warning Banner */}
-      {connectionStatus === 'api_disabled' && (
-        <div className="bg-red-500 text-white px-6 py-4 flex flex-col gap-2 z-[60] text-sm animate-in slide-in-from-top duration-300 shadow-xl">
-          <div className="flex items-center gap-2 font-bold text-base">
-            <AlertCircle className="w-5 h-5" />
-            Firestore API Not Enabled
-          </div>
-          <p className="opacity-95 leading-relaxed">
-            The Cloud Firestore API must be enabled for project <strong>the-conservatory-d858b</strong>. 
-          </p>
-          <div className="flex gap-4 mt-1">
-            <a 
-              href="https://console.developers.google.com/apis/api/firestore.googleapis.com/overview?project=the-conservatory-d858b" 
-              target="_blank" 
-              rel="noreferrer" 
-              className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-colors font-bold"
-            >
-              Enable API <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          </div>
-        </div>
-      )}
-
-      {/* Permission Denied Warning Banner */}
-      {connectionStatus === 'permission_denied' && (
-        <div className="bg-amber-600 text-white px-6 py-4 flex flex-col gap-2 z-[60] text-sm animate-in slide-in-from-top duration-300 shadow-xl">
-          <div className="flex items-center gap-2 font-bold text-base">
-            <ShieldAlert className="w-5 h-5" />
-            Firestore Rules Blocked Access
-          </div>
-          <p className="opacity-95 leading-relaxed">
-            API is enabled, but Security Rules are denying access. 
-          </p>
-          <div className="flex gap-4 mt-1">
-            <a 
-              href="https://console.firebase.google.com/project/the-conservatory-d858b/firestore/rules" 
-              target="_blank" 
-              rel="noreferrer" 
-              className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-colors font-bold"
-            >
-              Edit Security Rules <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          </div>
-        </div>
-      )}
-
       {/* Confirmation UI */}
       {pendingAction && (
         <ConfirmationCard 
@@ -164,6 +123,23 @@ const App: React.FC = () => {
           <div className="flex items-center gap-2 text-emerald-500 mb-1">
             <Leaf className="w-5 h-5" />
             <span className="text-[10px] font-bold uppercase tracking-[0.3em]">The Conservatory</span>
+            <div className={`flex items-center gap-1.5 ml-2 px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-tighter transition-all ${
+              connectionStatus === 'connected' 
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                : 'bg-red-500/10 border-red-500/20 text-red-400'
+            }`}>
+              {connectionStatus === 'connected' ? (
+                <>
+                  <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                  Live Sync
+                </>
+              ) : (
+                <>
+                  <div className="w-1 h-1 rounded-full bg-red-500" />
+                  Offline
+                </>
+              )}
+            </div>
           </div>
           <h1 className="text-3xl font-serif font-bold text-white tracking-tight">
             {activeTab === 'feed' ? 'Activity' : 'Collection'}
