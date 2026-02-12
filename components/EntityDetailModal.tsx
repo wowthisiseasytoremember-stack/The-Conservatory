@@ -1,0 +1,254 @@
+
+import React, { useState, useEffect } from 'react';
+import { Entity, EntityGroup } from '../types';
+import { X, Tag, Plus, Trash2, FolderOpen, Globe2, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+
+interface EntityDetailModalProps {
+  entity: Entity;
+  groups: EntityGroup[];
+  onClose: () => void;
+  onUpdate: (updates: Partial<Entity>) => void;
+  onAddGroup: (name: string) => EntityGroup;
+}
+
+interface GbifData {
+  scientificName: string;
+  kingdom: string;
+  family: string;
+  matchType: string;
+  status: string;
+}
+
+export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ 
+  entity, groups, onClose, onUpdate, onAddGroup 
+}) => {
+  const [newAlias, setNewAlias] = useState('');
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  
+  // GBIF State
+  const [gbifData, setGbifData] = useState<GbifData | null>(null);
+  const [loadingGbif, setLoadingGbif] = useState(false);
+
+  // Load GBIF Data on Mount
+  useEffect(() => {
+    const fetchGbif = async () => {
+      setLoadingGbif(true);
+      try {
+        // Use scientific name if available, otherwise common name
+        const query = entity.scientificName || entity.name;
+        const res = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        
+        if (data.matchType !== 'NONE') {
+          setGbifData({
+            scientificName: data.scientificName,
+            kingdom: data.kingdom,
+            family: data.family,
+            matchType: data.matchType,
+            status: data.status
+          });
+          // Auto-enrich if missing scientific name
+          if (!entity.scientificName && data.scientificName) {
+            onUpdate({ scientificName: data.scientificName });
+          }
+        }
+      } catch (e) {
+        console.error("GBIF Error", e);
+      } finally {
+        setLoadingGbif(false);
+      }
+    };
+
+    if (entity.type === 'ORGANISM' || entity.type === 'PLANT') {
+      fetchGbif();
+    }
+  }, [entity.id]); // Only run on entity switch
+
+  const addAlias = () => {
+    if (newAlias.trim() && !entity.aliases.includes(newAlias.trim())) {
+      onUpdate({ aliases: [...entity.aliases, newAlias.trim()] });
+      setNewAlias('');
+    }
+  };
+
+  const removeAlias = (alias: string) => {
+    onUpdate({ aliases: entity.aliases.filter(a => a !== alias) });
+  };
+
+  const setGroup = (groupId: string | undefined) => {
+    onUpdate({ group_id: groupId });
+  };
+
+  const handleCreateGroup = () => {
+    if (newGroupName.trim()) {
+      const g = onAddGroup(newGroupName.trim());
+      setGroup(g.id);
+      setNewGroupName('');
+      setIsCreatingGroup(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-slate-900 w-full max-w-md border border-slate-800 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in duration-200 flex flex-col max-h-[85vh]">
+        
+        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-black/20">
+          <div>
+            <h2 className="text-xl font-serif font-bold text-white">{entity.name}</h2>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-emerald-500 font-mono uppercase tracking-wider">{entity.type}</p>
+              {entity.quantity && (
+                 <span className="text-xs bg-slate-800 px-2 rounded-full text-slate-300">x{entity.quantity}</span>
+              )}
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full text-slate-400">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-8 overflow-y-auto no-scrollbar flex-1">
+          
+          {/* GBIF Scientific Context Card */}
+          {(entity.type === 'ORGANISM' || entity.type === 'PLANT') && (
+            <div className="bg-slate-800/30 border border-slate-700/50 rounded-xl p-4 relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-2 opacity-10">
+                 <Globe2 className="w-24 h-24" />
+               </div>
+               
+               <div className="flex items-center gap-2 mb-3">
+                 <Globe2 className="w-4 h-4 text-emerald-400" />
+                 <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-400">Scientific Context</h3>
+               </div>
+
+               {loadingGbif ? (
+                 <div className="flex items-center gap-2 text-slate-500 text-sm">
+                   <Loader2 className="w-4 h-4 animate-spin" /> Verifying with GBIF...
+                 </div>
+               ) : gbifData ? (
+                 <div className="space-y-2 relative z-10">
+                   <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-lg font-serif italic text-white">{gbifData.scientificName}</div>
+                        <div className="text-xs text-slate-400">Family: {gbifData.family} • Kingdom: {gbifData.kingdom}</div>
+                      </div>
+                      {gbifData.matchType === 'EXACT' && (
+                        <div className="bg-emerald-500/20 text-emerald-400 p-1.5 rounded-full" title="Exact Scientific Match">
+                          <CheckCircle2 className="w-5 h-5" />
+                        </div>
+                      )}
+                      {gbifData.matchType === 'FUZZY' && (
+                        <div className="bg-amber-500/20 text-amber-400 p-1.5 rounded-full" title="Fuzzy Match (Approximate)">
+                          <AlertTriangle className="w-5 h-5" />
+                        </div>
+                      )}
+                   </div>
+                   <div className="text-[10px] text-slate-600 pt-2 border-t border-slate-700/50">
+                     Source: Global Biodiversity Information Facility
+                   </div>
+                 </div>
+               ) : (
+                 <div className="text-sm text-slate-500 italic">No scientific match found in global database.</div>
+               )}
+            </div>
+          )}
+
+          {/* Alias Section */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Tag className="w-4 h-4 text-slate-400" />
+              <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Custom Aliases</h3>
+            </div>
+            
+            <div className="flex flex-wrap gap-2 mb-4">
+              {entity.aliases.map(a => (
+                <span key={a} className="bg-slate-800 text-slate-300 px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 border border-slate-700">
+                  {a}
+                  <button onClick={() => removeAlias(a)} className="hover:text-red-400">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+              {entity.aliases.length === 0 && <p className="text-xs text-slate-600 italic">No aliases set.</p>}
+            </div>
+
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={newAlias}
+                onChange={(e) => setNewAlias(e.target.value)}
+                placeholder="Add new alias..."
+                className="flex-1 bg-black/40 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                onKeyDown={(e) => e.key === 'Enter' && addAlias()}
+              />
+              <button 
+                onClick={addAlias}
+                className="p-2 bg-emerald-600 rounded-xl text-white hover:bg-emerald-500 transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+          </section>
+
+          {/* Group Section */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <FolderOpen className="w-4 h-4 text-cyan-500" />
+              <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Assign Group</h3>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2">
+              <button 
+                onClick={() => setGroup(undefined)}
+                className={`p-3 rounded-xl text-left text-sm flex justify-between items-center border transition-all ${
+                  !entity.group_id ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' : 'bg-slate-800/50 border-slate-800 text-slate-400'
+                }`}
+              >
+                No Group
+                {!entity.group_id && <div className="w-2 h-2 rounded-full bg-cyan-500" />}
+              </button>
+              
+              {groups.map(g => (
+                <button 
+                  key={g.id}
+                  onClick={() => setGroup(g.id)}
+                  className={`p-3 rounded-xl text-left text-sm flex justify-between items-center border transition-all ${
+                    entity.group_id === g.id ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' : 'bg-slate-800/50 border-slate-800 text-slate-400'
+                  }`}
+                >
+                  {g.name}
+                  {entity.group_id === g.id && <div className="w-2 h-2 rounded-full bg-cyan-500" />}
+                </button>
+              ))}
+
+              {isCreatingGroup ? (
+                <div className="mt-4 space-y-2">
+                  <input 
+                    autoFocus
+                    type="text" 
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    placeholder="Group name (e.g. 'Basement')"
+                    className="w-full bg-black/40 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500/50"
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={() => setIsCreatingGroup(false)} className="flex-1 py-2 text-xs text-slate-500">Cancel</button>
+                    <button onClick={handleCreateGroup} className="flex-1 py-2 bg-cyan-600 rounded-lg text-white text-xs font-bold">Create & Assign</button>
+                  </div>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setIsCreatingGroup(true)}
+                  className="mt-2 p-3 rounded-xl border border-dashed border-slate-700 text-slate-500 text-sm flex items-center justify-center gap-2 hover:border-slate-500 transition-colors"
+                >
+                  <Plus className="w-4 h-4" /> Create New Group
+                </button>
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+};
