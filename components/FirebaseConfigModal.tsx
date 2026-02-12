@@ -72,8 +72,10 @@ export const FirebaseConfigModal: React.FC<FirebaseConfigModalProps> = ({ onClos
             <Database className="w-5 h-5 shrink-0 text-emerald-500" />
             <div>
               <p className="font-bold text-emerald-500 mb-1">Step 2: Create Database Instance</p>
-              Go to **Build > Firestore Database** in Firebase Console and click **Create Database**. 
-              Select **Production Mode** or **Test Mode** (allow writes for dev).
+              <p className="text-emerald-200/80">
+                Go to <strong>Build &gt; Firestore Database</strong> in Firebase Console and click <strong>Create Database</strong>.
+                Select <strong>Production Mode</strong> or <strong>Test Mode</strong> (allow writes for dev).
+              </p>
               <a 
                 href="https://console.firebase.google.com" 
                 target="_blank" 

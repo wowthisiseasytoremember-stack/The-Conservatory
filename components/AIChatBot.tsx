@@ -1,12 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Send, X, Globe, Brain, Sparkles, ExternalLink, Loader2, Info } from 'lucide-react';
-import { geminiService } from '../services/geminiService';
-import { ChatMessage } from '../types';
-import { v4 as uuidv4 } from 'uuid';
+import { useConservatory } from '../services/store';
 
 export const AIChatBot: React.FC = () => {
+  const { messages, sendMessage, clearMessages } = useConservatory();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -25,42 +23,15 @@ export const AIChatBot: React.FC = () => {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMsg: ChatMessage = {
-      id: uuidv4(),
-      role: 'user',
-      text: input,
-      timestamp: Date.now()
-    };
-
-    setMessages(prev => [...prev, userMsg]);
+    const currentInput = input;
     setInput('');
     setIsLoading(true);
 
     try {
-      const history = messages.slice(-8); 
-      const response = await geminiService.chat(input, history, {
+      await sendMessage(currentInput, {
         search: useSearch,
         thinking: useThinking
       });
-
-      const aiMsg: ChatMessage = {
-        id: uuidv4(),
-        role: 'model',
-        text: response.text,
-        timestamp: Date.now(),
-        isSearch: useSearch,
-        isThinking: useThinking,
-        groundingLinks: response.links
-      };
-
-      setMessages(prev => [...prev, aiMsg]);
-    } catch (e: any) {
-      setMessages(prev => [...prev, {
-        id: uuidv4(),
-        role: 'model',
-        text: `Consultant Error: ${e.message}`,
-        timestamp: Date.now()
-      }]);
     } finally {
       setIsLoading(false);
     }
@@ -93,9 +64,18 @@ export const AIChatBot: React.FC = () => {
                 </div>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-slate-800 rounded-full text-slate-500">
-              <X className="w-6 h-6" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={clearMessages}
+                className="p-2 hover:bg-slate-800 rounded-full text-slate-500 hover:text-red-400 transition-colors"
+                title="Clear History"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-slate-800 rounded-full text-slate-500">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
           </div>
 
           {/* Messages Container */}

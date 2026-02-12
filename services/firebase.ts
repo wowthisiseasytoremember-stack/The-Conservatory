@@ -67,27 +67,18 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Services explicitly linked to the app instance
-export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Initialize analytics (non-blocking)
-try {
-  getAnalytics(app);
-} catch (e) {
-  console.warn("Analytics blocked or not supported");
-}
+// Initialize Firestore with persistent cache (new API)
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 
-// Enable Offline Persistence for laboratory environments with poor connectivity
-if (typeof window !== 'undefined') {
-  enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code == 'failed-precondition') {
-        console.warn('Persistence failed: Multiple tabs open');
-    } else if (err.code == 'unimplemented') {
-        console.warn('Persistence not supported by browser');
-    }
-  });
-}
+console.log("Initializing Firestore with databaseId: 'theconservatory' (Build: " + new Date().toISOString() + ")");
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+}, 'theconservatory');
 
 export const signInWithGoogle = async () => {
   try {

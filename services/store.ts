@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
-  AppEvent, Entity, DomainEvent, EntityGroup, PendingAction, EntityType, EventStatus 
+  AppEvent, Entity, DomainEvent, EntityGroup, PendingAction, EntityType, EventStatus, ChatMessage 
 } from '../types';
 import { geminiService } from './geminiService';
 import { 
@@ -10,11 +10,13 @@ import {
   onSnapshot, query, orderBy, limit, signInWithPopup, signOut, 
   onAuthStateChanged, googleProvider, User
 } from './firebase';
+import { connectionService, ConnectionStatus } from './connectionService';
 
 class ConservatoryStore {
   private events: AppEvent[] = [];
   private entities: Entity[] = [];
   private groups: EntityGroup[] = [];
+  private messages: ChatMessage[] = [];
   private pendingAction: PendingAction | null = null;
   private user: User | null = null;
   private listeners: (() => void)[] = [];
@@ -65,10 +67,12 @@ class ConservatoryStore {
         const savedEvents = localStorage.getItem('conservatory_events');
         const savedEntities = localStorage.getItem('conservatory_entities');
         const savedGroups = localStorage.getItem('conservatory_groups');
+        const savedMessages = localStorage.getItem('conservatory_messages');
         
         if (savedEvents) this.events = JSON.parse(savedEvents);
         if (savedEntities) this.entities = JSON.parse(savedEntities);
         if (savedGroups) this.groups = JSON.parse(savedGroups);
+        if (savedMessages) this.messages = JSON.parse(savedMessages);
     } catch (e) {
         console.warn("Local storage corrupted, starting fresh.");
     }
@@ -79,6 +83,7 @@ class ConservatoryStore {
         localStorage.setItem('conservatory_events', JSON.stringify(this.events));
         localStorage.setItem('conservatory_entities', JSON.stringify(this.entities));
         localStorage.setItem('conservatory_groups', JSON.stringify(this.groups));
+        localStorage.setItem('conservatory_messages', JSON.stringify(this.messages));
         this.notify();
     } catch (e) {
         console.error("LocalStorage Write Failed", e);
@@ -111,13 +116,12 @@ class ConservatoryStore {
           });
         });
         
-        // Merge with local pending/error events
         const localPending = this.events.filter(e => e.status === EventStatus.PENDING || e.status === EventStatus.ERROR);
         this.events = [...localPending, ...cloudEvents];
         this.persistLocal();
       });
 
-      // 2. Sync Entities (Materialized View)
+      // 2. Sync Entities
       const qEntities = query(collection(db, 'entities'), orderBy('updated_at', 'desc'));
       const unsubEntities = onSnapshot(qEntities, (snapshot) => {
         const cloudEntities: Entity[] = [];
@@ -159,6 +163,7 @@ class ConservatoryStore {
   getEvents() { return [...this.events]; }
   getEntities() { return [...this.entities]; }
   getGroups() { return [...this.groups]; }
+  getMessages() { return [...this.messages]; }
   getPendingAction() { return this.pendingAction ? { ...this.pendingAction } : null; }
   getUser() { return this.user; }
 
@@ -248,6 +253,19 @@ class ConservatoryStore {
     }
   }
 
+  private cleanDataObject(obj: any): any {
+    if (Array.isArray(obj)) {
+      return obj.map(v => this.cleanDataObject(v));
+    } else if (obj !== null && typeof obj === 'object') {
+      return Object.fromEntries(
+        Object.entries(obj)
+          .filter(([_, v]) => v !== undefined)
+          .map(([k, v]) => [k, this.cleanDataObject(v)])
+      );
+    }
+    return obj;
+  }
+
   async commitPendingAction() {
     if (!this.pendingAction) return;
     
@@ -288,19 +306,29 @@ class ConservatoryStore {
     this.persistLocal();
 
     try {
-      // 1. Save to Event Log
-      await addDoc(collection(db, 'events'), {
+      await addDoc(collection(db, 'events'), this.cleanDataObject({
         type: eventType,
         timestamp: serverTimestamp(),
         payload: safePayload,
         metadata: domainEvent.metadata
-      });
+      }));
 
-      // 2. Direct Materialization (Simulating cloud projection for immediate multi-user sync)
       if (intent === 'MODIFY_HABITAT') {
+        const habitatName = safePayload.habitatParams?.name || `New Habitat`;
+        const normalizedName = habitatName.toLowerCase().trim();
+        const existing = this.entities.find(e => 
+          e.type === EntityType.HABITAT && 
+          e.name.toLowerCase().trim() === normalizedName
+        );
+
+        if (existing) {
+          console.log(`Matching existing habitat found: ${existing.id}`);
+          return; 
+        }
+
         const id = uuidv4();
-        await setDoc(doc(db, 'entities', id), {
-          name: safePayload.habitatParams?.name || `New Habitat`,
+        const habitatData: any = this.cleanDataObject({
+          name: habitatName,
           type: EntityType.HABITAT,
           aliases: [],
           traits: [{ type: 'AQUATIC', parameters: { salinity: safePayload.habitatParams?.type === 'Saltwater' ? 'marine' : 'fresh' } }],
@@ -309,16 +337,30 @@ class ConservatoryStore {
           created_at: Date.now(),
           updated_at: Date.now()
         });
+        
+        await setDoc(doc(db, 'entities', id), habitatData);
       } else if (intent === 'ACCESSION_ENTITY') {
         for (const cand of safePayload.candidates || []) {
+          const normalizedName = cand.commonName.toLowerCase().trim();
+          // Check if entity already exists in this habitat
+          const existing = this.entities.find(e => 
+            e.habitat_id === safePayload.targetHabitatId &&
+            e.name.toLowerCase().trim() === normalizedName
+          );
+
+          if (existing) {
+            console.log(`Matching existing entity found in habitat: ${existing.id}`);
+            continue;
+          }
+
           const id = uuidv4();
           let type = EntityType.ORGANISM;
           if (cand.traits?.some((t: any) => t.type === 'PHOTOSYNTHETIC')) type = EntityType.PLANT;
           if (cand.traits?.some((t: any) => t.type === 'COLONY')) type = EntityType.COLONY;
 
-          await setDoc(doc(db, 'entities', id), {
+          const entityData: any = this.cleanDataObject({
             name: cand.commonName,
-            scientificName: cand.scientificName,
+            scientificName: cand.scientificName, 
             habitat_id: safePayload.targetHabitatId,
             traits: cand.traits || [],
             type,
@@ -329,6 +371,8 @@ class ConservatoryStore {
             created_at: Date.now(),
             updated_at: Date.now()
           });
+
+          await setDoc(doc(db, 'entities', id), entityData);
         }
       }
     } catch (e: any) {
@@ -353,7 +397,6 @@ class ConservatoryStore {
       await setDoc(entityRef, { ...updates, updated_at: Date.now() }, { merge: true });
     } catch (e) {
       console.error("Failed to update entity in Firestore", e);
-      // Fallback local update if offline
       const idx = this.entities.findIndex(e => e.id === id);
       if (idx !== -1) {
         this.entities[idx] = { ...this.entities[idx], ...updates, updated_at: Date.now() };
@@ -375,26 +418,48 @@ class ConservatoryStore {
     return group;
   }
 
-  async testConnection(): Promise<{ success: boolean; error?: string; code?: string }> {
-    if (!this.user) {
-      return { success: false, error: "Authentication required", code: 'AUTH_REQUIRED' };
-    }
+  async sendMessage(text: string, options: { search?: boolean; thinking?: boolean }) {
+    const userMsg: ChatMessage = {
+      id: uuidv4(),
+      role: 'user',
+      text,
+      timestamp: Date.now()
+    };
+    this.messages.push(userMsg);
+    this.notify();
 
     try {
-      const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("Connection Timed Out")), 5000));
-      await Promise.race([
-          getDoc(doc(db, 'events', 'init')),
-          timeout
-      ]);
-      return { success: true };
+      const history = this.messages.slice(-8);
+      const response = await geminiService.chat(text, history, options);
+      const aiMsg: ChatMessage = {
+        id: uuidv4(),
+        role: 'model',
+        text: response.text,
+        timestamp: Date.now(),
+        isSearch: options.search,
+        isThinking: options.thinking,
+        groundingLinks: response.links
+      };
+      this.messages.push(aiMsg);
+      this.persistLocal();
     } catch (e: any) {
-      const errorMsg = e.message || "Unknown Connection Error";
-      const code = e.code;
-      if (code === 'permission-denied' || errorMsg.includes("permission-denied")) {
-        return { success: false, error: "Permission Denied", code: 'PERMISSION_DENIED' };
-      }
-      return { success: false, error: errorMsg, code };
+      this.messages.push({
+        id: uuidv4(),
+        role: 'model',
+        text: `Consultant Error: ${e.message}`,
+        timestamp: Date.now()
+      });
+      this.persistLocal();
     }
+  }
+
+  clearMessages() {
+    this.messages = [];
+    this.persistLocal();
+  }
+
+  async testConnection(): Promise<{ success: boolean; error?: string; code?: ConnectionStatus }> {
+    return connectionService.testConnection(this.user);
   }
 }
 
@@ -405,6 +470,7 @@ export function useConservatory() {
     events: store.getEvents(),
     entities: store.getEntities(),
     groups: store.getGroups(),
+    messages: store.getMessages(),
     pendingAction: store.getPendingAction(),
     user: store.getUser()
   });
@@ -415,6 +481,7 @@ export function useConservatory() {
         events: store.getEvents(),
         entities: store.getEntities(),
         groups: store.getGroups(),
+        messages: store.getMessages(),
         pendingAction: store.getPendingAction(),
         user: store.getUser()
       });
@@ -431,6 +498,8 @@ export function useConservatory() {
     updateSlot: useCallback((path: string, val: any) => store.updateSlot(path, val), []),
     updateEntity: useCallback((id: string, updates: Partial<Entity>) => store.updateEntity(id, updates), []),
     addGroup: useCallback((name: string) => store.addGroup(name), []),
-    testConnection: useCallback(() => store.testConnection(), [])
+    testConnection: useCallback(() => store.testConnection(), []),
+    sendMessage: useCallback((text: string, opts: any) => store.sendMessage(text, opts), []),
+    clearMessages: useCallback(() => store.clearMessages(), [])
   };
 }

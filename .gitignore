@@ -15,10 +15,18 @@ build/
 
 # Firebase
 .firebase/
+*-firebase-adminsdk-*.json
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
 
 # System
 .DS_Store
 Thumbs.db
+
+# Logs & Error artifacts
+*.txt
+*.log
 
 # Python
 __pycache__/
