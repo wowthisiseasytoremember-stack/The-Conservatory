@@ -1,4 +1,5 @@
-import { initializeApp } from 'firebase/app';
+
+import { initializeApp, getApp, getApps } from 'firebase/app';
 import { 
   getFirestore, 
   enableIndexedDbPersistence, 
@@ -8,27 +9,31 @@ import {
   doc, 
   getDoc, 
   serverTimestamp,
-  FieldValue,
   onSnapshot,
   query,
   orderBy,
   limit
 } from 'firebase/firestore';
+// Fix: FieldValue and User should be imported as types to avoid "no exported member" value errors in some environments
+import type { FieldValue } from 'firebase/firestore';
+import { getAnalytics } from 'firebase/analytics';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 
 // Helper to resolve environment variables
-const getEnv = (key: string, legacyKey?: string) => {
+const getEnv = (key: string) => {
   try {
     // @ts-ignore
     if (typeof import.meta !== 'undefined' && import.meta.env) {
       // @ts-ignore
-      const val = import.meta.env[key] || (legacyKey ? import.meta.env[legacyKey] : undefined);
+      const val = import.meta.env[key];
       if (val) return val;
     }
   } catch (e) {}
 
   try {
     if (typeof process !== 'undefined' && process.env) {
-      const val = process.env[key] || (legacyKey ? process.env[legacyKey] : undefined);
+      const val = process.env[key];
       if (val) return val;
     }
   } catch (e) {}
@@ -36,7 +41,7 @@ const getEnv = (key: string, legacyKey?: string) => {
   return undefined;
 };
 
-// 1. Try LocalStorage Override (Runtime Config)
+// 1. Try LocalStorage Override (Runtime Config via UI)
 const LOCAL_CONFIG_KEY = 'conservatory_firebase_config';
 let localConfig = null;
 try {
@@ -46,37 +51,61 @@ try {
   console.warn("Failed to parse local firebase config", e);
 }
 
-// 2. Fallback to Env Vars, then Placeholders
-const envConfig = {
-  apiKey: getEnv('VITE_FIREBASE_API_KEY', 'REACT_APP_FIREBASE_API_KEY'),
-  authDomain: getEnv('VITE_FIREBASE_AUTH_DOMAIN', 'REACT_APP_FIREBASE_AUTH_DOMAIN'),
-  projectId: getEnv('VITE_FIREBASE_PROJECT_ID', 'REACT_APP_FIREBASE_PROJECT_ID'),
-  storageBucket: getEnv('VITE_FIREBASE_STORAGE_BUCKET', 'REACT_APP_FIREBASE_STORAGE_BUCKET'),
-  messagingSenderId: getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID', 'REACT_APP_FIREBASE_MESSAGING_SENDER_ID'),
-  appId: getEnv('VITE_FIREBASE_APP_ID', 'REACT_APP_FIREBASE_APP_ID')
-};
-
-// Merge: Local > Env > Placeholder
+// 2. Project-specific credentials
 const firebaseConfig = {
-  apiKey: localConfig?.apiKey || envConfig.apiKey || "AIzaSy_PLACEHOLDER",
-  authDomain: localConfig?.authDomain || envConfig.authDomain || "project.firebaseapp.com",
-  projectId: localConfig?.projectId || envConfig.projectId || "project-id",
-  storageBucket: localConfig?.storageBucket || envConfig.storageBucket || "project.appspot.com",
-  messagingSenderId: localConfig?.messagingSenderId || envConfig.messagingSenderId || "123456789",
-  appId: localConfig?.appId || envConfig.appId || "1:123456789:web:abc12345"
+  apiKey: localConfig?.apiKey || getEnv('VITE_FIREBASE_API_KEY') || "AIzaSyDf7A1EK0AlQckJjkLbI93Lu1EvWIH-Rws",
+  authDomain: localConfig?.authDomain || getEnv('VITE_FIREBASE_AUTH_DOMAIN') || "the-conservatory-d858b.firebaseapp.com",
+  projectId: localConfig?.projectId || getEnv('VITE_FIREBASE_PROJECT_ID') || "the-conservatory-d858b",
+  storageBucket: localConfig?.storageBucket || getEnv('VITE_FIREBASE_STORAGE_BUCKET') || "the-conservatory-d858b.firebasestorage.app",
+  messagingSenderId: localConfig?.messagingSenderId || getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID') || "814637797090",
+  appId: localConfig?.appId || getEnv('VITE_FIREBASE_APP_ID') || "1:814637797090:web:feb2cda6730397ca9f18bb",
+  measurementId: localConfig?.measurementId || getEnv('VITE_FIREBASE_MEASUREMENT_ID') || "G-1JKV6H7WDL"
 };
 
-const app = initializeApp(firebaseConfig);
+// Initialize App (Idempotent)
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+// Initialize Services explicitly linked to the app instance
 export const db = getFirestore(app);
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
 
-// Enable Offline Persistence
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code == 'failed-precondition') {
-      console.warn('Persistence failed: Multiple tabs open');
-  } else if (err.code == 'unimplemented') {
-      console.warn('Persistence not supported by browser');
+// Initialize analytics (non-blocking)
+try {
+  getAnalytics(app);
+} catch (e) {
+  console.warn("Analytics blocked or not supported");
+}
+
+// Enable Offline Persistence for laboratory environments with poor connectivity
+if (typeof window !== 'undefined') {
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code == 'failed-precondition') {
+        console.warn('Persistence failed: Multiple tabs open');
+    } else if (err.code == 'unimplemented') {
+        console.warn('Persistence not supported by browser');
+    }
+  });
+}
+
+export const signInWithGoogle = async () => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    return result.user;
+  } catch (error) {
+    console.error("Login failed", error);
+    throw error;
   }
-});
+};
 
-export { collection, addDoc, updateDoc, doc, getDoc, serverTimestamp, onSnapshot, query, orderBy, limit };
-export type { FieldValue };
+export const logout = () => signOut(auth);
+
+/**
+ * Explicitly export firebase functions used by store.ts and other services
+ */
+export { 
+  collection, addDoc, updateDoc, doc, getDoc, 
+  serverTimestamp, onSnapshot, query, orderBy, 
+  limit, onAuthStateChanged, signInWithPopup, signOut 
+};
+export type { FieldValue, User };

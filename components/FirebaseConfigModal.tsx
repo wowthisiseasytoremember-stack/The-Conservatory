@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Check, AlertTriangle, Database } from 'lucide-react';
+import { X, Check, AlertTriangle, Database, ExternalLink, ShieldCheck } from 'lucide-react';
 
 interface FirebaseConfigModalProps {
   onClose: () => void;
@@ -17,7 +17,6 @@ export const FirebaseConfigModal: React.FC<FirebaseConfigModalProps> = ({ onClos
         throw new Error("Config must contain at least 'apiKey' and 'projectId'");
       }
       localStorage.setItem('conservatory_firebase_config', JSON.stringify(config));
-      // Reload to apply changes to the firebase.ts singleton
       window.location.reload();
     } catch (e: any) {
       setError(e.message || "Invalid JSON");
@@ -44,38 +43,71 @@ export const FirebaseConfigModal: React.FC<FirebaseConfigModalProps> = ({ onClos
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh] no-scrollbar">
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-200/80 flex gap-3 items-start leading-relaxed">
             <AlertTriangle className="w-5 h-5 shrink-0 text-amber-500" />
             <div>
-              <p className="font-bold text-amber-500 mb-1">Setup Required</p>
-              This app requires a Firebase project. Create one at <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" className="underline hover:text-white">console.firebase.google.com</a>, add a Web App, and paste the config object here.
+              <p className="font-bold text-amber-500 mb-1 uppercase tracking-wider">Critical Step: Project ID</p>
+              Ensure you are using your own Firebase Project. The default ID is <strong>the-conservatory-d858b</strong>. If you are seeing "API Disabled" errors, you must manually enable the API for your specific project.
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Firebase Config JSON</label>
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-blue-200/80 flex gap-3 items-start leading-relaxed">
+            <ShieldCheck className="w-5 h-5 shrink-0 text-blue-400" />
+            <div>
+              <p className="font-bold text-blue-400 mb-1">Step 1: Enable Firestore API</p>
+              Before using Firestore, the API must be active in your Google Cloud Project.
+              <a 
+                href="https://console.developers.google.com/apis/api/firestore.googleapis.com/overview" 
+                target="_blank" 
+                rel="noreferrer" 
+                className="mt-2 flex items-center gap-1 underline font-bold text-blue-400"
+              >
+                Go to API Dashboard <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-xs text-emerald-200/80 flex gap-3 items-start leading-relaxed">
+            <Database className="w-5 h-5 shrink-0 text-emerald-500" />
+            <div>
+              <p className="font-bold text-emerald-500 mb-1">Step 2: Create Database Instance</p>
+              Go to **Build > Firestore Database** in Firebase Console and click **Create Database**. 
+              Select **Production Mode** or **Test Mode** (allow writes for dev).
+              <a 
+                href="https://console.firebase.google.com" 
+                target="_blank" 
+                rel="noreferrer" 
+                className="mt-2 flex items-center gap-1 underline font-bold text-emerald-400"
+              >
+                Open Firebase Console <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Step 3: Paste Web App Config</label>
             <textarea
               value={configJson}
               onChange={(e) => { setConfigJson(e.target.value); setError(null); }}
               placeholder={'{ "apiKey": "...", "authDomain": "...", "projectId": "..." }'}
-              className="w-full h-48 bg-black/50 border border-slate-700 rounded-xl p-4 text-xs font-mono text-emerald-400 placeholder:text-slate-700 focus:outline-none focus:border-emerald-500/50 resize-none"
+              className="w-full h-32 bg-black/50 border border-slate-700 rounded-xl p-4 text-xs font-mono text-emerald-400 placeholder:text-slate-700 focus:outline-none focus:border-emerald-500/50 resize-none"
             />
           </div>
 
           {error && (
             <div className="text-xs text-red-400 bg-red-950/30 p-2 rounded border border-red-900/50">
-              Error: {error}
+              {error}
             </div>
           )}
         </div>
 
-        <div className="p-4 bg-black/40 border-t border-slate-800 flex justify-between items-center">
+        <div className="p-4 bg-black/40 border-t border-slate-800 flex justify-between items-center shrink-0">
            <button 
             onClick={handleClear}
             className="text-xs text-red-400 hover:text-red-300 underline"
           >
-            Clear Configuration
+            Clear Local Config
           </button>
           <div className="flex gap-3">
              <button 

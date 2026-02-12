@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -6,8 +5,9 @@ import {
 } from '../types';
 import { geminiService } from './geminiService';
 import { 
-  db, collection, addDoc, doc, getDoc, serverTimestamp, 
-  onSnapshot, query, orderBy, limit 
+  db, auth, collection, addDoc, doc, getDoc, serverTimestamp, 
+  onSnapshot, query, orderBy, limit, signInWithPopup, signOut, 
+  onAuthStateChanged, googleProvider, User
 } from './firebase';
 
 class ConservatoryStore {
@@ -15,14 +15,45 @@ class ConservatoryStore {
   private entities: Entity[] = [];
   private groups: EntityGroup[] = [];
   private pendingAction: PendingAction | null = null;
+  private user: User | null = null;
   private listeners: (() => void)[] = [];
   private unsubscribeFirestore: (() => void) | null = null;
 
   constructor() {
-    // 1. Load optimistic local state for instant boot
     this.loadLocal();
-    // 2. Start syncing with cloud
-    this.initFirestoreSync();
+    this.initAuth();
+  }
+
+  private initAuth() {
+    onAuthStateChanged(auth, (user) => {
+      this.user = user;
+      if (user) {
+        this.initFirestoreSync();
+      } else {
+        if (this.unsubscribeFirestore) {
+          this.unsubscribeFirestore();
+          this.unsubscribeFirestore = null;
+        }
+      }
+      this.notify();
+    });
+  }
+
+  async login() {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (e) {
+      console.error("Login failed", e);
+      throw e;
+    }
+  }
+
+  async logout() {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error("Logout failed", e);
+    }
   }
 
   private loadLocal() {
@@ -51,6 +82,8 @@ class ConservatoryStore {
   }
 
   private initFirestoreSync() {
+    if (this.unsubscribeFirestore) return;
+
     try {
       const q = query(collection(db, 'events'), orderBy('timestamp', 'asc'), limit(500));
       
@@ -59,7 +92,6 @@ class ConservatoryStore {
         
         snapshot.forEach((doc) => {
           const data = doc.data();
-          // Convert Firestore Timestamp to millis
           const ts = data.timestamp?.toMillis ? data.timestamp.toMillis() : Date.now();
           
           cloudEvents.push({
@@ -77,19 +109,9 @@ class ConservatoryStore {
           });
         });
 
-        // REPLAY STRATEGY: 
-        // 1. Take cloud events as source of truth.
-        // 2. Rebuild state from scratch to ensure consistency.
-        // 3. Keep any local PENDING events at the top (optimistic UI).
-
         const pendingEvents = this.events.filter(e => e.status === EventStatus.PENDING || e.status === EventStatus.ERROR);
-        
-        // Sort: Newest first for UI (reversed from replay order)
         this.events = [...pendingEvents, ...cloudEvents.reverse()];
-        
-        // Rebuild State
-        this.replayEvents(cloudEvents); // Replay in chronological order (asc)
-        
+        this.replayEvents(cloudEvents);
         this.persistLocal();
       }, (error) => {
         console.error("Firestore Sync Error:", error);
@@ -100,16 +122,12 @@ class ConservatoryStore {
   }
 
   private replayEvents(chronologicalEvents: AppEvent[]) {
-    // Reset Derived State
     this.entities = [];
-    
-    // Re-apply all events
     chronologicalEvents.forEach(e => {
       if (e.domain_event) {
         this.applyEvent(e.domain_event);
       }
     });
-    
     this.notify();
   }
 
@@ -124,13 +142,12 @@ class ConservatoryStore {
     };
   }
 
-  // Getters
   getEvents() { return [...this.events]; }
   getEntities() { return [...this.entities]; }
   getGroups() { return [...this.groups]; }
   getPendingAction() { return this.pendingAction ? { ...this.pendingAction } : null; }
+  getUser() { return this.user; }
 
-  // LOGIC ANCHOR: Resolver
   resolveEntity<T extends { id: string; name: string; aliases?: string[] }>(
     userInput: string,
     candidates: T[]
@@ -155,7 +172,6 @@ class ConservatoryStore {
     return { match: null, isAmbiguous: false };
   }
 
-  // LOGIC ANCHOR: Deep Update
   updateSlot(path: string, value: any) {
     if (!this.pendingAction) return;
     const newPending = JSON.parse(JSON.stringify(this.pendingAction)); 
@@ -170,7 +186,6 @@ class ConservatoryStore {
     this.persistLocal();
   }
 
-  // LOGIC ANCHOR: Voice Processing
   async processVoiceInput(text: string) {
     this.pendingAction = {
       status: 'ANALYZING',
@@ -184,7 +199,6 @@ class ConservatoryStore {
 
     try {
       const currentEntities = [...this.entities]; 
-      // Corrected: Removed the third argument 'this.pendingAction' as it's not supported by the parseVoiceCommand signature.
       const result = await geminiService.parseVoiceCommand(text, currentEntities);
       
       const habitatResolution = result.targetHabitatName 
@@ -200,7 +214,7 @@ class ConservatoryStore {
         candidates: result.candidates || [],
         habitatParams: result.habitatParams,
         observationNotes: result.observationNotes,
-        observationParams: result.observationParams, // Ensure this flows through
+        observationParams: result.observationParams,
         aiReasoning: result.aiReasoning,
         isAmbiguous: result.isAmbiguous || habitatResolution.isAmbiguous
       };
@@ -208,7 +222,6 @@ class ConservatoryStore {
       this.persistLocal();
     } catch (e: any) {
       console.error("Voice Parsing Error:", e);
-      // Fallback UI so we don't get stuck in 'ANALYZING'
       this.pendingAction = {
         status: 'CONFIRMING',
         transcript: text,
@@ -221,7 +234,6 @@ class ConservatoryStore {
     }
   }
 
-  // LOGIC ANCHOR: Commit
   async commitPendingAction() {
     if (!this.pendingAction) return;
     
@@ -232,8 +244,6 @@ class ConservatoryStore {
     const eventType = intent === 'ACCESSION_ENTITY' ? 'ENTITY_ACCESSIONED' : 
                       intent === 'MODIFY_HABITAT' ? 'MODIFY_HABITAT' : 'OBSERVATION_LOGGED';
 
-    // 1. GENERATE DETERMINISTIC IDs IN PAYLOAD
-    // This ensures if we replay the event, we get the same ID.
     const rawPayload = { ...this.pendingAction };
     const safePayload = JSON.parse(JSON.stringify(rawPayload));
     
@@ -250,11 +260,10 @@ class ConservatoryStore {
         }));
     }
 
-    // 2. Optimistic Local Event
     const tempId = uuidv4();
     const domainEvent: DomainEvent = {
       eventId: tempId,
-      type: eventType, // Use mapped type
+      type: eventType,
       timestamp: new Date().toISOString(),
       payload: safePayload,
       metadata: {
@@ -272,14 +281,11 @@ class ConservatoryStore {
       domain_event: domainEvent
     };
 
-    // Add locally immediately
     this.events.unshift(appEvent);
-    this.pendingAction = null; // Clear UI immediately
+    this.pendingAction = null;
     this.persistLocal();
 
-    // 3. Write to Cloud
     try {
-      // Clean payload for Firestore
       const { status, isAmbiguous, ...payloadToSave } = safePayload;
       
       await addDoc(collection(db, 'events'), {
@@ -288,7 +294,6 @@ class ConservatoryStore {
         payload: payloadToSave,
         metadata: domainEvent.metadata
       });
-      // Firestore listener will catch the echo and update the status to PARSED
     } catch (e: any) {
       console.error("Persistence Failed", e);
       const idx = this.events.findIndex(e => e.id === tempId);
@@ -300,15 +305,11 @@ class ConservatoryStore {
     }
   }
 
-  // LOGIC ANCHOR: Reducer (State Replay)
   private applyEvent(event: DomainEvent) {
     const { type, payload } = event;
 
     if (type === 'MODIFY_HABITAT') {
-      // Deterministic ID from payload, or fallback if legacy event
       const id = payload.generatedId || event.eventId; 
-      
-      // Check if exists (Idempotency)
       if (this.entities.some(e => e.id === id)) return;
 
       this.entities.push({
@@ -330,8 +331,8 @@ class ConservatoryStore {
       const targetId = payload.targetHabitatId;
       
       payload.candidates?.forEach((cand: any) => {
-        const id = cand.generatedId || uuidv4(); // Fallback for legacy events
-        if (this.entities.some(e => e.id === id)) return; // Idempotency
+        const id = cand.generatedId || uuidv4();
+        if (this.entities.some(e => e.id === id)) return;
 
         let type = EntityType.ORGANISM;
         if (cand.traits?.some((t: any) => t.type === 'PHOTOSYNTHETIC')) type = EntityType.PLANT;
@@ -353,8 +354,6 @@ class ConservatoryStore {
         });
       });
     }
-    // Note: LOG_OBSERVATION doesn't mutate entities in this simplified version, 
-    // but in a real app it would update 'last_observation_date' or metrics history on the entity.
   }
 
   discardPending() {
@@ -377,20 +376,47 @@ class ConservatoryStore {
     return newGroup;
   }
 
-  async testConnection(): Promise<{ success: boolean; error?: string }> {
+  async testConnection(): Promise<{ success: boolean; error?: string; code?: string }> {
+    if (!this.user) {
+      return { success: false, error: "Authentication required", code: 'AUTH_REQUIRED' };
+    }
+
     try {
       const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("Connection Timed Out")), 5000));
-      // Simple read test
       await Promise.race([
           getDoc(doc(db, 'events', 'init')),
           timeout
       ]);
-      // It might not exist, but if we don't get a permission denied or network error, we are good.
       return { success: true };
     } catch (e: any) {
-       // Allow "Missing or insufficient permissions" to pass if strictly writing? 
-       // No, we need read access for event sourcing.
-       return { success: false, error: e.message };
+      const errorMsg = e.message || "Unknown Connection Error";
+      const code = e.code;
+
+      if (code === 'permission-denied' || errorMsg.includes("permission-denied")) {
+        // Since we checked this.user, this most likely means either a disabled API or bad security rules
+        if (errorMsg.includes("API has not been used") || errorMsg.includes("disabled")) {
+          return { 
+            success: false, 
+            error: "Cloud Firestore API is not enabled for project 'the-conservatory-d858b'. Visit the Cloud Console to enable it.", 
+            code: 'API_DISABLED' 
+          };
+        }
+        return { 
+          success: false, 
+          error: "Permission Denied. Check your Security Rules.", 
+          code: 'PERMISSION_DENIED' 
+        };
+      }
+
+      if (errorMsg.includes("offline")) {
+        return { 
+          success: false, 
+          error: "Firestore is currently offline.", 
+          code: 'OFFLINE' 
+        };
+      }
+      
+      return { success: false, error: errorMsg, code };
     }
   }
 }
@@ -402,7 +428,8 @@ export function useConservatory() {
     events: store.getEvents(),
     entities: store.getEntities(),
     groups: store.getGroups(),
-    pendingAction: store.getPendingAction()
+    pendingAction: store.getPendingAction(),
+    user: store.getUser()
   });
 
   useEffect(() => {
@@ -411,13 +438,16 @@ export function useConservatory() {
         events: store.getEvents(),
         entities: store.getEntities(),
         groups: store.getGroups(),
-        pendingAction: store.getPendingAction()
+        pendingAction: store.getPendingAction(),
+        user: store.getUser()
       });
     });
   }, []);
 
   return {
     ...data,
+    login: useCallback(() => store.login(), []),
+    logout: useCallback(() => store.logout(), []),
     processVoiceInput: useCallback((text: string) => store.processVoiceInput(text), []),
     commitPendingAction: useCallback(() => store.commitPendingAction(), []),
     discardPending: useCallback(() => store.discardPending(), []),

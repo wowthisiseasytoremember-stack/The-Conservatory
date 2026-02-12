@@ -1,18 +1,17 @@
 
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { Entity, PendingAction, IdentifyResult, AdvisoryReport, RackContainer } from "../types";
-import { db, collection, addDoc, updateDoc, serverTimestamp } from './firebase';
 
-// Use process.env.API_KEY directly for initialization as per guidelines
+// Initialize using the mandatory process.env.API_KEY
 const getClient = () => {
-    return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
-const withTimeout = <T>(promise: Promise<T>, ms: number = 30000): Promise<T> => {
-    return Promise.race([
-        promise,
-        new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`AI Timed out after ${ms}ms`)), ms))
-    ]);
+const withTimeout = <T>(promise: Promise<T>, ms: number = 45000): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`AI Timed out after ${ms}ms`)), ms))
+  ]);
 };
 
 const TRAIT_SCHEMA = {
@@ -93,7 +92,7 @@ const PENDING_ACTION_SCHEMA = {
 
 export const geminiService = {
   /**
-   * Fast parsing for voice commands (Low Latency)
+   * Fast parsing for voice commands (gemini-flash-lite-latest)
    */
   async parseVoiceCommand(transcription: string, entities: Entity[]): Promise<any> {
     const ai = getClient();
@@ -102,9 +101,10 @@ export const geminiService = {
     const systemInstruction = `
       You are the Principal Curator of "The Conservatory". Parse user voice input into structured JSON.
       Existing Index: ${JSON.stringify(entityIndex)}
-      Use gemini-flash-lite-latest for speed.
+      Priority: Speed. Use gemini-flash-lite-latest.
     `;
 
+    // Using gemini-flash-lite-latest as per guidelines for flash lite models
     const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
       model: "gemini-flash-lite-latest",
       contents: transcription,
@@ -118,16 +118,16 @@ export const geminiService = {
   },
 
   /**
-   * Deep Multimodal Analysis (Pro)
+   * Deep Multimodal Analysis (gemini-3-pro-preview)
    */
   async identifyPhoto(base64Data: string): Promise<IdentifyResult> {
     const ai = getClient();
     const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
-      model: "gemini-3-pro-image-preview",
+      model: "gemini-3-pro-preview",
       contents: {
         parts: [
           { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
-          { text: "Identify the species in this photo with high precision." }
+          { text: "Identify the species in this photo with high precision. Provide reasoning and confidence." }
         ]
       },
       config: {
@@ -149,12 +149,12 @@ export const geminiService = {
   },
 
   /**
-   * Analyze a multi-container rack setup from an image
+   * Analyze rack setup (gemini-3-pro-preview)
    */
   async analyzeRackScene(base64Data: string): Promise<{ containers: RackContainer[] }> {
     const ai = getClient();
     const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
-      model: "gemini-3-pro-image-preview",
+      model: "gemini-3-pro-preview",
       contents: {
         parts: [
           { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
@@ -203,7 +203,7 @@ export const geminiService = {
   },
 
   /**
-   * Get an advisory report for architectural implementation
+   * Advisory Report (gemini-3-pro-preview)
    */
   async getAdvisoryReport(intent: string): Promise<AdvisoryReport> {
     const ai = getClient();
@@ -211,7 +211,7 @@ export const geminiService = {
       model: "gemini-3-pro-preview",
       contents: `Propose an implementation strategy for the following user request: ${intent}`,
       config: {
-        systemInstruction: "You are an expert system architect specializing in aqua-botany digital twins. Provide safe implementation reports.",
+        systemInstruction: "You are an expert system architect specializing in digital twin management. Provide implementation reports.",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -230,7 +230,7 @@ export const geminiService = {
   },
 
   /**
-   * Integrated Chat (Pro + Search + Thinking)
+   * Integrated Chat (Grounded Flash or Thinking Pro)
    */
   async chat(
     message: string, 
@@ -239,7 +239,9 @@ export const geminiService = {
   ): Promise<{ text: string; links?: any[] }> {
     const ai = getClient();
     
-    // Choose model and config based on tools
+    // Choose model based on requirements
+    // Use gemini-3-flash-preview for Search Grounding
+    // Use gemini-3-pro-preview for complex reasoning/thinking
     const model = options.search ? "gemini-3-flash-preview" : "gemini-3-pro-preview";
     const config: any = {};
     
@@ -248,21 +250,22 @@ export const geminiService = {
     }
     
     if (options.thinking && !options.search) {
-      // Thinking only supported on Gemini 3 Pro, not with tools
+      // Thinking budget 32768 for Pro as per instructions
       config.thinkingConfig = { thinkingBudget: 32768 };
     }
 
-    const chat = ai.chats.create({
+    const chatInstance = ai.chats.create({
       model,
       config: {
         ...config,
-        systemInstruction: "You are the Conservatory AI Guide. Help with aquaculture, botany, and system management."
+        systemInstruction: "You are the Conservatory Guide. Help with aquaculture, biology, and system operations."
       },
       history: history.map(h => ({ role: h.role, parts: [{ text: h.text }] }))
     });
 
-    const response = await chat.sendMessage({ message });
+    const response = await chatInstance.sendMessage({ message });
     
+    // Extract Grounding Chunks for display as mandatory
     const links = response.candidates?.[0]?.groundingMetadata?.groundingChunks
       ?.map((c: any) => ({ title: c.web?.title || 'Source', uri: c.web?.uri }))
       .filter((l: any) => l.uri);
