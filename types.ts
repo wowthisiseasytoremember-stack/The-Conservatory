@@ -19,7 +19,14 @@ export enum EntityType {
 export type EntityTrait = 
   | { type: 'AQUATIC'; parameters: { pH?: number; temp?: number; salinity?: 'fresh'|'brackish'|'marine'; nitrates?: number; ammonia?: number } }
   | { type: 'TERRESTRIAL'; parameters: { humidity?: number; substrate?: string; temp?: number } }
-  | { type: 'PHOTOSYNTHETIC'; parameters: { lightReq?: 'low'|'med'|'high'; co2?: boolean; growth_height?: number } }
+  | { type: 'PHOTOSYNTHETIC'; parameters: { 
+      lightReq?: 'low'|'med'|'high'; 
+      co2?: boolean; 
+      growth_height?: number;
+      growth_rate?: 'slow'|'medium'|'fast';
+      difficulty?: 'easy'|'medium'|'hard'|'very_hard';
+      placement?: 'foreground'|'midground'|'background'|'floating'|'epiphyte'; 
+  } }
   | { type: 'INVERTEBRATE'; parameters: { molting?: boolean; colony?: boolean } }
   | { type: 'VERTEBRATE'; parameters: { diet?: 'carnivore'|'herbivore'|'omnivore' } }
   | { type: 'COLONY'; parameters: { estimatedCount?: number; stable?: boolean } };
@@ -37,11 +44,20 @@ export interface Entity {
   // The "DNA" of the entity. A mix-and-match list of what this thing IS.
   traits: EntityTrait[]; 
   
+  // Rich Details (New)
+  details?: {
+    description?: string;
+    origin?: string;
+    notes?: string;
+    maintenance?: string;
+  };
+
   // Legacy/System fields
   created_at: number;
   updated_at: number;
   aliases: string[];
   enrichment_status: 'none' | 'pending' | 'complete' | 'failed';
+  overflow?: Record<string, any>;
 }
 
 export interface EntityGroup {

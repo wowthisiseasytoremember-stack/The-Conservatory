@@ -218,7 +218,11 @@ class ConservatoryStore {
 
     try {
       const currentEntities = [...this.entities]; 
-      const result = await geminiService.parseVoiceCommand(text, currentEntities);
+      
+      // Test Hook for Stability
+      const result = (window as any).mockGeminiParse 
+        ? await (window as any).mockGeminiParse(text, currentEntities)
+        : await geminiService.parseVoiceCommand(text, currentEntities);
       
       const habitatResolution = result.targetHabitatName 
         ? this.resolveEntity(result.targetHabitatName, currentEntities)
@@ -259,11 +263,10 @@ class ConservatoryStore {
     } else if (obj !== null && typeof obj === 'object') {
       return Object.fromEntries(
         Object.entries(obj)
-          .filter(([_, v]) => v !== undefined)
-          .map(([k, v]) => [k, this.cleanDataObject(v)])
+          .map(([k, v]) => [k, v === undefined ? null : this.cleanDataObject(v)])
       );
     }
-    return obj;
+    return obj === undefined ? null : obj;
   }
 
   async commitPendingAction() {
@@ -327,6 +330,9 @@ class ConservatoryStore {
         }
 
         const id = uuidv4();
+        const { name: _n, type: _t, ...otherHabitatParams } = safePayload.habitatParams || {};
+        console.log("Creating habitat:", habitatName);
+
         const habitatData: any = this.cleanDataObject({
           name: habitatName,
           type: EntityType.HABITAT,
@@ -335,9 +341,16 @@ class ConservatoryStore {
           confidence: 1,
           enrichment_status: 'none',
           created_at: Date.now(),
-          updated_at: Date.now()
+          updated_at: Date.now(),
+          overflow: otherHabitatParams
         });
         
+        console.log("Optimistic update push:", id, habitatData);
+        // Optimistic Update
+        this.entities.push({ id, ...habitatData });
+        this.persistLocal();
+        console.log("Optimistic update done. Entities count:", this.entities.length);
+
         await setDoc(doc(db, 'entities', id), habitatData);
       } else if (intent === 'ACCESSION_ENTITY') {
         for (const cand of safePayload.candidates || []) {
@@ -358,6 +371,8 @@ class ConservatoryStore {
           if (cand.traits?.some((t: any) => t.type === 'PHOTOSYNTHETIC')) type = EntityType.PLANT;
           if (cand.traits?.some((t: any) => t.type === 'COLONY')) type = EntityType.COLONY;
 
+          const { commonName, scientificName, quantity, traits, ...otherCandidateProps } = cand;
+
           const entityData: any = this.cleanDataObject({
             name: cand.commonName,
             scientificName: cand.scientificName, 
@@ -369,8 +384,13 @@ class ConservatoryStore {
             aliases: [],
             enrichment_status: 'pending',
             created_at: Date.now(),
-            updated_at: Date.now()
+            updated_at: Date.now(),
+            overflow: otherCandidateProps
           });
+
+          // Optimistic Update
+          this.entities.push({ id, ...entityData });
+          this.persistLocal();
 
           await setDoc(doc(db, 'entities', id), entityData);
         }
@@ -418,6 +438,48 @@ class ConservatoryStore {
     return group;
   }
 
+  async enrichEntity(entityId: string) {
+    const entity = this.entities.find(e => e.id === entityId);
+    if (!entity) return;
+
+    // Set status to pending
+    this.updateEntity(entityId, { enrichment_status: 'pending' });
+
+    try {
+        // 1. Search General APIs
+        const query = entity.scientificName || entity.name;
+        const [gbif, wiki, inat] = await Promise.all([
+            // geminiService.searchGBIF(query), // Not implemented yet
+            // geminiService.searchWikipedia(query),
+            Promise.resolve(null), Promise.resolve(null), Promise.resolve(null)
+        ]);
+
+        // 2. Try Scraper if it looks like a plant
+        let scraperData = null;
+        if (entity.type === EntityType.PLANT) {
+             const { enrichmentService } = await import('./enrichmentService');
+             scraperData = await enrichmentService.scrapeAquasabi(entity.scientificName || entity.name);
+             if (scraperData && scraperData.details) {
+                 // Append to entity details
+                 this.updateEntity(entityId, { 
+                     details: {
+                         ...entity.details,
+                         description: scraperData.details.description,
+                         notes: scraperData.details.notes,
+                         maintenance: scraperData.details.maintenance
+                     }
+                 });
+             }
+        }
+        
+        this.updateEntity(entityId, { enrichment_status: 'complete' });
+
+    } catch (e) {
+        console.error("Enrichment Failed", e);
+        this.updateEntity(entityId, { enrichment_status: 'failed' });
+    }
+  }
+
   async sendMessage(text: string, options: { search?: boolean; thinking?: boolean }) {
     const userMsg: ChatMessage = {
       id: uuidv4(),
@@ -430,7 +492,9 @@ class ConservatoryStore {
 
     try {
       const history = this.messages.slice(-8);
-      const response = await geminiService.chat(text, history, options);
+      const response = (window as any).mockGeminiChat 
+        ? await (window as any).mockGeminiChat(text, history, options)
+        : await geminiService.chat(text, history, options);
       const aiMsg: ChatMessage = {
         id: uuidv4(),
         role: 'model',
@@ -499,6 +563,7 @@ export function useConservatory() {
     updateEntity: useCallback((id: string, updates: Partial<Entity>) => store.updateEntity(id, updates), []),
     addGroup: useCallback((name: string) => store.addGroup(name), []),
     testConnection: useCallback(() => store.testConnection(), []),
+    enrichEntity: useCallback((id: string) => store.enrichEntity(id), []),
     sendMessage: useCallback((text: string, opts: any) => store.sendMessage(text, opts), []),
     clearMessages: useCallback(() => store.clearMessages(), [])
   };
