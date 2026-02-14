@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   AppEvent, Entity, DomainEvent, EntityGroup, PendingAction, EntityType, EventStatus, ChatMessage,
-  IdentifyResult 
+  IdentifyResult, ResearchProgress, ResearchStage, ResearchEntityProgress 
 } from '../types';
 import { geminiService } from './geminiService';
 import { 
@@ -26,6 +26,19 @@ class ConservatoryStore {
   private unsubscribes: (() => void)[] = [];
 
   private activeHabitatId: string | null = null;
+  private _isTestMode: boolean = false;
+
+  // Deep Research Pipeline State
+  private _researchProgress: ResearchProgress = {
+    isActive: false,
+    totalEntities: 0,
+    completedEntities: 0,
+    currentEntityIndex: -1,
+    currentEntity: null,
+    currentStage: null,
+    entityResults: [],
+    discoveries: []
+  };
 
   constructor() {
     this.loadLocal();
@@ -36,14 +49,25 @@ class ConservatoryStore {
       // @ts-ignore
       window.setTestUser = (user: User) => {
         console.log("Setting Test User:", user);
+        // Prevent Firebase auth from overwriting test user
+        this._isTestMode = true;
+        this.clearSync();
         this.user = user;
+        // Mark test mode to skip Firestore writes
+        (window as any).__TEST_MODE__ = true;
         this.notify();
       };
+      
+      // Expose processVoiceInput for E2E tests
+      // @ts-ignore
+      window.processVoiceInput = (text: string) => this.processVoiceInput(text);
     }
   }
 
   private initAuth() {
     onAuthStateChanged(auth, (user) => {
+      // In test mode, never let Firebase auth override the test user
+      if (this._isTestMode) return;
       this.user = user;
       if (user) {
         this.initFirestoreSync();
@@ -411,7 +435,7 @@ class ConservatoryStore {
     this.pendingAction = null;
     this.persistLocal();
 
-    const isTestMode = (window as any).setTestUser;
+    const isTestMode = (window as any).__TEST_MODE__;
     const batch = writeBatch(db);
 
     try {
@@ -491,7 +515,7 @@ class ConservatoryStore {
             quantity: cand.quantity,
             confidence: 0.9,
             aliases: [],
-            enrichment_status: 'pending',
+            enrichment_status: 'queued',
             created_at: Date.now(),
             updated_at: Date.now(),
             overflow: otherCandidateProps
@@ -512,10 +536,11 @@ class ConservatoryStore {
       }
       this.persistLocal();
 
-      // Trigger Auto-Enrichment for new entities
-      newEntityIds.forEach(id => {
-        this.enrichEntity(id).catch(err => console.error(`Auto-enrichment failed for ${id}:`, err));
-      });
+      // Entities are queued for research — no auto-enrichment.
+      // User triggers Deep Research when ready (per-habitat or global).
+      if (newEntityIds.length > 0) {
+        console.log(`[Store] ${newEntityIds.length} entities queued for Deep Research.`);
+      }
     } catch (e: any) {
       console.error("Persistence Failed", e);
       const idx = this.events.findIndex(e => e.id === tempId);
@@ -535,7 +560,7 @@ class ConservatoryStore {
   async updateEntity(id: string, updates: Partial<Entity>) {
     try {
       // @ts-ignore
-      if ((window as any).setTestUser) {
+      if ((window as any).__TEST_MODE__) {
          console.log("Test Mode: Skipping Firestore Update");
          // Apply update locally for consistency in test
          const idx = this.entities.findIndex(e => e.id === id);
@@ -595,75 +620,274 @@ class ConservatoryStore {
     this.persistLocal();
   }
 
-  async enrichEntity(entityId: string) {
+  // -------------------------------------------------------------------
+  // Deep Research Pipeline
+  // -------------------------------------------------------------------
+
+  getResearchProgress(): ResearchProgress {
+    return this._researchProgress;
+  }
+
+  resetResearchProgress() {
+    this._researchProgress = {
+      isActive: false,
+      totalEntities: 0,
+      completedEntities: 0,
+      currentEntityIndex: -1,
+      currentEntity: null,
+      currentStage: null,
+      entityResults: [],
+      discoveries: []
+    };
+    this.notify();
+  }
+
+  private setResearchProgress(update: Partial<ResearchProgress>) {
+    this._researchProgress = { ...this._researchProgress, ...update };
+    this.notify();
+  }
+
+  /**
+   * Enrich a single entity with stage callbacks for progress tracking.
+   * Can be called standalone (single entity) or by deepResearch (batch).
+   */
+  async enrichEntity(entityId: string, onStage?: (stage: ResearchStage['name']) => void) {
     const entity = this.entities.find(e => e.id === entityId);
     if (!entity) return;
 
-    // Set status to pending
     this.updateEntity(entityId, { enrichment_status: 'pending' });
-    console.log(`Starting enrichment for ${entity.name} (${entityId})`);
+    console.log(`[Enrichment] Starting for ${entity.name} (${entityId})`);
 
     try {
         const { enrichmentService } = await import('./enrichmentService');
         const searchQuery = entity.scientificName || entity.name;
-
-        // 1. Search General APIs (real calls)
-        const [gbif, wiki, inat] = await Promise.all([
-            enrichmentService.searchGBIF(searchQuery),
-            enrichmentService.searchWikipedia(searchQuery),
-            enrichmentService.searchiNaturalist(searchQuery)
-        ]);
-
-        // 2. Build merged details from all sources
         const mergedDetails: any = { ...entity.details };
+        const currentOverflow = { ...(entity.overflow || {}) };
 
-        if (gbif) {
-          mergedDetails.origin = mergedDetails.origin || gbif.origin;
-          // Store taxonomy in overflow for now
-          if (gbif.taxonomy) {
-            this.updateEntity(entityId, {
-              overflow: { ...entity.overflow, taxonomy: gbif.taxonomy },
-              scientificName: entity.scientificName || gbif.scientificName
-            });
+        // Stage 1: Local Library (fastest — check first)
+        onStage?.('library');
+        let libraryHit = false;
+        if (entity.type === EntityType.PLANT) {
+          const scraperData = await enrichmentService.scrapeAquasabi(searchQuery);
+          if (scraperData) {
+            libraryHit = true;
+            mergedDetails.description = scraperData.description || mergedDetails.description;
+            mergedDetails.notes = scraperData.tips || mergedDetails.notes;
+            mergedDetails.origin = scraperData.origin || mergedDetails.origin;
+            if (scraperData.images?.length) {
+              currentOverflow.referenceImages = scraperData.images;
+            }
           }
         }
 
+        // Stage 2: GBIF Taxonomy
+        onStage?.('gbif');
+        const gbif = await enrichmentService.searchGBIF(searchQuery);
+        if (gbif) {
+          mergedDetails.origin = mergedDetails.origin || gbif.origin;
+          if (gbif.taxonomy) {
+            currentOverflow.taxonomy = gbif.taxonomy;
+            if (!entity.scientificName && gbif.scientificName) {
+              this.updateEntity(entityId, { scientificName: gbif.scientificName });
+            }
+          }
+        }
+
+        // Stage 3: Wikipedia
+        onStage?.('wikipedia');
+        const wiki = await enrichmentService.searchWikipedia(searchQuery);
         if (wiki?.description) {
           mergedDetails.description = mergedDetails.description || wiki.description;
         }
 
+        // Stage 4: iNaturalist
+        onStage?.('inaturalist');
+        const inat = await enrichmentService.searchiNaturalist(searchQuery);
         if (inat) {
-          // Use iNaturalist common name as an alias if we don't have one
           if (inat.commonName && !entity.aliases?.includes(inat.commonName)) {
             this.updateEntity(entityId, {
               aliases: [...(entity.aliases || []), inat.commonName]
             });
           }
+          if (inat.images?.length && !currentOverflow.referenceImages?.length) {
+            currentOverflow.referenceImages = inat.images;
+          }
         }
 
-        // 3. Try local library if it's a plant
-        if (entity.type === EntityType.PLANT) {
-             const scraperData = await enrichmentService.scrapeAquasabi(searchQuery);
-             if (scraperData) {
-                 // Local library data is highest fidelity — override
-                 mergedDetails.description = scraperData.description || mergedDetails.description;
-                 mergedDetails.notes = scraperData.tips || mergedDetails.notes;
-                 mergedDetails.origin = scraperData.origin || mergedDetails.origin;
-                 if (scraperData.images?.length) {
-                   this.updateEntity(entityId, {
-                     overflow: { ...entity.overflow, referenceImages: scraperData.images }
-                   });
-                 }
-             }
+        // Stage 5: AI Discovery (biological secrets)
+        onStage?.('discovery');
+        let discoverySnippet: string | undefined;
+        try {
+          const discovery = await geminiService.getBiologicalDiscovery(entity.name);
+          if (discovery) {
+            currentOverflow.discovery = discovery;
+            discoverySnippet = discovery.mechanism?.split('.')[0] + '.';
+          }
+        } catch (e) {
+          console.warn(`[Enrichment] Discovery generation failed for ${entity.name}`, e);
+          // Non-fatal — continue with enrichment
         }
 
-        this.updateEntity(entityId, { details: mergedDetails, enrichment_status: 'complete' });
-        console.log(`Enrichment complete for ${entityId}`);
+        // Commit all enrichment data
+        this.updateEntity(entityId, {
+          details: mergedDetails,
+          overflow: currentOverflow,
+          enrichment_status: 'complete'
+        });
+        console.log(`[Enrichment] Complete for ${entity.name}`);
+        return discoverySnippet;
 
     } catch (e) {
-        console.error("Enrichment Failed", e);
+        console.error('[Enrichment] Failed', e);
         this.updateEntity(entityId, { enrichment_status: 'failed' });
+        throw e;
     }
+  }
+
+  /**
+   * Deep Research: Batch-enrich multiple entities serially with full progress tracking.
+   * Designed to be triggered per-habitat ("Research This Habitat") or globally.
+   */
+  async deepResearch(entityIds: string[]) {
+    // Filter to only entities that need research
+    const toResearch = entityIds.filter(id => {
+      const e = this.entities.find(ent => ent.id === id);
+      return e && (e.enrichment_status === 'queued' || e.enrichment_status === 'none' || e.enrichment_status === 'failed');
+    });
+
+    if (toResearch.length === 0) return;
+
+    const STAGE_DEFS: Array<{ name: ResearchStage['name']; label: string }> = [
+      { name: 'library', label: 'Consulting local library...' },
+      { name: 'gbif', label: 'Querying GBIF taxonomy...' },
+      { name: 'wikipedia', label: 'Searching Wikipedia...' },
+      { name: 'inaturalist', label: 'Checking iNaturalist...' },
+      { name: 'discovery', label: 'Synthesizing discoveries...' }
+    ];
+
+    // Initialize progress
+    this.setResearchProgress({
+      isActive: true,
+      totalEntities: toResearch.length,
+      completedEntities: 0,
+      currentEntityIndex: 0,
+      currentEntity: null,
+      currentStage: null,
+      entityResults: [],
+      discoveries: []
+    });
+
+    for (let i = 0; i < toResearch.length; i++) {
+      const entityId = toResearch[i];
+      const entity = this.entities.find(e => e.id === entityId);
+      if (!entity) continue;
+
+      // Create stage tracker for this entity
+      const entityProgress: ResearchEntityProgress = {
+        entityId,
+        entityName: entity.name,
+        stages: STAGE_DEFS.map(s => ({ name: s.name, label: s.label, status: 'waiting' as const }))
+      };
+
+      this.setResearchProgress({
+        currentEntityIndex: i,
+        currentEntity: { id: entityId, name: entity.name },
+        entityResults: [...this._researchProgress.entityResults, entityProgress]
+      });
+
+      try {
+        const discoverySnippet = await this.enrichEntity(entityId, (stage) => {
+          // Update the current entity's stage status
+          const results = [...this._researchProgress.entityResults];
+          const current = results[results.length - 1];
+          if (current) {
+            current.stages = current.stages.map(s => {
+              if (s.name === stage) return { ...s, status: 'active' as const };
+              if (s.status === 'active') return { ...s, status: 'complete' as const };
+              return s;
+            });
+            this.setResearchProgress({
+              currentStage: stage,
+              entityResults: results
+            });
+          }
+        });
+
+        // Mark all stages complete for this entity
+        const results = [...this._researchProgress.entityResults];
+        const current = results[results.length - 1];
+        if (current) {
+          current.stages = current.stages.map(s =>
+            s.status === 'waiting' || s.status === 'active'
+              ? { ...s, status: 'complete' as const }
+              : s
+          );
+          current.discoverySnippet = discoverySnippet;
+        }
+
+        // Accumulate discovery
+        if (discoverySnippet) {
+          this.setResearchProgress({
+            completedEntities: this._researchProgress.completedEntities + 1,
+            entityResults: results,
+            discoveries: [
+              ...this._researchProgress.discoveries,
+              { entityId, entityName: entity.name, mechanism: discoverySnippet }
+            ]
+          });
+        } else {
+          this.setResearchProgress({
+            completedEntities: this._researchProgress.completedEntities + 1,
+            entityResults: results
+          });
+        }
+      } catch (e) {
+        // Mark stages as error for this entity
+        const results = [...this._researchProgress.entityResults];
+        const current = results[results.length - 1];
+        if (current) {
+          current.stages = current.stages.map(s =>
+            s.status === 'waiting' || s.status === 'active'
+              ? { ...s, status: 'error' as const, error: String(e) }
+              : s
+          );
+        }
+        this.setResearchProgress({
+          completedEntities: this._researchProgress.completedEntities + 1,
+          entityResults: results
+        });
+      }
+    }
+
+    // Finished
+    this.setResearchProgress({
+      isActive: false,
+      currentEntity: null,
+      currentStage: null
+    });
+    console.log(`[Deep Research] Complete. ${this._researchProgress.discoveries.length} discoveries.`);
+  }
+
+  /**
+   * Convenience: Deep Research all queued entities in a specific habitat.
+   */
+  async deepResearchHabitat(habitatId: string) {
+    const targets = this.entities
+      .filter(e => e.habitat_id === habitatId && e.type !== EntityType.HABITAT)
+      .filter(e => e.enrichment_status === 'queued' || e.enrichment_status === 'none' || e.enrichment_status === 'failed')
+      .map(e => e.id);
+    return this.deepResearch(targets);
+  }
+
+  /**
+   * Convenience: Deep Research all queued entities globally.
+   */
+  async deepResearchAll() {
+    const targets = this.entities
+      .filter(e => e.type !== EntityType.HABITAT)
+      .filter(e => e.enrichment_status === 'queued' || e.enrichment_status === 'none' || e.enrichment_status === 'failed')
+      .map(e => e.id);
+    return this.deepResearch(targets);
   }
 
   async sendMessage(text: string, options: { search?: boolean; thinking?: boolean }) {
@@ -724,7 +948,8 @@ export function useConservatory() {
     pendingAction: store.getPendingAction(),
     liveTranscript: store.getLiveTranscript(),
     user: store.getUser(),
-    activeHabitatId: store.getActiveHabitatId()
+    activeHabitatId: store.getActiveHabitatId(),
+    researchProgress: store.getResearchProgress()
   });
 
   useEffect(() => {
@@ -737,7 +962,8 @@ export function useConservatory() {
         pendingAction: store.getPendingAction(),
         liveTranscript: store.getLiveTranscript(),
         user: store.getUser(),
-        activeHabitatId: store.getActiveHabitatId()
+        activeHabitatId: store.getActiveHabitatId(),
+        researchProgress: store.getResearchProgress()
       });
     });
   }, []);
@@ -756,6 +982,10 @@ export function useConservatory() {
     testConnection: useCallback(() => store.testConnection(), []),
     enrichEntity: useCallback((id: string) => store.enrichEntity(id), []),
     createActionFromVision: useCallback((result: IdentifyResult, habitatId?: string) => store.createActionFromVision(result, habitatId), []),
+    deepResearch: useCallback((ids: string[]) => store.deepResearch(ids), []),
+    deepResearchHabitat: useCallback((habitatId: string) => store.deepResearchHabitat(habitatId), []),
+    deepResearchAll: useCallback(() => store.deepResearchAll(), []),
+    resetResearchProgress: useCallback(() => store.resetResearchProgress(), []),
     sendMessage: useCallback((text: string, opts: any) => store.sendMessage(text, opts), []),
     clearMessages: useCallback(() => store.clearMessages(), [])
   };

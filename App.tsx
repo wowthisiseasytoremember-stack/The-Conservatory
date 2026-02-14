@@ -9,6 +9,7 @@ import { EntityDetailModal } from './components/EntityDetailModal';
 import { ConfirmationCard } from './components/ConfirmationCard';
 import { DevTools } from './components/DevTools';
 import { AIChatBot } from './components/AIChatBot';
+import { DeepResearchLoader } from './components/DeepResearchLoader';
 import { FirebaseConfigModal } from './components/FirebaseConfigModal';
 import { LoginView } from './components/LoginView';
 import { MainLayout, BiomeTheme } from './components/MainLayout';
@@ -18,10 +19,10 @@ import { ConnectionStatus } from './services/connectionService';
 const App: React.FC = () => {
   const { 
     events, entities, groups, pendingAction, user, liveTranscript,
-    activeHabitatId,
+    activeHabitatId, researchProgress,
     processVoiceInput, commitPendingAction, discardPending, 
     updateSlot, updateEntity, addGroup, testConnection, login, logout,
-    createActionFromVision, setActiveHabitat
+    createActionFromVision, setActiveHabitat, deepResearchAll, resetResearchProgress
   } = useConservatory();
   
   const [activeTab, setActiveTab] = useState<'feed' | 'entities'>('feed');
@@ -123,6 +124,13 @@ const App: React.FC = () => {
             setEditingEntity({ ...editingEntity, ...updates });
           }}
           onAddGroup={addGroup}
+        />
+      )}
+      {/* Deep Research Loader Overlay */}
+      {(researchProgress.isActive || (researchProgress.completedEntities > 0 && researchProgress.discoveries.length > 0)) && (
+        <DeepResearchLoader
+          progress={researchProgress}
+          onDismiss={resetResearchProgress}
         />
       )}
     </MainLayout>

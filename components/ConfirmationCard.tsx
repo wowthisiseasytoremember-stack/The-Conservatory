@@ -407,6 +407,41 @@ export const ConfirmationCard: React.FC<ConfirmationCardProps> = ({ action, onCo
                     </div>
                     <Slot value={action.observationParams?.nitrates} placeholder="--" type="number" suffix="ppm" onChange={(v) => onUpdate('observationParams.nitrates', v)} />
                   </div>
+
+                  {/* Specialized Metric Slots */}
+                  <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                    <div className="flex items-center gap-2 mb-1 text-xs text-slate-400 uppercase tracking-wider">
+                      <Droplets className="w-3 h-3 text-blue-400" /> Humidity
+                    </div>
+                    <Slot value={action.observationParams?.humidity} placeholder="--" type="number" suffix="%" onChange={(v) => onUpdate('observationParams.humidity', v)} />
+                  </div>
+
+                  <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                    <div className="flex items-center gap-2 mb-1 text-xs text-slate-400 uppercase tracking-wider">
+                      <ArrowRight className="w-3 h-3 text-emerald-400" /> Growth
+                    </div>
+                    <Slot value={action.observationParams?.growth_cm} placeholder="--" type="number" suffix="cm" onChange={(v) => onUpdate('observationParams.growth_cm', v)} />
+                  </div>
+
+                  <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                    <div className="flex items-center gap-2 mb-1 text-xs text-slate-400 uppercase tracking-wider">
+                      <Sparkles className="w-3 h-3 text-purple-400" /> Molting
+                    </div>
+                    <div className="flex gap-2">
+                       <button 
+                         onClick={() => onUpdate('observationParams.molting', true)}
+                         className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold border transition-all ${action.observationParams?.molting === true ? 'bg-fuchsia-500/20 border-fuchsia-500 text-fuchsia-400' : 'bg-slate-900 border-slate-800 text-slate-600'}`}
+                       >
+                         Yes
+                       </button>
+                       <button 
+                         onClick={() => onUpdate('observationParams.molting', false)}
+                         className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold border transition-all ${action.observationParams?.molting === false ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-slate-900 border-slate-800 text-slate-600'}`}
+                       >
+                         No
+                       </button>
+                    </div>
+                  </div>
                </div>
             </div>
           )}

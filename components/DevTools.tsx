@@ -2,15 +2,19 @@
 import React, { useState } from 'react';
 import { useConservatory } from '../services/store';
 import { geminiService } from '../services/geminiService';
-import { Terminal, X, Zap, Database, Bot, Copy, Check, Loader2, Play, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
-import { AdvisoryReport } from '../types';
+import { Terminal, X, Zap, Database, Bot, Copy, Check, Loader2, Play, ShieldCheck, ShieldAlert, AlertTriangle, Plus, Leaf, Fish, FlaskConical, RefreshCw, Beaker } from 'lucide-react';
+import { AdvisoryReport, EntityType } from '../types';
 
 export const DevTools: React.FC = () => {
-  const { processVoiceInput, testConnection } = useConservatory();
+  const { 
+    processVoiceInput, testConnection, entities, enrichEntity, commitPendingAction,
+    deepResearchAll 
+  } = useConservatory();
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'scenarios' | 'contractor'>('scenarios');
+  const [activeTab, setActiveTab] = useState<'scenarios' | 'actions' | 'contractor'>('scenarios');
   const [dbStatus, setDbStatus] = useState<'idle' | 'testing' | 'success' | 'fail'>('idle');
   const [dbError, setDbError] = useState<string | null>(null);
+  const [actionLog, setActionLog] = useState<string[]>([]);
   
   // Advisory State
   const [intent, setIntent] = useState('');
@@ -18,17 +22,20 @@ export const DevTools: React.FC = () => {
   const [report, setReport] = useState<AdvisoryReport | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const habitats = entities.filter(e => e.type === EntityType.HABITAT);
+  const organisms = entities.filter(e => e.type !== EntityType.HABITAT);
+
+  const log = (msg: string) => {
+    setActionLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 20));
+  };
+
   const handleTestConnection = async () => {
     setDbStatus('testing');
     setDbError(null);
     const result = await testConnection();
     setDbStatus(result.success ? 'success' : 'fail');
-    if (!result.success && result.error) {
-        setDbError(result.error);
-    }
-    if (result.success) {
-        setTimeout(() => setDbStatus('idle'), 3000);
-    }
+    if (!result.success && result.error) setDbError(result.error);
+    if (result.success) setTimeout(() => setDbStatus('idle'), 3000);
   };
 
   const handleAskAdvisor = async () => {
@@ -40,7 +47,6 @@ export const DevTools: React.FC = () => {
         setReport(result);
     } catch (e) {
         console.error(e);
-        // Error state handled by UI showing empty/error message if needed
     } finally {
         setIsThinking(false);
     }
@@ -54,23 +60,79 @@ export const DevTools: React.FC = () => {
     }
   };
 
-  const scenarios = [
-    { 
-      label: "New Tank", 
-      cmd: "Create a 20 gallon freshwater tank in the living room called The Shallows." 
-    },
-    { 
-      label: "Log Fish", 
-      cmd: "I just added 12 Neon Tetras and 5 Cherry Shrimp to The Shallows." 
-    },
-    { 
-      label: "Log Parameters", 
-      cmd: "Log a water change for The Shallows. pH is 6.8 and temperature is 78 degrees." 
-    },
-    { 
-      label: "Ambiguous", 
-      cmd: "Add 2 snails to the tank." 
+  // === QUICK ACTION HANDLERS ===
+  const handleQuickHabitat = () => {
+    const names = ['The Shallows', 'Deep Blue', 'Moss Garden', 'Blackwater Creek', 'Reef Edge', 'Nano Cube'];
+    const name = names[Math.floor(Math.random() * names.length)] + ` ${Date.now().toString(36).slice(-4)}`;
+    const types = ['Freshwater', 'Saltwater', 'Brackish'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const size = [10, 20, 29, 40, 55, 75][Math.floor(Math.random() * 6)];
+    processVoiceInput(`Create a ${size} gallon ${type.toLowerCase()} tank called ${name}.`);
+    log(`🏠 Creating habitat: ${name} (${size}gal ${type})`);
+  };
+
+  const handleQuickOrganism = () => {
+    if (habitats.length === 0) {
+      log('⚠️ No habitats exist. Create one first!');
+      return;
     }
+    const targetHab = habitats[Math.floor(Math.random() * habitats.length)];
+    const fauna = [
+      { name: 'Neon Tetra', qty: Math.floor(Math.random() * 10) + 5 },
+      { name: 'Cherry Shrimp', qty: Math.floor(Math.random() * 8) + 3 },
+      { name: 'Amano Shrimp', qty: Math.floor(Math.random() * 5) + 2 },
+      { name: 'Corydoras', qty: Math.floor(Math.random() * 4) + 2 },
+      { name: 'Otocinclus', qty: Math.floor(Math.random() * 3) + 2 },
+      { name: 'Betta', qty: 1 },
+    ];
+    const animal = fauna[Math.floor(Math.random() * fauna.length)];
+    processVoiceInput(`I just added ${animal.qty} ${animal.name} to ${targetHab.name}.`);
+    log(`🐟 Adding ${animal.qty}x ${animal.name} → ${targetHab.name}`);
+  };
+
+  const handleQuickPlant = () => {
+    if (habitats.length === 0) {
+      log('⚠️ No habitats exist. Create one first!');
+      return;
+    }
+    const targetHab = habitats[Math.floor(Math.random() * habitats.length)];
+    const plants = [
+      'Java Fern', 'Anubias Nana', 'Java Moss', 'Dwarf Hairgrass', 
+      'Amazon Sword', 'Rotala Rotundifolia', 'Bucephalandra', 'Monte Carlo'
+    ];
+    const plant = plants[Math.floor(Math.random() * plants.length)];
+    const qty = Math.floor(Math.random() * 5) + 1;
+    processVoiceInput(`I just planted ${qty} ${plant} in ${targetHab.name}.`);
+    log(`🌿 Planting ${qty}x ${plant} → ${targetHab.name}`);
+  };
+
+  const handleQuickObservation = () => {
+    if (habitats.length === 0) {
+      log('⚠️ No habitats exist. Create one first!');
+      return;
+    }
+    const targetHab = habitats[Math.floor(Math.random() * habitats.length)];
+    const pH = (6.0 + Math.random() * 2).toFixed(1);
+    const temp = Math.floor(74 + Math.random() * 8);
+    processVoiceInput(`The pH in ${targetHab.name} is ${pH} and the temperature is ${temp} degrees.`);
+    log(`📊 Logging pH=${pH}, temp=${temp}°F → ${targetHab.name}`);
+  };
+
+  const handleEnrichAll = async () => {
+    const pending = organisms.filter(e => e.enrichment_status !== 'complete');
+    if (pending.length === 0) {
+      log('✅ All entities already enriched!');
+      return;
+    }
+    log(`🔬 Initiating Deep Research pipeline for ${pending.length} entities...`);
+    deepResearchAll();
+  };
+
+  const scenarios = [
+    { label: "New Tank", cmd: "Create a 20 gallon freshwater tank in the living room called The Shallows.", icon: "🏠" },
+    { label: "Log Fish", cmd: "I just added 12 Neon Tetras and 5 Cherry Shrimp to The Shallows.", icon: "🐟" },
+    { label: "Log Parameters", cmd: "Log a water change for The Shallows. pH is 6.8 and temperature is 78 degrees.", icon: "📊" },
+    { label: "Ambiguous", cmd: "Add 2 snails to the tank.", icon: "❓" }
   ];
 
   if (!isOpen) {
@@ -79,6 +141,7 @@ export const DevTools: React.FC = () => {
         onClick={() => setIsOpen(true)}
         className="fixed top-4 right-4 z-50 bg-slate-800/50 p-2 rounded-full border border-slate-700 hover:bg-slate-700 hover:text-emerald-400 text-slate-500 transition-colors"
         title="Open Dev Tools"
+        data-testid="devtools-fab"
       >
         <Terminal className="w-5 h-5" />
       </button>
@@ -86,7 +149,7 @@ export const DevTools: React.FC = () => {
   }
 
   return (
-    <div className={`fixed top-4 right-4 z-50 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-4 animate-in slide-in-from-right-10 flex flex-col gap-4 transition-all duration-300 ${report ? 'w-[480px]' : 'w-80'}`}>
+    <div className={`fixed top-4 right-4 z-50 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-4 animate-in slide-in-from-right-10 flex flex-col gap-3 transition-all duration-300 max-h-[85vh] overflow-hidden ${report ? 'w-[480px]' : 'w-80'}`}>
       {/* Header & Tabs */}
       <div className="flex justify-between items-center border-b border-slate-800 pb-2">
         <div className="flex gap-1 bg-slate-800/50 p-1 rounded-lg">
@@ -98,6 +161,13 @@ export const DevTools: React.FC = () => {
              <Zap className="w-4 h-4" />
            </button>
            <button 
+             onClick={() => setActiveTab('actions')}
+             className={`p-1.5 rounded-md transition-all ${activeTab === 'actions' ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+             title="Quick Actions"
+           >
+             <Beaker className="w-4 h-4" />
+           </button>
+           <button 
              onClick={() => setActiveTab('contractor')}
              className={`p-1.5 rounded-md transition-all ${activeTab === 'contractor' ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
              title="Advisory Service"
@@ -105,14 +175,17 @@ export const DevTools: React.FC = () => {
              <Bot className="w-4 h-4" />
            </button>
         </div>
-        <button onClick={() => setIsOpen(false)} className="text-slate-500 hover:text-white p-1">
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] text-slate-600 font-mono">{entities.length} entities</span>
+          <button onClick={() => setIsOpen(false)} className="text-slate-500 hover:text-white p-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {activeTab === 'scenarios' ? (
-        /* Scenarios View */
-        <div className="space-y-4">
+        /* ============== SCENARIOS TAB ============== */
+        <div className="space-y-4 overflow-y-auto custom-scrollbar">
              {/* DB Test Button */}
              <div className="space-y-2">
                  <button 
@@ -146,15 +219,104 @@ export const DevTools: React.FC = () => {
                     onClick={() => processVoiceInput(s.cmd)}
                     className="w-full text-left px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/30 border border-transparent text-xs text-slate-300 transition-all group"
                   >
-                    <div className="font-bold mb-0.5">{s.label}</div>
+                    <div className="font-bold mb-0.5">{s.icon} {s.label}</div>
                     <div className="text-[10px] text-slate-500 truncate group-hover:text-emerald-500/70">"{s.cmd}"</div>
                   </button>
                 ))}
              </div>
         </div>
+
+      ) : activeTab === 'actions' ? (
+        /* ============== QUICK ACTIONS TAB ============== */
+        <div className="space-y-3 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-right-4 duration-200">
+          
+          {/* Quick Add Buttons */}
+          <div className="space-y-1.5">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Quick Add</div>
+            
+            <button onClick={handleQuickHabitat} data-testid="devtools-add-habitat"
+              className="w-full text-left px-3 py-2.5 rounded-lg bg-slate-800/50 hover:bg-cyan-500/10 hover:border-cyan-500/30 border border-transparent text-xs transition-all group flex items-center gap-2">
+              <div className="bg-cyan-500/20 p-1.5 rounded-lg"><Plus className="w-3 h-3 text-cyan-400" /></div>
+              <div>
+                <div className="font-bold text-slate-200 group-hover:text-cyan-300">New Habitat</div>
+                <div className="text-[10px] text-slate-500">Random name/size/type</div>
+              </div>
+            </button>
+
+            <button onClick={handleQuickOrganism} data-testid="devtools-add-organism"
+              className="w-full text-left px-3 py-2.5 rounded-lg bg-slate-800/50 hover:bg-orange-500/10 hover:border-orange-500/30 border border-transparent text-xs transition-all group flex items-center gap-2">
+              <div className="bg-orange-500/20 p-1.5 rounded-lg"><Fish className="w-3 h-3 text-orange-400" /></div>
+              <div>
+                <div className="font-bold text-slate-200 group-hover:text-orange-300">Add Organism</div>
+                <div className="text-[10px] text-slate-500">Random fauna → random habitat ({habitats.length} available)</div>
+              </div>
+            </button>
+
+            <button onClick={handleQuickPlant} data-testid="devtools-add-plant"
+              className="w-full text-left px-3 py-2.5 rounded-lg bg-slate-800/50 hover:bg-emerald-500/10 hover:border-emerald-500/30 border border-transparent text-xs transition-all group flex items-center gap-2">
+              <div className="bg-emerald-500/20 p-1.5 rounded-lg"><Leaf className="w-3 h-3 text-emerald-400" /></div>
+              <div>
+                <div className="font-bold text-slate-200 group-hover:text-emerald-300">Add Plant</div>
+                <div className="text-[10px] text-slate-500">Random plant → random habitat ({habitats.length} available)</div>
+              </div>
+            </button>
+
+            <button onClick={handleQuickObservation} data-testid="devtools-add-observation"
+              className="w-full text-left px-3 py-2.5 rounded-lg bg-slate-800/50 hover:bg-purple-500/10 hover:border-purple-500/30 border border-transparent text-xs transition-all group flex items-center gap-2">
+              <div className="bg-purple-500/20 p-1.5 rounded-lg"><FlaskConical className="w-3 h-3 text-purple-400" /></div>
+              <div>
+                <div className="font-bold text-slate-200 group-hover:text-purple-300">Log Observation</div>
+                <div className="text-[10px] text-slate-500">Random pH/temp → random habitat</div>
+              </div>
+            </button>
+          </div>
+
+          {/* Enrichment */}
+          <div className="space-y-1.5">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Enrichment</div>
+            <button onClick={handleEnrichAll} data-testid="devtools-enrich-all"
+              className="w-full px-3 py-2.5 rounded-lg bg-slate-800/50 hover:bg-amber-500/10 hover:border-amber-500/30 border border-transparent text-xs transition-all group flex items-center gap-2">
+              <div className="bg-amber-500/20 p-1.5 rounded-lg"><RefreshCw className="w-3 h-3 text-amber-400" /></div>
+              <div className="text-left">
+                <div className="font-bold text-slate-200 group-hover:text-amber-300">Enrich All Entities</div>
+                <div className="text-[10px] text-slate-500">
+                  {organisms.filter(e => e.enrichment_status !== 'complete').length} pending / {organisms.length} total
+                </div>
+              </div>
+            </button>
+          </div>
+
+          {/* Live DB Summary */}
+          <div className="space-y-1.5">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Local DB</div>
+            <div className="bg-black/40 rounded-lg p-2 text-[10px] font-mono text-slate-400 space-y-0.5">
+              <div>🏠 Habitats: <span className="text-white">{habitats.length}</span></div>
+              <div>🐟 Organisms: <span className="text-white">{organisms.filter(e => e.type === 'ORGANISM' as any).length}</span></div>
+              <div>🌿 Plants: <span className="text-white">{organisms.filter(e => e.type === 'PLANT' as any).length}</span></div>
+              <div>🦐 Colonies: <span className="text-white">{organisms.filter(e => e.type === 'COLONY' as any).length}</span></div>
+              <div className="border-t border-slate-800 pt-1 mt-1">
+                ✅ Enriched: <span className="text-emerald-400">{organisms.filter(e => e.enrichment_status === 'complete').length}</span>
+                {' '}⏳ Pending: <span className="text-amber-400">{organisms.filter(e => e.enrichment_status !== 'complete').length}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Log */}
+          {actionLog.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Action Log</div>
+              <div className="bg-black/40 rounded-lg p-2 text-[10px] font-mono text-slate-500 space-y-0.5 max-h-32 overflow-y-auto">
+                {actionLog.map((msg, i) => (
+                  <div key={i} className={i === 0 ? 'text-emerald-400' : ''}>{msg}</div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
       ) : (
-        /* Advisory View */
-        <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300">
+        /* ============== CONTRACTOR/ADVISORY TAB ============== */
+        <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300 overflow-y-auto custom-scrollbar">
             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
                 <h4 className="text-emerald-400 font-bold text-xs flex items-center gap-2 mb-1">
                     <Bot className="w-3 h-3" /> Architectural Advisor

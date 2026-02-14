@@ -65,7 +65,7 @@ export interface Entity {
   created_at: number;
   updated_at: number;
   aliases: string[];
-  enrichment_status: 'none' | 'pending' | 'complete' | 'failed';
+  enrichment_status: 'none' | 'queued' | 'pending' | 'complete' | 'failed';
   overflow?: Record<string, any>;
 }
 
@@ -171,4 +171,31 @@ export interface ChatMessage {
   isSearch?: boolean;
   isThinking?: boolean;
   groundingLinks?: Array<{ title: string; uri: string }>;
+}
+
+export type ResearchStageStatus = 'waiting' | 'active' | 'complete' | 'error' | 'skipped';
+
+export interface ResearchStage {
+  name: 'library' | 'gbif' | 'wikipedia' | 'inaturalist' | 'discovery';
+  label: string;
+  status: ResearchStageStatus;
+  error?: string;
+}
+
+export interface ResearchEntityProgress {
+  entityId: string;
+  entityName: string;
+  stages: ResearchStage[];
+  discoverySnippet?: string;  // first sentence of mechanism, for the reveal
+}
+
+export interface ResearchProgress {
+  isActive: boolean;
+  totalEntities: number;
+  completedEntities: number;
+  currentEntityIndex: number;
+  currentEntity: { id: string; name: string } | null;
+  currentStage: ResearchStage['name'] | null;
+  entityResults: ResearchEntityProgress[];
+  discoveries: Array<{ entityId: string; entityName: string; mechanism: string }>;
 }

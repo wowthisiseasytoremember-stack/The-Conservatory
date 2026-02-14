@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { Entity, EntityType, EntityGroup } from '../types';
-import { Waves, Flower2, Bug, Package, ChevronRight, Settings2 } from 'lucide-react';
+import { Waves, Flower2, Bug, Package, ChevronRight, Settings2, Search } from 'lucide-react';
+import { useConservatory } from '../services/store';
 
 interface EntityListProps {
   entities: Entity[];
@@ -14,6 +15,7 @@ interface EntityListProps {
 export const EntityList: React.FC<EntityListProps> = ({ 
   entities, groups, activeHabitatId, onSetActiveHabitat, onEditEntity 
 }) => {
+  const { deepResearchHabitat } = useConservatory();
   const getIcon = (type: EntityType) => {
     switch (type) {
       case EntityType.HABITAT: return <Waves className="w-5 h-5 text-cyan-400" />;
@@ -50,8 +52,23 @@ export const EntityList: React.FC<EntityListProps> = ({
           {getIcon(e.type)}
           <div className="flex gap-1">
             {isHabitat && isActive && (
-               <div className="bg-cyan-500 text-[8px] font-bold text-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
-                 Active
+               <div className="flex gap-1 items-center">
+                 <div className="bg-cyan-500 text-[8px] font-bold text-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
+                   Active
+                 </div>
+                 {entities.some(ent => ent.habitat_id === e.id && ent.enrichment_status === 'queued') && (
+                   <button
+                     onClick={(evt) => {
+                       evt.stopPropagation();
+                       deepResearchHabitat(e.id);
+                     }}
+                     className="bg-emerald-600 hover:bg-emerald-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-0.5 shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+                     title="Research new residents"
+                     data-testid="research-habitat-btn"
+                   >
+                     <Search className="w-2 h-2" /> Research
+                   </button>
+                 )}
                </div>
             )}
             {e.quantity !== undefined && (
