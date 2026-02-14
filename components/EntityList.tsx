@@ -62,8 +62,8 @@ export const EntityList: React.FC<EntityListProps> = ({ entities, groups, onSele
     <div className="space-y-10 pb-20">
       {/* Grouped View */}
       {groups.map(g => (
-        entitiesByGroup[g.id].length > 0 && (
-          <div key={g.id} className="space-y-4">
+        entitiesByGroup[g.id]?.length > 0 && (
+          <div key={`${g.id}-${entitiesByGroup[g.id].length}`} className="space-y-4">
             <div className="flex items-center gap-2 px-1">
               <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-500/80">{g.name}</h3>
               <div className="flex-1 h-px bg-cyan-500/10" />

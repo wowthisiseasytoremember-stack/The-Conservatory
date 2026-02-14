@@ -231,6 +231,87 @@ export const geminiService = {
   },
 
   /**
+   * Ecosystem Narrative: Holistic Synthesis
+   */
+  async getEcosystemNarrative(snapshot: any): Promise<{ webOfLife: string; biomicStory: string; evolutionaryTension: string }> {
+    const ai = getClient();
+    const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
+      model: "gemini-3-pro-preview",
+      contents: `Synthesize the biological connections of this habitat: ${JSON.stringify(snapshot)}`,
+      config: {
+        systemInstruction: `
+          You are the Master Ecologist. 
+          Analyze the habitat snapshot (metadata + inhabitants).
+          Generate a 3-part holistic report:
+          1. webOfLife: How the specific plants and animals interact (shelter, biological filtration, etc.).
+          2. biomicStory: A cohesive narrative of the tank's natural theme and inspiration.
+          3. evolutionaryTension: Identifying potential biological dynamics (e.g. who competes for space, who hides where).
+          Be sophisticated, educational, and fascinating.
+        `,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            webOfLife: { type: Type.STRING },
+            biomicStory: { type: Type.STRING },
+            evolutionaryTension: { type: Type.STRING }
+          },
+          required: ["webOfLife", "biomicStory", "evolutionaryTension"]
+        },
+      }
+    }));
+    return JSON.parse(response.text || '{}');
+  },
+
+  /**
+   * Generate a high-fidelity image prompt for habitat visuals
+   */
+  async generateHabitatVisualPrompt(narrative: string): Promise<string> {
+    const ai = getClient();
+    const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
+      model: "gemini-3-pro-preview",
+      contents: `Based on this ecosystem narrative, generate a detailed image generation prompt for a premium botanical illustration: ${narrative}`,
+      config: {
+        systemInstruction: "Generate a descriptive, photographic, or artistic image prompt focusing on botanical accuracy and atmospheric beauty. No titles or text.",
+      }
+    }));
+    return response.text || '';
+  },
+
+  /**
+   * Discovery Layer: Scientific Mechanisms & Ethology
+   */
+  async getBiologicalDiscovery(speciesName: string): Promise<{ mechanism: string; evolutionaryAdvantage: string; synergyNote: string }> {
+    const ai = getClient();
+    const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
+      model: "gemini-3-pro-preview",
+      contents: `Identify the biological mechanism or ethological secret of: ${speciesName}.`,
+      config: {
+        systemInstruction: `
+          You are the Chief Biologist of The Conservatory. 
+          Your goal is to reveal the "How" and "Why" behind biological traits.
+          Focus on:
+          1. Scientific Mechanisms: (e.g., How photosynthesis adapts to low light, or how shrimp use antennae).
+          2. Evolutionary Advantage: Why did this trait evolve in the wild?
+          3. Synergy: How does this species benefit others in a captive ecosystem (e.g. nitrogen cycle, physical shelter).
+          Avoid "twee" or overly poetic language. Be rigorous, fascinating, and scientific.
+        `,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            mechanism: { type: Type.STRING, description: "The scientific explanation of the trait/behavior" },
+            evolutionaryAdvantage: { type: Type.STRING, description: "Why this trait exists in the wild" },
+            synergyNote: { type: Type.STRING, description: "How this species interacts with others (Flora/Fauna)" }
+          },
+          required: ["mechanism", "evolutionaryAdvantage", "synergyNote"]
+        },
+      }
+    }));
+    return JSON.parse(response.text || '{}');
+  },
+
+  /**
    * Integrated Chat (Grounded Flash or Thinking Pro)
    */
 
@@ -249,12 +330,26 @@ export const geminiService = {
     const allPlants = plantService.getAll();
     const plantIndex = allPlants.map(p => p.name).join(', ');
     
-    // Smart Lookup: If message contains a plant name, inject its details
-    // Simple heuristic: Does the message contain a known plant string?
-    const relevantPlants = allPlants.filter(p => 
+    // Smart Lookup: 
+    // 1. Direct Match: If message contains a known plant name (or close to it)
+    let relevantPlants = allPlants.filter(p => 
         message.toLowerCase().includes(p.name.toLowerCase()) || 
         message.toLowerCase().includes(p.id.toLowerCase())
-    ).slice(0, 3); // Limit to top 3 matches to save tokens
+    ).slice(0, 3);
+
+    // 2. Genus/Group Match (Fallback):
+    // If we didn't find specific plants, check if the user is asking about a known Genus 
+    // (e.g. "Anubias someweirdname" -> send all Anubias)
+    if (relevantPlants.length === 0) {
+       const potentialGenera = message.split(' ').filter(w => w.length > 3); // Simple heuristic: words > 3 chars
+       for (const word of potentialGenera) {
+          const group = plantService.getGenusGroup(word);
+          if (group.length > 0) {
+             relevantPlants = group.slice(0, 10); // Limit to top 10 of the genus
+             break; 
+          }
+       }
+    }
 
     let contextString = `
     AVAILABLE PLANT DATABASE:

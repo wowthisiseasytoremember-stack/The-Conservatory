@@ -26,11 +26,7 @@ const App: React.FC = () => {
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('unknown');
-  const [testUser, setTestUser] = useState<any>(null);
 
-  useEffect(() => {
-    // @ts-ignore
-    window.setTestUser = (u: any) => setTestUser(u);
     // @ts-ignore
     window.processVoiceInput = processVoiceInput;
     
@@ -53,7 +49,7 @@ const App: React.FC = () => {
     });
   };
 
-  if (!user && !testUser) {
+  if (!user) {
     return <LoginView onLogin={login} />;
   }
 

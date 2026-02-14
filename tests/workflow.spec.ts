@@ -56,6 +56,9 @@ test.describe('The Conservatory E2E Workflows', () => {
     });
     // Wait for App to load
     await expect(page.locator('h1')).toContainText(/Activity|Collection/);
+    
+    // Debug: Log browser console to stdout
+    page.on('console', msg => console.log(`BROWSER_LOG: ${msg.text()}`));
   });
 
   test('CUJ: Create Habitat -> Add Entities -> Log Observation', async ({ page }) => {
@@ -73,9 +76,8 @@ test.describe('The Conservatory E2E Workflows', () => {
 
     // Verify in Collection
     await page.click('button:has-text("Collection")');
-    await expect(page.locator(`.p-4:has-text("${habitatName}")`)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('button', { name: habitatName })).toBeVisible({ timeout: 15000 });
 
-    /*
     // 2. Add Entities
     await page.evaluate((name) => {
       // @ts-ignore
@@ -106,9 +108,8 @@ test.describe('The Conservatory E2E Workflows', () => {
     
     // Check collection count - should still be 1 unique habitat
     await page.click('button:has-text("Collection")');
-    const count = await page.locator(`.p-4:has-text("${habitatName}")`).count();
+    const count = await page.getByRole('button', { name: habitatName }).count();
     expect(count).toBe(1);
-    */
   });
 
 });
