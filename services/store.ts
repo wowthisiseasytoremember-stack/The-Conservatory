@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   AppEvent, Entity, DomainEvent, EntityGroup, PendingAction, EntityType, EventStatus, ChatMessage,
-  IdentifyResult, ResearchProgress, ResearchStage, ResearchEntityProgress 
+  IdentifyResult, ResearchProgress, ResearchStage, ResearchEntityProgress, BiomeTheme 
 } from '../types';
 import { geminiService } from './geminiService';
 import { 
@@ -254,6 +254,22 @@ class ConservatoryStore {
     };
   }
 
+  public get activeBiomeTheme(): BiomeTheme {
+    if (!this.activeHabitatId) return 'default';
+    const habitat = this.entities.find(e => e.id === this.activeHabitatId);
+    if (!habitat) return 'default';
+
+    const type = (habitat as any).details?.type?.toLowerCase() || '';
+    const name = habitat.name.toLowerCase();
+
+    if (name.includes('blackwater')) return 'blackwater';
+    if (name.includes('tanganyika') || name.includes('malawi')) return 'tanganyika';
+    if (type.includes('marine') || type.includes('reef') || name.includes('ocean')) return 'marine';
+    if (type.includes('paludarium') || type.includes('terrarium') || type.includes('vivarium')) return 'paludarium';
+    
+    return 'default';
+  }
+
   resolveEntity<T extends { id: string; name: string; aliases?: string[] }>(
     userInput: string,
     candidates: T[]
@@ -490,10 +506,13 @@ class ConservatoryStore {
           }
         }
       } else if (intent === 'ACCESSION_ENTITY') {
+        const targetHabitatId = safePayload.targetHabitatId || 
+          this.entities.find(e => e.type === EntityType.HABITAT && e.name.toLowerCase().trim() === (safePayload.targetHabitatName || '').toLowerCase().trim())?.id;
+
         for (const cand of safePayload.candidates || []) {
           const normalizedName = cand.commonName.toLowerCase().trim();
           const existing = this.entities.find(e => 
-            e.habitat_id === safePayload.targetHabitatId &&
+            e.habitat_id === targetHabitatId &&
             e.name.toLowerCase().trim() === normalizedName
           );
 
@@ -509,7 +528,7 @@ class ConservatoryStore {
           const entityData: any = this.cleanDataObject({
             name: cand.commonName,
             scientificName: cand.scientificName, 
-            habitat_id: safePayload.targetHabitatId,
+            habitat_id: targetHabitatId,
             traits: cand.traits || [],
             type,
             quantity: cand.quantity,

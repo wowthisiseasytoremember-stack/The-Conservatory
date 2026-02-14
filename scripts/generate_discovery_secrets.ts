@@ -13,6 +13,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import 'dotenv/config'; // Load env vars
 import { GoogleGenAI, Type, GenerateContentResponse } from '@google/genai';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -95,13 +96,13 @@ async function main() {
   const limit = limitIdx !== -1 ? parseInt(args[limitIdx + 1]) : Infinity;
   const resume = args.includes('--resume');
 
-  if (!process.env.API_KEY) {
-    console.error("ERROR: API_KEY environment variable is required.");
-    console.error("Usage: API_KEY=your_key npx ts-node scripts/generate_discovery_secrets.ts");
+  if (!process.env.GEMINI_API_KEY) {
+    console.error("ERROR: GEMINI_API_KEY environment variable is required.");
+    console.error("Usage: GEMINI_API_KEY=your_key npx ts-node scripts/generate_discovery_secrets.ts");
     process.exit(1);
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
   console.log("Loading plant library...");
   const library: PlantEntry[] = JSON.parse(fs.readFileSync(LIBRARY_PATH, 'utf-8'));

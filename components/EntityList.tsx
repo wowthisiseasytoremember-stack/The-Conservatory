@@ -41,6 +41,7 @@ export const EntityList: React.FC<EntityListProps> = ({
             onEditEntity(e);
           }
         }}
+        data-testid={isHabitat ? `habitat-card-${e.id}` : `entity-card-${e.id}`}
         className={`
           border p-3 rounded-xl transition-all text-left relative group
           ${isActive 

@@ -2,8 +2,7 @@
 import React from 'react';
 import { Leaf, Activity, LayoutGrid, Settings, AlertCircle, LogOut } from 'lucide-react';
 import { ConnectionStatus } from '../services/connectionService';
-
-export type BiomeTheme = 'default' | 'blackwater' | 'tanganyika' | 'paludarium' | 'marine';
+import { BiomeTheme } from '../types';
 
 interface MainLayoutProps {
   children: React.ReactNode;

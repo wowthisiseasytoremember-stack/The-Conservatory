@@ -1,4 +1,6 @@
 
+export type BiomeTheme = 'default' | 'blackwater' | 'tanganyika' | 'paludarium' | 'marine';
+
 export type ActionStatus = 'LISTENING' | 'ANALYZING' | 'CONFIRMING' | 'COMMITTING' | 'STRATEGY_REQUIRED' | 'ERROR';
 
 export enum EventStatus {

@@ -12,14 +12,14 @@ import { AIChatBot } from './components/AIChatBot';
 import { DeepResearchLoader } from './components/DeepResearchLoader';
 import { FirebaseConfigModal } from './components/FirebaseConfigModal';
 import { LoginView } from './components/LoginView';
-import { MainLayout, BiomeTheme } from './components/MainLayout';
-import { Entity, RackContainer, IdentifyResult } from './types';
+import { MainLayout } from './components/MainLayout';
+import { Entity, RackContainer, IdentifyResult, BiomeTheme } from './types';
 import { ConnectionStatus } from './services/connectionService';
 
 const App: React.FC = () => {
   const { 
     events, entities, groups, pendingAction, user, liveTranscript,
-    activeHabitatId, researchProgress,
+    activeHabitatId, researchProgress, activeBiomeTheme,
     processVoiceInput, commitPendingAction, discardPending, 
     updateSlot, updateEntity, addGroup, testConnection, login, logout,
     createActionFromVision, setActiveHabitat, deepResearchAll, resetResearchProgress
@@ -76,7 +76,7 @@ const App: React.FC = () => {
       connectionStatus={connectionStatus}
       onOpenSettings={() => setIsSettingsOpen(true)}
       onLogout={logout}
-      biomeTheme={biomeTheme}
+      biomeTheme={activeBiomeTheme}
       liveTranscript={liveTranscript}
       photoIdentifyComponent={
         <PhotoIdentify onConfirm={handlePhotoConfirm} />

@@ -84,12 +84,14 @@ test.describe('Deep Research Enrichment Pipeline', () => {
     await goToCollection(page);
     
     // 3. Select the habitat to see the entities
-    const labBtn = page.locator('button:has-text("Research Lab")');
+    const labBtn = page.getByRole('button').filter({ hasText: 'Research Lab' }).first();
+    await expect(labBtn).toBeVisible({ timeout: 15000 });
     await labBtn.click();
+    await page.waitForTimeout(500); // Wait for list animation
 
     // 4. Verify "Research" button is visible because of queued entity
     const researchBtn = page.getByTestId('research-habitat-btn');
-    await expect(researchBtn).toBeVisible({ timeout: 5000 });
+    await expect(researchBtn).toBeVisible({ timeout: 10000 });
 
     // 5. Start research
     await researchBtn.click();

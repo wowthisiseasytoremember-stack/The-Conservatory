@@ -16,7 +16,11 @@ interface EntityDetailModalProps {
 interface GbifData {
   scientificName: string;
   kingdom: string;
+  phylum?: string;
+  class?: string;
+  order?: string;
   family: string;
+  genus?: string;
   matchType: string;
   status: string;
 }
@@ -54,7 +58,11 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
           setGbifData({
             scientificName: data.scientificName,
             kingdom: data.kingdom,
+            phylum: data.phylum,
+            class: data.class,
+            order: data.order,
             family: data.family,
+            genus: data.genus,
             matchType: data.matchType,
             status: data.status
           });
@@ -233,6 +241,17 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
           </button>
         </div>
 
+        {/* Taxonomy Ribbon (B2) */}
+        {gbifData && (entity.type === 'ORGANISM' || entity.type === 'PLANT') && (
+          <div className="bg-black/40 px-6 py-2 border-b border-slate-800/50 overflow-x-auto no-scrollbar whitespace-nowrap">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] font-medium text-slate-500">
+              <span className="text-emerald-500/70">Kingdom</span> {gbifData.kingdom}
+              {gbifData.phylum && <><span className="text-slate-700 mx-1">·</span> <span className="text-emerald-500/70">Phylum</span> {gbifData.phylum}</>}
+              {gbifData.family && <><span className="text-slate-700 mx-1">·</span> <span className="text-emerald-500/70">Family</span> {gbifData.family}</>}
+            </div>
+          </div>
+        )}
+
         <div className="p-6 space-y-8 overflow-y-auto no-scrollbar flex-1">
           
           {/* GBIF Scientific Context Card */}
@@ -276,6 +295,11 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
                ) : (
                  <div className="text-sm text-slate-500 italic">No scientific match found in global database.</div>
                )}
+
+               {/* Visual Gauges */}
+               <div className="mt-4 pt-4 border-t border-slate-700/50">
+                 {renderTraitGauges()}
+               </div>
             </div>
           )}
 

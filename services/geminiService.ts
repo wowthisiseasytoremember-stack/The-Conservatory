@@ -1,5 +1,4 @@
-
-import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { z } from 'zod';
 import { Entity, PendingAction, IdentifyResult, AdvisoryReport, RackContainer } from "../types";
 import { 
@@ -12,11 +11,6 @@ import {
   BiologicalDiscoverySchema 
 } from '../src/schemas';
 import { plantService } from './plantService';
-
-// Initialize using the mandatory process.env.API_KEY
-const getClient = () => {
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
-};
 
 const withTimeout = <T>(promise: Promise<T>, ms: number = 45000): Promise<T> => {
   return Promise.race([
@@ -101,12 +95,37 @@ const PENDING_ACTION_SCHEMA = {
   required: ["intent", "aiReasoning"]
 };
 
+// Internal helper to call the secure Vercel API proxy
+async function callProxy(config: {
+  model: string;
+  contents: any;
+  systemInstruction?: string;
+  generationConfig?: any;
+}) {
+  const res = await fetch('/api/proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: config.model,
+      contents: config.contents,
+      systemInstruction: config.systemInstruction,
+      config: config.generationConfig
+    })
+  });
+  
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'AI Proxy Error');
+  }
+  
+  return await res.json();
+}
+
 export const geminiService = {
   /**
    * Fast parsing for voice commands (gemini-flash-lite-latest)
    */
   async parseVoiceCommand(transcription: string, entities: Entity[]): Promise<any> {
-    const ai = getClient();
     const entityIndex = entities.map(e => ({ id: e.id, name: e.name, aliases: e.aliases }));
 
     const systemInstruction = `
@@ -115,34 +134,33 @@ export const geminiService = {
       Priority: Speed. Use gemini-flash-lite-latest.
     `;
 
-    // Using gemini-flash-lite-latest as per guidelines for flash lite models
-    const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
+    const response = await withTimeout(callProxy({
       model: "gemini-flash-lite-latest",
       contents: transcription,
-      config: {
-        systemInstruction,
+      systemInstruction,
+      generationConfig: {
         responseMimeType: "application/json",
         responseSchema: PENDING_ACTION_SCHEMA,
       },
     }));
+
     const data = JSON.parse(response.text || '{}');
     return PendingActionSchema.parse(data);
   },
 
   /**
-   * Deep Multimodal Analysis (gemini-3-pro-preview)
+   * Deep Multimodal Analysis (gemini-1.5-pro-latest)
    */
   async identifyPhoto(base64Data: string): Promise<IdentifyResult> {
-    const ai = getClient();
-    const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
-      model: "gemini-3-pro-preview",
-      contents: {
-        parts: [
+    const response = await withTimeout(callProxy({
+      model: "gemini-1.5-pro-latest",
+      contents: [
+        { role: 'user', parts: [
           { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
           { text: "Identify the species in this photo with high precision. Provide reasoning and confidence." }
-        ]
-      },
-      config: {
+        ]}
+      ],
+      generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -162,19 +180,18 @@ export const geminiService = {
   },
 
   /**
-   * Analyze rack setup (gemini-3-pro-preview)
+   * Analyze rack setup (gemini-1.5-pro-latest)
    */
   async analyzeRackScene(base64Data: string): Promise<{ containers: RackContainer[] }> {
-    const ai = getClient();
-    const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
-      model: "gemini-3-pro-preview",
-      contents: {
-        parts: [
+    const response = await withTimeout(callProxy({
+      model: "gemini-1.5-pro-latest",
+      contents: [
+        { role: 'user', parts: [
           { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
           { text: "Identify all aquarium/terrarium containers on this rack. Map their position and contents." }
-        ]
-      },
-      config: {
+        ]}
+      ],
+      generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -217,14 +234,13 @@ export const geminiService = {
   },
 
   /**
-   * Advisory Report (gemini-3-pro-preview)
+   * Advisory Report (gemini-1.5-pro-latest)
    */
   async getAdvisoryReport(intent: string): Promise<AdvisoryReport> {
-    const ai = getClient();
-    const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+    const response = await withTimeout(callProxy({
+      model: "gemini-1.5-pro-latest",
       contents: `Propose an implementation strategy for the following user request: ${intent}`,
-      config: {
+      generationConfig: {
         systemInstruction: "You are an expert system architect specializing in digital twin management. Provide implementation reports.",
         responseMimeType: "application/json",
         responseSchema: {
@@ -248,25 +264,24 @@ export const geminiService = {
    * Strategy Agent: Handle unknown or complex intents
    */
   async getIntentStrategy(input: string, context: any): Promise<any> {
-    const ai = getClient();
-    const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+    const response = await withTimeout(callProxy({
+      model: "gemini-1.5-pro-latest",
       contents: `The user said: "${input}". 
                  Context: ${JSON.stringify(context)}.
                  Analyze what they want and provide a strategy.`,
-      config: {
-        systemInstruction: `
-          You are the Conservatory Strategy Agent.
-          When a user says something the system doesn't understand (e.g. "Crayfish molted"), 
-          your job is to suggest a path forward in a friendly, conversational way.
-          
-          Guidelines:
-          1. advice: Phrase this as a helpful suggestion or interpretation. 
-             Example: "It sounds like you want to log a biological event for your crayfish. I can help with that—should I add a molting record to its history?"
-          2. suggestedCommand: A specific, executable command that the system understands.
-             Example: "Update Crayfish to include INVERTEBRATE trait with molting set to true."
-          3. Never say "I don't know." Always provide a best-guess interpretation.
-        `,
+      systemInstruction: `
+        You are the Conservatory Strategy Agent.
+        When a user says something the system doesn't understand (e.g. "Crayfish molted"), 
+        your job is to suggest a path forward in a friendly, conversational way.
+        
+        Guidelines:
+        1. advice: Phrase this as a helpful suggestion or interpretation. 
+           Example: "It sounds like you want to log a biological event for your crayfish. I can help with that—should I add a molting record to its history?"
+        2. suggestedCommand: A specific, executable command that the system understands.
+           Example: "Update Crayfish to include INVERTEBRATE trait with molting set to true."
+        3. Never say "I don't know." Always provide a best-guess interpretation.
+      `,
+      generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -287,20 +302,19 @@ export const geminiService = {
    * Ecosystem Narrative: Holistic Synthesis
    */
   async getEcosystemNarrative(snapshot: any): Promise<{ webOfLife: string; biomicStory: string; evolutionaryTension: string }> {
-    const ai = getClient();
-    const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+    const response = await withTimeout(callProxy({
+      model: "gemini-1.5-pro-latest",
       contents: `Synthesize the biological connections of this habitat: ${JSON.stringify(snapshot)}`,
-      config: {
-        systemInstruction: `
-          You are the Master Ecologist. 
-          Analyze the habitat snapshot (metadata + inhabitants).
-          Generate a 3-part holistic report:
-          1. webOfLife: How the specific plants and animals interact (shelter, biological filtration, etc.).
-          2. biomicStory: A cohesive narrative of the tank's natural theme and inspiration.
-          3. evolutionaryTension: Identifying potential biological dynamics (e.g. who competes for space, who hides where).
-          Be sophisticated, educational, and fascinating.
-        `,
+      systemInstruction: `
+        You are the Master Ecologist. 
+        Analyze the habitat snapshot (metadata + inhabitants).
+        Generate a 3-part holistic report:
+        1. webOfLife: How the specific plants and animals interact (shelter, biological filtration, etc.).
+        2. biomicStory: A cohesive narrative of the tank's natural theme and inspiration.
+        3. evolutionaryTension: Identifying potential biological dynamics (e.g. who competes for space, who hides where).
+        Be sophisticated, educational, and fascinating.
+      `,
+      generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -321,13 +335,10 @@ export const geminiService = {
    * Generate a high-fidelity image prompt for habitat visuals
    */
   async generateHabitatVisualPrompt(narrative: string): Promise<string> {
-    const ai = getClient();
-    const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+    const response = await withTimeout(callProxy({
+      model: "gemini-1.5-pro-latest",
       contents: `Based on this ecosystem narrative, generate a detailed image generation prompt for a premium botanical illustration: ${narrative}`,
-      config: {
-        systemInstruction: "Generate a descriptive, photographic, or artistic image prompt focusing on botanical accuracy and atmospheric beauty. No titles or text.",
-      }
+      systemInstruction: "Generate a descriptive, photographic, or artistic image prompt focusing on botanical accuracy and atmospheric beauty. No titles or text.",
     }));
     return response.text || '';
   },
@@ -336,20 +347,19 @@ export const geminiService = {
    * Discovery Layer: Scientific Mechanisms & Ethology
    */
   async getBiologicalDiscovery(speciesName: string): Promise<{ mechanism: string; evolutionaryAdvantage: string; synergyNote: string }> {
-    const ai = getClient();
-    const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+    const response = await withTimeout(callProxy({
+      model: "gemini-1.5-pro-latest",
       contents: `Identify the biological mechanism or ethological secret of: ${speciesName}.`,
-      config: {
-        systemInstruction: `
-          You are the Chief Biologist of The Conservatory. 
-          Your goal is to reveal the "How" and "Why" behind biological traits.
-          Focus on:
-          1. Scientific Mechanisms: (e.g., How photosynthesis adapts to low light, or how shrimp use antennae).
-          2. Evolutionary Advantage: Why did this trait evolve in the wild?
-          3. Synergy: How does this species benefit others in a captive ecosystem (e.g. nitrogen cycle, physical shelter).
-          Avoid "twee" or overly poetic language. Be rigorous, fascinating, and scientific.
-        `,
+      systemInstruction: `
+        You are the Chief Biologist of The Conservatory. 
+        Your goal is to reveal the "How" and "Why" behind biological traits.
+        Focus on:
+        1. Scientific Mechanisms: (e.g., How photosynthesis adapts to low light, or how shrimp use antennae).
+        2. Evolutionary Advantage: Why did this trait evolve in the wild?
+        3. Synergy: How does this species benefit others in a captive ecosystem (e.g. nitrogen cycle, physical shelter).
+        Avoid "twee" or overly poetic language. Be rigorous, fascinating, and scientific.
+      `,
+      generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -369,38 +379,26 @@ export const geminiService = {
   /**
    * Integrated Chat (Grounded Flash or Thinking Pro)
    */
-
-
   async chat(
     message: string, 
     history: any[] = [], 
     options: { search?: boolean; thinking?: boolean } = {}
   ): Promise<{ text: string; links?: any[] }> {
-    const ai = getClient();
-    
     // CONTEXT INJECTION: Plant Library
-    // We inject the full list of names so the AI knows what we have.
-    // If the user asks about a specific plant, we could inject full details here.
-    // For now, we provide the index and a lookup instruction.
     const allPlants = plantService.getAll();
     const plantIndex = allPlants.map(p => p.name).join(', ');
     
-    // Smart Lookup: 
-    // 1. Direct Match: If message contains a known plant name (or close to it)
     let relevantPlants = allPlants.filter(p => 
         message.toLowerCase().includes(p.name.toLowerCase()) || 
         message.toLowerCase().includes(p.id.toLowerCase())
     ).slice(0, 3);
 
-    // 2. Genus/Group Match (Fallback):
-    // If we didn't find specific plants, check if the user is asking about a known Genus 
-    // (e.g. "Anubias someweirdname" -> send all Anubias)
     if (relevantPlants.length === 0) {
-       const potentialGenera = message.split(' ').filter(w => w.length > 3); // Simple heuristic: words > 3 chars
+       const potentialGenera = message.split(' ').filter(w => w.length > 3);
        for (const word of potentialGenera) {
           const group = plantService.getGenusGroup(word);
           if (group.length > 0) {
-             relevantPlants = group.slice(0, 10); // Limit to top 10 of the genus
+             relevantPlants = group.slice(0, 10);
              break; 
           }
        }
@@ -419,22 +417,16 @@ export const geminiService = {
         `;
     }
 
-    const model = options.search ? "gemini-3-flash-preview" : "gemini-3-pro-preview";
-    const config: any = {};
+    const model = options.search ? "gemini-2.0-flash-exp" : "gemini-1.5-pro-latest";
     
-    // ... (existing config logic)
-    
-    const chatInstance = ai.chats.create({
+    const response = await callProxy({
       model,
-      config: {
-        ...config,
-        systemInstruction: `You are the Conservatory Guide. Help with aquaculture, biology, and system operations. \n${contextString}`
-      },
-      history: history.map(h => ({ role: h.role, parts: [{ text: h.text }] }))
+      contents: [
+        ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'model', parts: [{ text: h.text }] })),
+        { role: 'user', parts: [{ text: message }] }
+      ],
+      systemInstruction: `You are the Conservatory Guide. Help with aquaculture, biology, and system operations. \n${contextString}`
     });
-
-
-    const response = await chatInstance.sendMessage({ message });
     
     // Extract Grounding Chunks for display as mandatory
     const links = response.candidates?.[0]?.groundingMetadata?.groundingChunks

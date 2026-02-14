@@ -16,7 +16,6 @@ import {
   limit,
   writeBatch
 } from 'firebase/firestore';
-// Fix: FieldValue and User should be imported as types to avoid "no exported member" value errors in some environments
 import type { FieldValue } from 'firebase/firestore';
 import { getAnalytics } from 'firebase/analytics';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
