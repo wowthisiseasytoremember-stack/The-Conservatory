@@ -2,15 +2,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
-  AppEvent, Entity, DomainEvent, EntityGroup, PendingAction, EntityType, EventStatus, ChatMessage 
+  AppEvent, Entity, DomainEvent, EntityGroup, PendingAction, EntityType, EventStatus, ChatMessage,
+  IdentifyResult 
 } from '../types';
 import { geminiService } from './geminiService';
 import { 
   db, auth, collection, addDoc, doc, getDoc, setDoc, serverTimestamp, 
   onSnapshot, query, orderBy, limit, signInWithPopup, signOut, 
-  onAuthStateChanged, googleProvider, User
+  onAuthStateChanged, googleProvider, User, writeBatch
 } from './firebase';
 import { connectionService, ConnectionStatus } from './connectionService';
+import { mockFirestore } from './MockFirestoreService';
 
 class ConservatoryStore {
   private events: AppEvent[] = [];
@@ -19,8 +21,11 @@ class ConservatoryStore {
   private messages: ChatMessage[] = [];
   private pendingAction: PendingAction | null = null;
   private user: User | null = null;
+  private liveTranscript: string = '';
   private listeners: (() => void)[] = [];
   private unsubscribes: (() => void)[] = [];
+
+  private activeHabitatId: string | null = null;
 
   constructor() {
     this.loadLocal();
@@ -171,10 +176,24 @@ class ConservatoryStore {
   }
 
   getEvents() { return [...this.events]; }
-  getEntities() { return [...this.entities]; }
+  getActiveHabitatId() { return this.activeHabitatId; }
+
+  setActiveHabitat(id: string | null) {
+    this.activeHabitatId = id;
+    this.persistLocal();
+  }
+
+  getEntities() { return this.entities; }
   getGroups() { return [...this.groups]; }
   getMessages() { return [...this.messages]; }
   getPendingAction() { return this.pendingAction ? { ...this.pendingAction } : null; }
+  getLiveTranscript() { return this.liveTranscript; }
+
+  setLiveTranscript(text: string) {
+    this.liveTranscript = text;
+    this.notify();
+  }
+
   getUser() { return this.user; }
 
   /**
@@ -250,6 +269,27 @@ class ConservatoryStore {
   }
 
   async processVoiceInput(text: string) {
+    // Conversational Loop: If we are waiting for strategy confirmation
+    if (this.pendingAction?.status === 'STRATEGY_REQUIRED' && this.pendingAction.intentStrategy) {
+      const lowerText = text.toLowerCase().trim();
+      const isYes = ['yes', 'correct', 'yeah', 'yep', 'do it', 'sure'].some(w => lowerText.includes(w));
+      const isNo = ['no', 'nope', 'incorrect', 'wrong', 'wait'].some(w => lowerText.includes(w));
+
+      if (isYes && this.pendingAction.intentStrategy.suggestedCommand) {
+        const cmd = this.pendingAction.intentStrategy.suggestedCommand;
+        this.pendingAction = null; // Clear strategy and re-process as the suggested command
+        return this.processVoiceInput(cmd);
+      } else if (isNo) {
+        this.pendingAction = {
+          ...this.pendingAction,
+          status: 'ANALYZING',
+          aiReasoning: "Understood. Please tell me more specifically what you'd like to do."
+        };
+        this.notify();
+        return;
+      }
+    }
+
     this.pendingAction = {
       status: 'ANALYZING',
       transcript: text,
@@ -268,6 +308,26 @@ class ConservatoryStore {
         ? await (window as any).mockGeminiParse(text, currentEntities)
         : await geminiService.parseVoiceCommand(text, currentEntities);
       
+      // Intent Sovereignty: If the parser is unsure, call the Strategy Agent
+      if (!result.intent || result.isAmbiguous) {
+        const strategy = (window as any).mockGeminiStrategy
+          ? await (window as any).mockGeminiStrategy(text)
+          : await geminiService.getIntentStrategy(text, { 
+              entities: currentEntities.map(e => ({ name: e.name, type: e.type })) 
+            });
+        
+        this.pendingAction = {
+          status: 'STRATEGY_REQUIRED',
+          transcript: text,
+          intent: result.intent,
+          intentStrategy: strategy,
+          aiReasoning: result.aiReasoning || "Input is complex or ambiguous.",
+          candidates: []
+        };
+        this.persistLocal();
+        return;
+      }
+
       const habitatResolution = result.targetHabitatName 
         ? this.resolveEntity(result.targetHabitatName, currentEntities)
         : { match: null, isAmbiguous: false };
@@ -288,14 +348,13 @@ class ConservatoryStore {
       
       this.persistLocal();
     } catch (e: any) {
-      console.error("Voice Parsing Error:", e);
+      console.error("AI Payload Validation/Parsing Error:", e);
       this.pendingAction = {
-        status: 'CONFIRMING',
+        status: 'ERROR',
         transcript: text,
-        intent: 'LOG_OBSERVATION',
-        aiReasoning: e.message || "Parsing failed. Please edit manually.",
-        candidates: [],
-        observationNotes: text
+        intent: null,
+        aiReasoning: `Data Integrity Error: ${e.message}. The AI sent an unexpected response format.`,
+        candidates: []
       };
       this.persistLocal();
     }
@@ -352,18 +411,28 @@ class ConservatoryStore {
     this.pendingAction = null;
     this.persistLocal();
 
+    const isTestMode = (window as any).setTestUser;
+    const batch = writeBatch(db);
+
     try {
-      // @ts-ignore
-      if ((window as any).setTestUser) {
-         console.log("Test Mode: Skipping Firestore Event Write");
-      } else {
-        await addDoc(collection(db, 'events'), this.cleanDataObject({
+      if (!isTestMode) {
+        const eventRef = doc(collection(db, 'events'));
+        batch.set(eventRef, this.cleanDataObject({
           type: eventType,
           timestamp: serverTimestamp(),
           payload: safePayload,
           metadata: domainEvent.metadata
         }));
+      } else {
+        mockFirestore.addDoc('events', this.cleanDataObject({
+          type: eventType,
+          timestamp: Date.now(),
+          payload: safePayload,
+          metadata: domainEvent.metadata
+        }));
       }
+
+      const newEntityIds: string[] = [];
 
       if (intent === 'MODIFY_HABITAT') {
         const habitatName = safePayload.habitatParams?.name || `New Habitat`;
@@ -373,62 +442,46 @@ class ConservatoryStore {
           e.name.toLowerCase().trim() === normalizedName
         );
 
-        if (existing) {
-          console.log(`Matching existing habitat found: ${existing.id}`);
-          return; 
-        }
-
-        const id = uuidv4();
-        const { name: _n, type: _t, ...otherHabitatParams } = safePayload.habitatParams || {};
-        console.log("Creating habitat:", habitatName);
-
-        const habitatData: any = this.cleanDataObject({
-          name: habitatName,
-          type: EntityType.HABITAT,
-          aliases: [],
-          traits: [{ type: 'AQUATIC', parameters: { salinity: safePayload.habitatParams?.type === 'Saltwater' ? 'marine' : 'fresh' } }],
-          confidence: 1,
-          enrichment_status: 'none',
-          created_at: Date.now(),
-          updated_at: Date.now(),
-          overflow: otherHabitatParams
-        });
-        
-        console.log("Optimistic update push:", id, habitatData);
-        // Optimistic Update
-        this.entities.push({ id, ...habitatData });
-        this.persistLocal();
-        console.log("Optimistic update done. Entities count:", this.entities.length);
-
-        console.log("Optimistic update done. Entities count:", this.entities.length);
-
-        // @ts-ignore
-        if ((window as any).setTestUser) {
-           console.log("Test Mode: Skipping Firestore Entity Write");
-        } else {
-           await setDoc(doc(db, 'entities', id), habitatData);
+        if (!existing) {
+          const id = uuidv4();
+          const { name: _n, type: _t, ...otherHabitatParams } = safePayload.habitatParams || {};
+          const habitatData: any = this.cleanDataObject({
+            name: habitatName,
+            type: EntityType.HABITAT,
+            aliases: [],
+            traits: [{ type: 'AQUATIC', parameters: { salinity: safePayload.habitatParams?.type === 'Saltwater' ? 'marine' : 'fresh' } }],
+            confidence: 1,
+            enrichment_status: 'none',
+            created_at: Date.now(),
+            updated_at: Date.now(),
+            overflow: otherHabitatParams
+          });
+          
+          // Optimistic Update
+          this.entities.push({ id, ...habitatData });
+          if (!isTestMode) {
+            batch.set(doc(db, 'entities', id), habitatData);
+          } else {
+            mockFirestore.setDoc('entities', id, habitatData);
+          }
         }
       } else if (intent === 'ACCESSION_ENTITY') {
         for (const cand of safePayload.candidates || []) {
           const normalizedName = cand.commonName.toLowerCase().trim();
-          // Check if entity already exists in this habitat
           const existing = this.entities.find(e => 
             e.habitat_id === safePayload.targetHabitatId &&
             e.name.toLowerCase().trim() === normalizedName
           );
 
-          if (existing) {
-            console.log(`Matching existing entity found in habitat: ${existing.id}`);
-            continue;
-          }
+          if (existing) continue;
 
           const id = uuidv4();
+          newEntityIds.push(id);
           let type = EntityType.ORGANISM;
           if (cand.traits?.some((t: any) => t.type === 'PHOTOSYNTHETIC')) type = EntityType.PLANT;
           if (cand.traits?.some((t: any) => t.type === 'COLONY')) type = EntityType.COLONY;
 
           const { commonName, scientificName, quantity, traits, ...otherCandidateProps } = cand;
-
           const entityData: any = this.cleanDataObject({
             name: cand.commonName,
             scientificName: cand.scientificName, 
@@ -446,18 +499,23 @@ class ConservatoryStore {
 
           // Optimistic Update
           this.entities.push({ id, ...entityData });
-          this.persistLocal();
-
-          this.persistLocal();
-
-          // @ts-ignore
-          if ((window as any).setTestUser) {
-             console.log("Test Mode: Skipping Firestore Entity Write");
+          if (!isTestMode) {
+            batch.set(doc(db, 'entities', id), entityData);
           } else {
-             await setDoc(doc(db, 'entities', id), entityData);
+            mockFirestore.setDoc('entities', id, entityData);
           }
         }
       }
+
+      if (!isTestMode) {
+        await batch.commit();
+      }
+      this.persistLocal();
+
+      // Trigger Auto-Enrichment for new entities
+      newEntityIds.forEach(id => {
+        this.enrichEntity(id).catch(err => console.error(`Auto-enrichment failed for ${id}:`, err));
+      });
     } catch (e: any) {
       console.error("Persistence Failed", e);
       const idx = this.events.findIndex(e => e.id === tempId);
@@ -513,6 +571,30 @@ class ConservatoryStore {
     return group;
   }
 
+  /**
+   * Creates a PendingAction directly from a vision identification result,
+   * bypassing the voice-processing loop entirely.
+   */
+  createActionFromVision(result: IdentifyResult, habitatId?: string) {
+    this.pendingAction = {
+      status: 'CONFIRMING',
+      transcript: `[Photo ID] ${result.common_name}`,
+      intent: 'ACCESSION_ENTITY',
+      targetHabitatId: habitatId || null,
+      candidates: [{
+        commonName: result.common_name,
+        scientificName: result.species,
+        quantity: 1,
+        traits: result.kingdom?.toLowerCase() === 'plantae'
+          ? [{ type: 'PHOTOSYNTHETIC' as const, parameters: {} }]
+          : [{ type: 'INVERTEBRATE' as const, parameters: {} }]
+      }],
+      aiReasoning: result.reasoning,
+      isAmbiguous: result.confidence < 0.6
+    };
+    this.persistLocal();
+  }
+
   async enrichEntity(entityId: string) {
     const entity = this.entities.find(e => e.id === entityId);
     if (!entity) return;
@@ -522,33 +604,60 @@ class ConservatoryStore {
     console.log(`Starting enrichment for ${entity.name} (${entityId})`);
 
     try {
-        // 1. Search General APIs
-        const query = entity.scientificName || entity.name;
+        const { enrichmentService } = await import('./enrichmentService');
+        const searchQuery = entity.scientificName || entity.name;
+
+        // 1. Search General APIs (real calls)
         const [gbif, wiki, inat] = await Promise.all([
-            // geminiService.searchGBIF(query), // Not implemented yet
-            // geminiService.searchWikipedia(query),
-            Promise.resolve(null), Promise.resolve(null), Promise.resolve(null)
+            enrichmentService.searchGBIF(searchQuery),
+            enrichmentService.searchWikipedia(searchQuery),
+            enrichmentService.searchiNaturalist(searchQuery)
         ]);
 
-        // 2. Try Scraper if it looks like a plant
-        let scraperData = null;
+        // 2. Build merged details from all sources
+        const mergedDetails: any = { ...entity.details };
+
+        if (gbif) {
+          mergedDetails.origin = mergedDetails.origin || gbif.origin;
+          // Store taxonomy in overflow for now
+          if (gbif.taxonomy) {
+            this.updateEntity(entityId, {
+              overflow: { ...entity.overflow, taxonomy: gbif.taxonomy },
+              scientificName: entity.scientificName || gbif.scientificName
+            });
+          }
+        }
+
+        if (wiki?.description) {
+          mergedDetails.description = mergedDetails.description || wiki.description;
+        }
+
+        if (inat) {
+          // Use iNaturalist common name as an alias if we don't have one
+          if (inat.commonName && !entity.aliases?.includes(inat.commonName)) {
+            this.updateEntity(entityId, {
+              aliases: [...(entity.aliases || []), inat.commonName]
+            });
+          }
+        }
+
+        // 3. Try local library if it's a plant
         if (entity.type === EntityType.PLANT) {
-             const { enrichmentService } = await import('./enrichmentService');
-             scraperData = await enrichmentService.scrapeAquasabi(entity.scientificName || entity.name);
-             if (scraperData && scraperData.details) {
-                 // Append to entity details
-                 this.updateEntity(entityId, { 
-                     details: {
-                         ...entity.details,
-                         description: scraperData.details.description,
-                         notes: scraperData.details.notes,
-                         maintenance: scraperData.details.maintenance
-                     }
-                 });
+             const scraperData = await enrichmentService.scrapeAquasabi(searchQuery);
+             if (scraperData) {
+                 // Local library data is highest fidelity — override
+                 mergedDetails.description = scraperData.description || mergedDetails.description;
+                 mergedDetails.notes = scraperData.tips || mergedDetails.notes;
+                 mergedDetails.origin = scraperData.origin || mergedDetails.origin;
+                 if (scraperData.images?.length) {
+                   this.updateEntity(entityId, {
+                     overflow: { ...entity.overflow, referenceImages: scraperData.images }
+                   });
+                 }
              }
         }
-        
-        this.updateEntity(entityId, { enrichment_status: 'complete' });
+
+        this.updateEntity(entityId, { details: mergedDetails, enrichment_status: 'complete' });
         console.log(`Enrichment complete for ${entityId}`);
 
     } catch (e) {
@@ -613,7 +722,9 @@ export function useConservatory() {
     groups: store.getGroups(),
     messages: store.getMessages(),
     pendingAction: store.getPendingAction(),
-    user: store.getUser()
+    liveTranscript: store.getLiveTranscript(),
+    user: store.getUser(),
+    activeHabitatId: store.getActiveHabitatId()
   });
 
   useEffect(() => {
@@ -624,7 +735,9 @@ export function useConservatory() {
         groups: store.getGroups(),
         messages: store.getMessages(),
         pendingAction: store.getPendingAction(),
-        user: store.getUser()
+        liveTranscript: store.getLiveTranscript(),
+        user: store.getUser(),
+        activeHabitatId: store.getActiveHabitatId()
       });
     });
   }, []);
@@ -634,6 +747,7 @@ export function useConservatory() {
     login: useCallback(() => store.login(), []),
     logout: useCallback(() => store.logout(), []),
     processVoiceInput: useCallback((text: string) => store.processVoiceInput(text), []),
+    setActiveHabitat: useCallback((id: string | null) => store.setActiveHabitat(id), []),
     commitPendingAction: useCallback(() => store.commitPendingAction(), []),
     discardPending: useCallback(() => store.discardPending(), []),
     updateSlot: useCallback((path: string, val: any) => store.updateSlot(path, val), []),
@@ -641,6 +755,7 @@ export function useConservatory() {
     addGroup: useCallback((name: string) => store.addGroup(name), []),
     testConnection: useCallback(() => store.testConnection(), []),
     enrichEntity: useCallback((id: string) => store.enrichEntity(id), []),
+    createActionFromVision: useCallback((result: IdentifyResult, habitatId?: string) => store.createActionFromVision(result, habitatId), []),
     sendMessage: useCallback((text: string, opts: any) => store.sendMessage(text, opts), []),
     clearMessages: useCallback(() => store.clearMessages(), [])
   };

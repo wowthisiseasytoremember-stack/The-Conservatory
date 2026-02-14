@@ -13,7 +13,8 @@ import {
   onSnapshot,
   query,
   orderBy,
-  limit
+  limit,
+  writeBatch
 } from 'firebase/firestore';
 // Fix: FieldValue and User should be imported as types to avoid "no exported member" value errors in some environments
 import type { FieldValue } from 'firebase/firestore';
@@ -98,6 +99,7 @@ export const logout = () => signOut(auth);
 export { 
   collection, addDoc, updateDoc, setDoc, doc, getDoc, 
   serverTimestamp, onSnapshot, query, orderBy, 
-  limit, onAuthStateChanged, signInWithPopup, signOut 
+  limit, onAuthStateChanged, signInWithPopup, signOut, 
+  writeBatch
 };
 export type { FieldValue, User };

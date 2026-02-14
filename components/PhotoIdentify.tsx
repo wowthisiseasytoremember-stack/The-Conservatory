@@ -4,13 +4,15 @@ import { Camera, RefreshCw, Check, X, Layers } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
 import { IdentifyResult, RackContainer } from '../types';
 import { RackReviewModal } from './RackReviewModal';
+import { store } from '../services/store';
 
 interface PhotoIdentifyProps {
-  onConfirmObservation: (result: IdentifyResult) => void;
   onConfirmRack: (containers: RackContainer[]) => void;
+  /** @deprecated Use store.createActionFromVision instead */
+  onConfirmObservation?: (result: IdentifyResult) => void;
 }
 
-export const PhotoIdentify: React.FC<PhotoIdentifyProps> = ({ onConfirmObservation, onConfirmRack }) => {
+export const PhotoIdentify: React.FC<PhotoIdentifyProps> = ({ onConfirmRack }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<'single' | 'rack'>('single');
   const [isLoading, setIsLoading] = useState(false);
@@ -65,6 +67,12 @@ export const PhotoIdentify: React.FC<PhotoIdentifyProps> = ({ onConfirmObservati
     setIdResult(null);
     setRackResult(null);
     setCapturedImage(null);
+  };
+
+  const handleConfirmVision = (result: IdentifyResult) => {
+    // Direct store action — bypasses voice simulator entirely
+    store.createActionFromVision(result);
+    handleClose();
   };
 
   if (rackResult) {
@@ -122,9 +130,11 @@ export const PhotoIdentify: React.FC<PhotoIdentifyProps> = ({ onConfirmObservati
               ) : idResult ? (
                 <div className="bg-black/60 backdrop-blur-xl p-6 rounded-2xl border border-emerald-500/30">
                   <h3 className="text-2xl font-serif text-white mt-1">{idResult.common_name}</h3>
-                  <p className="mt-8 flex gap-3">
+                  <p className="text-sm text-emerald-300/60 italic mt-1">{idResult.species}</p>
+                  <p className="text-xs text-slate-400 mt-2">{Math.round(idResult.confidence * 100)}% confidence</p>
+                  <p className="mt-6 flex gap-3">
                     <button onClick={handleClose} className="flex-1 py-3 bg-slate-800 rounded-xl">Cancel</button>
-                    <button onClick={() => { onConfirmObservation(idResult); handleClose(); }} className="flex-1 py-3 bg-emerald-500 rounded-xl font-bold">Log Event</button>
+                    <button onClick={() => handleConfirmVision(idResult)} className="flex-1 py-3 bg-emerald-500 rounded-xl font-bold">Accession</button>
                   </p>
                 </div>
               ) : null}

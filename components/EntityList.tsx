@@ -6,10 +6,14 @@ import { Waves, Flower2, Bug, Package, ChevronRight, Settings2 } from 'lucide-re
 interface EntityListProps {
   entities: Entity[];
   groups: EntityGroup[];
-  onSelectEntity: (entity: Entity) => void;
+  activeHabitatId: string | null;
+  onSetActiveHabitat: (id: string | null) => void;
+  onEditEntity: (entity: Entity) => void;
 }
 
-export const EntityList: React.FC<EntityListProps> = ({ entities, groups, onSelectEntity }) => {
+export const EntityList: React.FC<EntityListProps> = ({ 
+  entities, groups, activeHabitatId, onSetActiveHabitat, onEditEntity 
+}) => {
   const getIcon = (type: EntityType) => {
     switch (type) {
       case EntityType.HABITAT: return <Waves className="w-5 h-5 text-cyan-400" />;
@@ -21,34 +25,57 @@ export const EntityList: React.FC<EntityListProps> = ({ entities, groups, onSele
     }
   };
 
-  const renderEntityCard = (e: Entity) => (
-    <button 
-      key={e.id} 
-      onClick={() => onSelectEntity(e)}
-      className="bg-slate-900/40 border border-slate-800 p-3 rounded-xl hover:bg-slate-900 transition-all text-left relative group"
-    >
-      <div className="flex justify-between items-start mb-2">
-        {getIcon(e.type)}
-        <div className="flex gap-1">
-          {e.quantity !== undefined && (
-            <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300 font-mono">
-              x{e.quantity}
-            </span>
-          )}
-          <Settings2 className="w-3 h-3 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+  const renderEntityCard = (e: Entity) => {
+    const isActive = e.id === activeHabitatId;
+    const isHabitat = e.type === EntityType.HABITAT;
+
+    return (
+      <button 
+        key={e.id} 
+        onClick={() => {
+          if (isHabitat) {
+            onSetActiveHabitat(isActive ? null : e.id);
+          } else {
+            onEditEntity(e);
+          }
+        }}
+        className={`
+          border p-3 rounded-xl transition-all text-left relative group
+          ${isActive 
+            ? 'bg-cyan-500/10 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.15)] ring-1 ring-cyan-500/50' 
+            : 'bg-slate-900/40 border-slate-800 hover:bg-slate-900'}
+        `}
+      >
+        <div className="flex justify-between items-start mb-2">
+          {getIcon(e.type)}
+          <div className="flex gap-1">
+            {isHabitat && isActive && (
+               <div className="bg-cyan-500 text-[8px] font-bold text-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
+                 Active
+               </div>
+            )}
+            {e.quantity !== undefined && (
+              <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300 font-mono">
+                x{e.quantity}
+              </span>
+            )}
+            <Settings2 className="w-3 h-3 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
         </div>
-      </div>
-      <h4 className="text-sm font-medium text-slate-200 truncate pr-4">{e.name}</h4>
-      <div className="flex items-center gap-1 mt-1">
-        <p className="text-[10px] text-slate-500 truncate flex-1">
-          {entities.find(h => h.id === e.habitat_id)?.name || "Roaming"}
-        </p>
-        {e.aliases.length > 0 && (
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" title="Has custom aliases" />
-        )}
-      </div>
-    </button>
-  );
+        <h4 className="text-sm font-medium text-slate-200 truncate pr-4">{e.name}</h4>
+        <div className="flex items-center gap-1 mt-1">
+          <p className="text-[10px] text-slate-500 truncate flex-1">
+            {e.type === EntityType.HABITAT 
+              ? (entities.filter(ent => ent.habitat_id === e.id).length + " residents") 
+              : (entities.find(h => h.id === e.habitat_id)?.name || "Roaming")}
+          </p>
+          {e.aliases.length > 0 && (
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" title="Has custom aliases" />
+          )}
+        </div>
+      </button>
+    );
+  };
 
   // Group entities by their group_id
   const entitiesByGroup = groups.reduce((acc, g) => {

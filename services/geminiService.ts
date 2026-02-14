@@ -1,6 +1,16 @@
 
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
+import { z } from 'zod';
 import { Entity, PendingAction, IdentifyResult, AdvisoryReport, RackContainer } from "../types";
+import { 
+  PendingActionSchema, 
+  IdentifyResultSchema, 
+  RackContainerSchema, 
+  AdvisoryReportSchema, 
+  IntentStrategySchema, 
+  EcosystemNarrativeSchema, 
+  BiologicalDiscoverySchema 
+} from '../src/schemas';
 import { plantService } from './plantService';
 
 // Initialize using the mandatory process.env.API_KEY
@@ -115,7 +125,8 @@ export const geminiService = {
         responseSchema: PENDING_ACTION_SCHEMA,
       },
     }));
-    return JSON.parse(response.text || '{}');
+    const data = JSON.parse(response.text || '{}');
+    return PendingActionSchema.parse(data);
   },
 
   /**
@@ -146,7 +157,8 @@ export const geminiService = {
         },
       }
     }));
-    return JSON.parse(response.text || '{}');
+    const data = JSON.parse(response.text || '{}');
+    return IdentifyResultSchema.parse(data);
   },
 
   /**
@@ -198,9 +210,10 @@ export const geminiService = {
           },
           required: ["containers"]
         },
-      }
+      },
     }));
-    return JSON.parse(response.text || '{"containers": []}');
+    const data = JSON.parse(response.text || '{"containers": []}');
+    return { containers: z.array(RackContainerSchema).parse(data.containers) };
   },
 
   /**
@@ -227,7 +240,47 @@ export const geminiService = {
         },
       }
     }));
-    return JSON.parse(response.text || '{}');
+    const data = JSON.parse(response.text || '{}');
+    return AdvisoryReportSchema.parse(data);
+  },
+
+  /**
+   * Strategy Agent: Handle unknown or complex intents
+   */
+  async getIntentStrategy(input: string, context: any): Promise<any> {
+    const ai = getClient();
+    const response = await withTimeout<GenerateContentResponse>(ai.models.generateContent({
+      model: "gemini-3-pro-preview",
+      contents: `The user said: "${input}". 
+                 Context: ${JSON.stringify(context)}.
+                 Analyze what they want and provide a strategy.`,
+      config: {
+        systemInstruction: `
+          You are the Conservatory Strategy Agent.
+          When a user says something the system doesn't understand (e.g. "Crayfish molted"), 
+          your job is to suggest a path forward in a friendly, conversational way.
+          
+          Guidelines:
+          1. advice: Phrase this as a helpful suggestion or interpretation. 
+             Example: "It sounds like you want to log a biological event for your crayfish. I can help with that—should I add a molting record to its history?"
+          2. suggestedCommand: A specific, executable command that the system understands.
+             Example: "Update Crayfish to include INVERTEBRATE trait with molting set to true."
+          3. Never say "I don't know." Always provide a best-guess interpretation.
+        `,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            advice: { type: Type.STRING },
+            suggestedCommand: { type: Type.STRING },
+            technicalSteps: { type: Type.ARRAY, items: { type: Type.STRING } }
+          },
+          required: ["advice", "suggestedCommand"]
+        },
+      }
+    }));
+    const data = JSON.parse(response.text || '{}');
+    return IntentStrategySchema.parse(data);
   },
 
   /**
@@ -260,7 +313,8 @@ export const geminiService = {
         },
       }
     }));
-    return JSON.parse(response.text || '{}');
+    const data = JSON.parse(response.text || '{}');
+    return EcosystemNarrativeSchema.parse(data);
   },
 
   /**
@@ -308,7 +362,8 @@ export const geminiService = {
         },
       }
     }));
-    return JSON.parse(response.text || '{}');
+    const data = JSON.parse(response.text || '{}');
+    return BiologicalDiscoverySchema.parse(data);
   },
 
   /**

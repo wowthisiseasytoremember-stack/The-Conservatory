@@ -192,6 +192,7 @@ async function main() {
         // Post-process
         library.push({
             ...data,
+            scientificName: (data as any).scientificName || undefined,
             images: [...new Set((data as any).rawImages)],
             listingType: 'aquasabi'
         } as PlantData);

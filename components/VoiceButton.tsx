@@ -1,6 +1,7 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { Mic, MicOff } from 'lucide-react';
+import { store } from '../services/store';
 
 interface VoiceButtonProps {
   onTranscription: (text: string) => void;
@@ -35,6 +36,8 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscription }) => 
         }
       }
       setInterimText(interimTranscript);
+      store.setLiveTranscript(interimTranscript || finalTranscript);
+      
       if (finalTranscript) {
         onTranscription(finalTranscript.trim());
       }
@@ -44,6 +47,7 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscription }) => 
     recognition.onend = () => {
       setIsRecording(false);
       setInterimText('');
+      store.setLiveTranscript('');
     };
 
     recognition.start();

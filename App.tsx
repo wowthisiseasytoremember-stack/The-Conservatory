@@ -11,15 +11,17 @@ import { DevTools } from './components/DevTools';
 import { AIChatBot } from './components/AIChatBot';
 import { FirebaseConfigModal } from './components/FirebaseConfigModal';
 import { LoginView } from './components/LoginView';
-import { MainLayout } from './components/MainLayout';
-import { IdentifyResult, Entity, RackContainer } from './types';
+import { MainLayout, BiomeTheme } from './components/MainLayout';
+import { Entity, RackContainer, IdentifyResult } from './types';
 import { ConnectionStatus } from './services/connectionService';
 
 const App: React.FC = () => {
   const { 
-    events, entities, groups, pendingAction, user,
+    events, entities, groups, pendingAction, user, liveTranscript,
+    activeHabitatId,
     processVoiceInput, commitPendingAction, discardPending, 
-    updateSlot, updateEntity, addGroup, testConnection, login, logout
+    updateSlot, updateEntity, addGroup, testConnection, login, logout,
+    createActionFromVision, setActiveHabitat
   } = useConservatory();
   
   const [activeTab, setActiveTab] = useState<'feed' | 'entities'>('feed');
@@ -27,6 +29,7 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('unknown');
 
+  useEffect(() => {
     // @ts-ignore
     window.processVoiceInput = processVoiceInput;
     
@@ -37,10 +40,10 @@ const App: React.FC = () => {
     checkDb();
     const interval = setInterval(checkDb, 30000);
     return () => clearInterval(interval);
-  }, [testConnection, user]);
+  }, [testConnection, user, processVoiceInput]);
 
   const handlePhotoConfirm = (result: IdentifyResult) => {
-    processVoiceInput(`I observed a ${result.common_name} (${result.species}). Reasoning: ${result.reasoning}`);
+    createActionFromVision(result);
   };
 
   const handleRackConfirm = (containers: RackContainer[]) => {
@@ -53,6 +56,18 @@ const App: React.FC = () => {
     return <LoginView onLogin={login} />;
   }
 
+  // Determine the biome theme based on the active habitat's traits
+  const activeHabitat = entities.find(e => e.id === activeHabitatId);
+  let biomeTheme: BiomeTheme = 'default';
+  
+  if (activeHabitat) {
+    const traits = activeHabitat.traits || [];
+    if (traits.some(t => t.parameters?.salinity === 'marine')) biomeTheme = 'marine';
+    else if (traits.some(t => t.type === 'TERRESTRIAL' && (t.parameters?.humidity || 0) > 70)) biomeTheme = 'paludarium';
+    else if (traits.some(t => t.parameters?.salinity === 'brackish')) biomeTheme = 'tanganyika'; // Using tanganyika as proxy for clear/rocky/brackish
+    else if (traits.some(t => t.parameters?.pH && t.parameters.pH < 6.5)) biomeTheme = 'blackwater';
+  }
+
   return (
     <MainLayout
       activeTab={activeTab}
@@ -60,19 +75,19 @@ const App: React.FC = () => {
       connectionStatus={connectionStatus}
       onOpenSettings={() => setIsSettingsOpen(true)}
       onLogout={logout}
+      biomeTheme={biomeTheme}
+      liveTranscript={liveTranscript}
       photoIdentifyComponent={
-        <PhotoIdentify onConfirmObservation={handlePhotoConfirm} onConfirmRack={handleRackConfirm} />
+        <PhotoIdentify onConfirm={handlePhotoConfirm} />
       }
       voiceButtonComponent={
-        <VoiceButton onTranscription={(text) => processVoiceInput(text)} />
+        <VoiceButton 
+           onActive={() => {}} 
+           onResult={processVoiceInput} 
+        />
       }
     >
       <DevTools />
-      <AIChatBot />
-
-      {isSettingsOpen && (
-        <FirebaseConfigModal onClose={() => setIsSettingsOpen(false)} />
-      )}
 
       {/* Confirmation UI */}
       {pendingAction && (
@@ -91,7 +106,9 @@ const App: React.FC = () => {
         <EntityList 
           entities={entities} 
           groups={groups}
-          onSelectEntity={(e) => setEditingEntity(e)} 
+          activeHabitatId={activeHabitatId}
+          onSetActiveHabitat={setActiveHabitat}
+          onEditEntity={setEditingEntity} 
         />
       )}
 

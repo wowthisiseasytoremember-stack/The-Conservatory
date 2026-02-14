@@ -1,5 +1,5 @@
 
-export type ActionStatus = 'LISTENING' | 'ANALYZING' | 'CONFIRMING' | 'COMMITTING';
+export type ActionStatus = 'LISTENING' | 'ANALYZING' | 'CONFIRMING' | 'COMMITTING' | 'STRATEGY_REQUIRED' | 'ERROR';
 
 export enum EventStatus {
   PENDING = 'pending',
@@ -52,6 +52,15 @@ export interface Entity {
     maintenance?: string;
   };
 
+  // Growth & Observation History
+  observations?: Array<{
+    timestamp: number;
+    type: 'growth' | 'parameter' | 'note';
+    label: string;
+    value: number;
+    unit?: string;
+  }>;
+
   // Legacy/System fields
   created_at: number;
   updated_at: number;
@@ -99,6 +108,11 @@ export interface PendingAction {
 
   aiReasoning?: string;
   isAmbiguous?: boolean;
+  intentStrategy?: {
+    advice: string;
+    suggestedCommand?: string;
+    technicalSteps?: string[];
+  };
 }
 
 export interface DomainEvent {

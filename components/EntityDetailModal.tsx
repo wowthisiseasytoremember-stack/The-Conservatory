@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Entity, EntityGroup } from '../types';
-import { X, Tag, Plus, Trash2, FolderOpen, Globe2, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { X, Tag, Plus, Trash2, FolderOpen, Globe2, CheckCircle2, AlertTriangle, Loader2, TrendingUp } from 'lucide-react';
+import { GrowthChart } from './GrowthChart';
 
 interface EntityDetailModalProps {
   entity: Entity;
@@ -30,6 +31,11 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
   // GBIF State
   const [gbifData, setGbifData] = useState<GbifData | null>(null);
   const [loadingGbif, setLoadingGbif] = useState(false);
+
+  // Observation logging state
+  const [obsLabel, setObsLabel] = useState('growth');
+  const [obsValue, setObsValue] = useState('');
+  const [obsUnit, setObsUnit] = useState('cm');
 
   // Load GBIF Data on Mount
   useEffect(() => {
@@ -90,6 +96,28 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
       setIsCreatingGroup(false);
     }
   };
+
+  const logObservation = () => {
+    const numVal = parseFloat(obsValue);
+    if (isNaN(numVal)) return;
+    const existing = entity.observations || [];
+    const newObs = {
+      timestamp: Date.now(),
+      type: obsLabel as 'growth' | 'parameter' | 'note',
+      label: obsLabel,
+      value: numVal,
+      unit: obsUnit || undefined,
+    };
+    onUpdate({ observations: [...existing, newObs] });
+    setObsValue('');
+  };
+
+  const growthData = (entity.observations || []).map(o => ({
+    timestamp: o.timestamp,
+    value: o.value,
+    label: o.label,
+    unit: o.unit,
+  }));
 
   return (
     <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -154,6 +182,53 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
                  <div className="text-sm text-slate-500 italic">No scientific match found in global database.</div>
                )}
             </div>
+          )}
+
+          {/* Growth History Section */}
+          {(entity.type === 'ORGANISM' || entity.type === 'PLANT' || entity.type === 'COLONY') && (
+            <section>
+              <GrowthChart data={growthData} title="Observation History" />
+              
+              {/* Log Observation Mini-Form */}
+              <div className="mt-3 p-3 bg-slate-800/30 border border-slate-700/50 rounded-xl space-y-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="w-3 h-3 text-emerald-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Log Observation</span>
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={obsLabel}
+                    onChange={(e) => setObsLabel(e.target.value)}
+                    className="bg-black/40 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                  >
+                    <option value="growth">Growth</option>
+                    <option value="parameter">Parameter</option>
+                    <option value="note">Note</option>
+                  </select>
+                  <input
+                    type="number"
+                    value={obsValue}
+                    onChange={(e) => setObsValue(e.target.value)}
+                    placeholder="Value"
+                    className="flex-1 bg-black/40 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                    onKeyDown={(e) => e.key === 'Enter' && logObservation()}
+                  />
+                  <input
+                    type="text"
+                    value={obsUnit}
+                    onChange={(e) => setObsUnit(e.target.value)}
+                    placeholder="unit"
+                    className="w-14 bg-black/40 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                  />
+                  <button
+                    onClick={logObservation}
+                    className="p-1.5 bg-emerald-600 rounded-lg text-white hover:bg-emerald-500 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </section>
           )}
 
           {/* Alias Section */}

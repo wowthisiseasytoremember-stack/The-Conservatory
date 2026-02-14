@@ -11,7 +11,44 @@ interface ConfirmationCardProps {
 }
 
 // ----------------------------------------------------------------------
-// SUB-COMPONENT: Trait Editor
+// Trait parameter definitions – what fields each trait type exposes
+// ----------------------------------------------------------------------
+const TRAIT_PARAM_DEFS: Record<string, Array<{ key: string; label: string; icon: string; type: 'number' | 'text' | 'select'; suffix?: string; options?: string[] }>> = {
+  AQUATIC: [
+    { key: 'pH', label: 'pH', icon: '💧', type: 'number' },
+    { key: 'temp', label: 'Temp', icon: '🌡️', type: 'number', suffix: '°F' },
+    { key: 'salinity', label: 'Salinity', icon: '🧂', type: 'select', options: ['fresh', 'brackish', 'marine'] },
+    { key: 'ammonia', label: 'Ammonia', icon: '⚗️', type: 'number', suffix: 'ppm' },
+    { key: 'nitrates', label: 'Nitrates', icon: '📊', type: 'number', suffix: 'ppm' },
+  ],
+  TERRESTRIAL: [
+    { key: 'humidity', label: 'Humidity', icon: '💨', type: 'number', suffix: '%' },
+    { key: 'substrate', label: 'Substrate', icon: '🪨', type: 'text' },
+    { key: 'temp', label: 'Temp', icon: '🌡️', type: 'number', suffix: '°F' },
+  ],
+  PHOTOSYNTHETIC: [
+    { key: 'lightReq', label: 'Light', icon: '☀️', type: 'select', options: ['low', 'med', 'high'] },
+    { key: 'co2', label: 'CO₂', icon: '🫧', type: 'select', options: ['true', 'false'] },
+    { key: 'growth_rate', label: 'Growth Rate', icon: '📈', type: 'select', options: ['slow', 'medium', 'fast'] },
+    { key: 'difficulty', label: 'Difficulty', icon: '⭐', type: 'select', options: ['easy', 'medium', 'hard', 'very_hard'] },
+    { key: 'placement', label: 'Placement', icon: '📍', type: 'select', options: ['foreground', 'midground', 'background', 'floating', 'epiphyte'] },
+    { key: 'growth_height', label: 'Height', icon: '📏', type: 'number', suffix: 'cm' },
+  ],
+  INVERTEBRATE: [
+    { key: 'molting', label: 'Molts', icon: '🦐', type: 'select', options: ['true', 'false'] },
+    { key: 'colony', label: 'Colony', icon: '🐜', type: 'select', options: ['true', 'false'] },
+  ],
+  VERTEBRATE: [
+    { key: 'diet', label: 'Diet', icon: '🍽️', type: 'select', options: ['carnivore', 'herbivore', 'omnivore'] },
+  ],
+  COLONY: [
+    { key: 'estimatedCount', label: 'Count', icon: '🔢', type: 'number' },
+    { key: 'stable', label: 'Stable', icon: '📊', type: 'select', options: ['true', 'false'] },
+  ],
+};
+
+// ----------------------------------------------------------------------
+// SUB-COMPONENT: Trait Editor (with nested parameters)
 // ----------------------------------------------------------------------
 const TraitList: React.FC<{ traits: EntityTrait[], onChange: (traits: EntityTrait[]) => void }> = ({ traits, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,20 +60,27 @@ const TraitList: React.FC<{ traits: EntityTrait[], onChange: (traits: EntityTrai
     if (exists) {
       onChange(traits.filter(t => t.type !== type));
     } else {
-      // Add with default params
       onChange([...traits, { type: type as any, parameters: {} }]);
     }
+  };
+
+  const updateParam = (traitType: string, paramKey: string, value: any) => {
+    onChange(traits.map(t => {
+      if (t.type !== traitType) return t;
+      return { ...t, parameters: { ...t.parameters, [paramKey]: value } } as EntityTrait;
+    }));
   };
 
   if (isOpen) {
     return (
       <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}>
-        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-700 max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-700 max-w-sm w-full shadow-2xl max-h-[80vh] overflow-y-auto no-scrollbar" onClick={e => e.stopPropagation()}>
           <h4 className="text-white font-serif font-bold mb-4 flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-emerald-400" />
             Edit Traits (DNA)
           </h4>
-          <div className="flex flex-wrap gap-2 mb-6">
+          {/* Trait Toggle Buttons */}
+          <div className="flex flex-wrap gap-2 mb-4">
             {allTypes.map(type => {
               const isSelected = traits.some(t => t.type === type);
               return (
@@ -54,6 +98,56 @@ const TraitList: React.FC<{ traits: EntityTrait[], onChange: (traits: EntityTrai
               );
             })}
           </div>
+
+          {/* Nested Parameter Editors for Selected Traits */}
+          {traits.map(trait => {
+            const defs = TRAIT_PARAM_DEFS[trait.type];
+            if (!defs || defs.length === 0) return null;
+            return (
+              <div key={trait.type} className="mb-4 p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-500 mb-2">{trait.type} Parameters</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {defs.map(def => (
+                    <div key={def.key} className="flex flex-col gap-1">
+                      <label className="text-[10px] text-slate-500 flex items-center gap-1">
+                        <span>{def.icon}</span> {def.label}
+                      </label>
+                      {def.type === 'select' ? (
+                        <select
+                          value={(trait.parameters as any)?.[def.key] ?? ''}
+                          onChange={(e) => {
+                            let val: any = e.target.value;
+                            if (val === 'true') val = true;
+                            if (val === 'false') val = false;
+                            if (val === '') val = undefined;
+                            updateParam(trait.type, def.key, val);
+                          }}
+                          className="bg-black/60 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                        >
+                          <option value="">—</option>
+                          {def.options?.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type={def.type}
+                            value={(trait.parameters as any)?.[def.key] ?? ''}
+                            onChange={(e) => updateParam(trait.type, def.key, def.type === 'number' ? (e.target.value ? parseFloat(e.target.value) : undefined) : e.target.value)}
+                            placeholder="—"
+                            className="w-full bg-black/60 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                          />
+                          {def.suffix && <span className="text-[10px] text-slate-500 whitespace-nowrap">{def.suffix}</span>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
           <button 
             onClick={() => setIsOpen(false)}
             className="w-full py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-white font-bold text-sm transition-colors"
@@ -72,11 +166,14 @@ const TraitList: React.FC<{ traits: EntityTrait[], onChange: (traits: EntityTrai
     >
       <span className="text-slate-600 font-bold text-lg select-none group-hover:text-slate-400">[</span>
       {traits.length === 0 ? <span className="text-amber-500 font-bold italic text-sm px-1">No Traits</span> : null}
-      {traits.map((t, i) => (
-        <span key={i} className="text-cyan-400 font-bold text-sm bg-cyan-950/40 px-1.5 rounded border border-cyan-500/20 shadow-sm">
-          {t.type}
-        </span>
-      ))}
+      {traits.map((t, i) => {
+        const paramCount = Object.values(t.parameters || {}).filter(v => v !== undefined && v !== null).length;
+        return (
+          <span key={i} className="text-cyan-400 font-bold text-sm bg-cyan-950/40 px-1.5 rounded border border-cyan-500/20 shadow-sm">
+            {t.type}{paramCount > 0 ? <span className="text-cyan-600 text-[10px] ml-0.5">({paramCount})</span> : ''}
+          </span>
+        );
+      })}
       <span className="text-slate-600 font-bold text-lg select-none group-hover:text-slate-400">]</span>
     </span>
   );
@@ -147,6 +244,65 @@ export const ConfirmationCard: React.FC<ConfirmationCardProps> = ({ action, onCo
             <div className="space-y-2 pt-2">
                <div className="h-4 bg-slate-800 rounded w-2/3 animate-pulse" />
                <div className="h-4 bg-slate-800 rounded w-1/2 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // RENDER: STRATEGY FALLBACK
+  if (action.status === 'STRATEGY_REQUIRED') {
+    return (
+      <div className="fixed inset-x-4 top-24 z-[55] animate-in slide-in-from-top duration-500 max-w-2xl mx-auto">
+        <div className="bg-slate-900 border border-amber-500/30 rounded-3xl p-6 shadow-2xl overflow-hidden relative">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <Sparkles className="w-24 h-24 text-amber-500" />
+          </div>
+          
+          <div className="relative z-10 space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-amber-500/20 p-2 rounded-xl">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+              </div>
+              <span className="text-xs font-bold uppercase tracking-widest text-amber-500">Clarity Required</span>
+            </div>
+
+            <div className="space-y-2">
+               <p className="text-slate-400 text-sm italic">"I heard: {action.transcript}"</p>
+               <h2 className="text-xl font-serif text-white leading-relaxed">
+                 {action.intentStrategy?.advice}
+               </h2>
+            </div>
+
+            {action.intentStrategy?.suggestedCommand && (
+              <div className="bg-black/30 border border-slate-800 rounded-2xl p-4 space-y-3">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Suggested Action</div>
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-emerald-400 font-mono text-sm">{action.intentStrategy.suggestedCommand}</p>
+                  <button 
+                    onClick={() => {
+                      // @ts-ignore
+                      if (window.processVoiceInput) {
+                         // @ts-ignore
+                         window.processVoiceInput(action.intentStrategy.suggestedCommand);
+                      }
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                  >
+                    Accept Suggestion
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button 
+                onClick={onDiscard}
+                className="flex-1 py-4 bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold rounded-2xl text-sm transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
