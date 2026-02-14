@@ -22,9 +22,9 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const genAI = new GoogleGenAI({ apiKey });
+    const genAI = new GoogleGenAI(apiKey);
     const modelInstance = genAI.getGenerativeModel({ 
-      model: model || "gemini-1.5-flash",
+      model: model || "gemini-pro",
       systemInstruction: systemInstruction,
     });
 

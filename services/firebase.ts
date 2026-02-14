@@ -64,6 +64,8 @@ const firebaseConfig = {
   measurementId: localConfig?.measurementId || getEnv('VITE_FIREBASE_MEASUREMENT_ID') || "G-1JKV6H7WDL"
 };
 
+console.log("Using Firebase Config:", firebaseConfig);
+
 // Initialize App (Idempotent)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 

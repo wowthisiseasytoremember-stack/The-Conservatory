@@ -22,7 +22,7 @@ class AIContractor:
     Drop this into any project root. 
     It scans Python DNA and generates copy-paste prompts for your IDE.
     """
-    def __init__(self, project_id: str, location: str = "us-central1", model_name: str = "gemini-1.5-flash"):
+    def __init__(self, project_id: str, location: str = "us-central1", model_name: str = "gemini-pro-latest"):
         self.project_id = project_id
         self.location = location
         self.model_name = model_name

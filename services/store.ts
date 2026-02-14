@@ -987,12 +987,16 @@ export const store = new ConservatoryStore();
 export function useConservatory() {
   const [data, setData] = useState({
     events: store.getEvents(),
+    entities: store.getEntities(),
+    groups: store.getGroups(),
+    messages: store.getMessages(),
+    pendingAction: store.getPendingAction(),
+    liveTranscript: store.getLiveTranscript(),
     testConnection: store.testConnection.bind(store),
     login: store.login.bind(store),
     logout: store.logout.bind(store),
     clearDatabase: store.clearDatabase.bind(store),
     createActionFromVision: store.createActionFromVision.bind(store),
-    setDeepResearch: store.setDeepResearch.bind(store),
     user: store.getUser(),
     activeHabitatId: store.getActiveHabitatId(),
     researchProgress: store.getResearchProgress()

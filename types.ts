@@ -53,6 +53,11 @@ export interface Entity {
     notes?: string;
     maintenance?: string;
   };
+  delightfulSummary?: string;
+  aweInspiringFacts?: {
+    fact: string;
+    source: string;
+  }[];
 
   // Growth & Observation History
   observations?: Array<{

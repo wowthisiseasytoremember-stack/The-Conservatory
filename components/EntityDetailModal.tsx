@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Entity, EntityGroup } from '../types';
-import { X, Tag, Plus, Trash2, FolderOpen, Globe2, CheckCircle2, AlertTriangle, Loader2, TrendingUp } from 'lucide-react';
+import { X, Tag, Plus, Trash2, FolderOpen, Globe2, CheckCircle2, AlertTriangle, Loader2, TrendingUp, Sparkles } from 'lucide-react';
 import { GrowthChart } from './GrowthChart';
 
 interface EntityDetailModalProps {
@@ -235,6 +235,9 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
                  <span className="text-xs bg-slate-800 px-2 rounded-full text-slate-300">x{entity.quantity}</span>
               )}
             </div>
+            {entity.delightfulSummary && (
+              <p className="text-sm text-slate-400 mt-2 leading-relaxed">{entity.delightfulSummary}</p>
+            )}
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full text-slate-400">
             <X className="w-6 h-6" />
@@ -301,6 +304,23 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
                  {renderTraitGauges()}
                </div>
             </div>
+          )}
+
+          {entity.aweInspiringFacts && (
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Awe-Inspiring Facts</h3>
+              </div>
+              <div className="space-y-3">
+                {entity.aweInspiringFacts.map((fact, index) => (
+                  <div key={index} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3">
+                    <p className="text-sm text-slate-300 italic">"{fact.fact}"</p>
+                    <p className="text-xs text-slate-500 text-right mt-2">- {fact.source}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
           )}
 
           {/* Growth & Observations Section */}

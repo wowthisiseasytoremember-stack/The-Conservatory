@@ -183,7 +183,7 @@ export const AIChatBot: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2 px-1 text-[9px] text-slate-600 font-bold uppercase tracking-widest">
-              <Info className="w-3 h-3" /> Powered by Gemini-3-Pro
+              <Info className="w-3 h-3" /> Powered by Gemini
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@ import * as logger from "firebase-functions/logger";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Use Gen 2 functions for better performance/concurrency
-export const proxy = onRequest({ cors: true }, async (req, res) => {
+export const proxy = onRequest({ cors: true, secrets: ["GEMINI_API_KEY"] }, async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.status(200).send();
     return;
@@ -29,7 +29,7 @@ export const proxy = onRequest({ cors: true }, async (req, res) => {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const modelInstance = genAI.getGenerativeModel({ 
-      model: model || "gemini-1.5-flash",
+      model: model || "gemini-pro-latest",
       systemInstruction: systemInstruction,
     });
 

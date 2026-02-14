@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { z } from 'zod';
-import { Entity, PendingAction, IdentifyResult, AdvisoryReport, RackContainer } from "../types";
+import { Entity, PendingAction, IdentifyResult, AdvisoryReport, RackContainer } from "../types.js";
 import { 
   PendingActionSchema, 
   IdentifyResultSchema, 
@@ -9,8 +9,8 @@ import {
   IntentStrategySchema, 
   EcosystemNarrativeSchema, 
   BiologicalDiscoverySchema 
-} from '../src/schemas';
-import { plantService } from './plantService';
+} from '../src/schemas.js';
+import { plantService } from './plantService.js';
 
 const withTimeout = <T>(promise: Promise<T>, ms: number = 45000): Promise<T> => {
   return Promise.race([
@@ -149,11 +149,11 @@ export const geminiService = {
   },
 
   /**
-   * Deep Multimodal Analysis (gemini-1.5-pro-latest)
+   * Deep Multimodal Analysis (gemini-pro-latest)
    */
   async identifyPhoto(base64Data: string): Promise<IdentifyResult> {
     const response = await withTimeout(callProxy({
-      model: "gemini-1.5-pro-latest",
+      model: "gemini-pro-latest",
       contents: [
         { role: 'user', parts: [
           { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
@@ -180,11 +180,11 @@ export const geminiService = {
   },
 
   /**
-   * Analyze rack setup (gemini-1.5-pro-latest)
+   * Analyze rack setup (gemini-pro-latest)
    */
   async analyzeRackScene(base64Data: string): Promise<{ containers: RackContainer[] }> {
     const response = await withTimeout(callProxy({
-      model: "gemini-1.5-pro-latest",
+      model: "gemini-pro-latest",
       contents: [
         { role: 'user', parts: [
           { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
@@ -234,11 +234,11 @@ export const geminiService = {
   },
 
   /**
-   * Advisory Report (gemini-1.5-pro-latest)
+   * Advisory Report (gemini-pro-latest)
    */
   async getAdvisoryReport(intent: string): Promise<AdvisoryReport> {
     const response = await withTimeout(callProxy({
-      model: "gemini-1.5-pro-latest",
+      model: "gemini-pro-latest",
       contents: `Propose an implementation strategy for the following user request: ${intent}`,
       generationConfig: {
         systemInstruction: "You are an expert system architect specializing in digital twin management. Provide implementation reports.",
@@ -265,7 +265,7 @@ export const geminiService = {
    */
   async getIntentStrategy(input: string, context: any): Promise<any> {
     const response = await withTimeout(callProxy({
-      model: "gemini-1.5-pro-latest",
+      model: "gemini-pro-latest",
       contents: `The user said: "${input}". 
                  Context: ${JSON.stringify(context)}.
                  Analyze what they want and provide a strategy.`,
@@ -303,7 +303,7 @@ export const geminiService = {
    */
   async getEcosystemNarrative(snapshot: any): Promise<{ webOfLife: string; biomicStory: string; evolutionaryTension: string }> {
     const response = await withTimeout(callProxy({
-      model: "gemini-1.5-pro-latest",
+      model: "gemini-pro-latest",
       contents: `Synthesize the biological connections of this habitat: ${JSON.stringify(snapshot)}`,
       systemInstruction: `
         You are the Master Ecologist. 
@@ -336,7 +336,7 @@ export const geminiService = {
    */
   async generateHabitatVisualPrompt(narrative: string): Promise<string> {
     const response = await withTimeout(callProxy({
-      model: "gemini-1.5-pro-latest",
+      model: "gemini-pro-latest",
       contents: `Based on this ecosystem narrative, generate a detailed image generation prompt for a premium botanical illustration: ${narrative}`,
       systemInstruction: "Generate a descriptive, photographic, or artistic image prompt focusing on botanical accuracy and atmospheric beauty. No titles or text.",
     }));
@@ -348,7 +348,7 @@ export const geminiService = {
    */
   async getBiologicalDiscovery(speciesName: string): Promise<{ mechanism: string; evolutionaryAdvantage: string; synergyNote: string }> {
     const response = await withTimeout(callProxy({
-      model: "gemini-1.5-pro-latest",
+      model: "gemini-pro-latest",
       contents: `Identify the biological mechanism or ethological secret of: ${speciesName}.`,
       systemInstruction: `
         You are the Chief Biologist of The Conservatory. 
@@ -377,6 +377,21 @@ export const geminiService = {
   },
 
   /**
+   * Generic Content Generation
+   */
+  async generateContent(prompt: string, schema?: any): Promise<any> {
+    const response = await withTimeout(callProxy({
+      model: "gemini-pro-latest",
+      contents: prompt,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: schema,
+      },
+    }));
+    return JSON.parse(response.text || '{}');
+  },
+
+  /**
    * Integrated Chat (Grounded Flash or Thinking Pro)
    */
   async chat(
@@ -385,7 +400,7 @@ export const geminiService = {
     options: { search?: boolean; thinking?: boolean } = {}
   ): Promise<{ text: string; links?: any[] }> {
     // CONTEXT INJECTION: Plant Library
-    const allPlants = plantService.getAll();
+    const allPlants = await plantService.getAll();
     const plantIndex = allPlants.map(p => p.name).join(', ');
     
     let relevantPlants = allPlants.filter(p => 
@@ -396,7 +411,7 @@ export const geminiService = {
     if (relevantPlants.length === 0) {
        const potentialGenera = message.split(' ').filter(w => w.length > 3);
        for (const word of potentialGenera) {
-          const group = plantService.getGenusGroup(word);
+          const group = await plantService.getGenusGroup(word);
           if (group.length > 0) {
              relevantPlants = group.slice(0, 10);
              break; 
@@ -417,7 +432,7 @@ export const geminiService = {
         `;
     }
 
-    const model = options.search ? "gemini-2.0-flash-exp" : "gemini-1.5-pro-latest";
+    const model = options.search ? "gemini-flash-latest" : "gemini-pro-latest";
     
     const response = await callProxy({
       model,
