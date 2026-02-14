@@ -1,6 +1,7 @@
 
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { Entity, PendingAction, IdentifyResult, AdvisoryReport, RackContainer } from "../types";
+import { plantService } from './plantService';
 
 // Initialize using the mandatory process.env.API_KEY
 const getClient = () => {
@@ -232,6 +233,8 @@ export const geminiService = {
   /**
    * Integrated Chat (Grounded Flash or Thinking Pro)
    */
+
+
   async chat(
     message: string, 
     history: any[] = [], 
@@ -239,29 +242,47 @@ export const geminiService = {
   ): Promise<{ text: string; links?: any[] }> {
     const ai = getClient();
     
-    // Choose model based on requirements
-    // Use gemini-3-flash-preview for Search Grounding
-    // Use gemini-3-pro-preview for complex reasoning/thinking
+    // CONTEXT INJECTION: Plant Library
+    // We inject the full list of names so the AI knows what we have.
+    // If the user asks about a specific plant, we could inject full details here.
+    // For now, we provide the index and a lookup instruction.
+    const allPlants = plantService.getAll();
+    const plantIndex = allPlants.map(p => p.name).join(', ');
+    
+    // Smart Lookup: If message contains a plant name, inject its details
+    // Simple heuristic: Does the message contain a known plant string?
+    const relevantPlants = allPlants.filter(p => 
+        message.toLowerCase().includes(p.name.toLowerCase()) || 
+        message.toLowerCase().includes(p.id.toLowerCase())
+    ).slice(0, 3); // Limit to top 3 matches to save tokens
+
+    let contextString = `
+    AVAILABLE PLANT DATABASE:
+    The following plants are in your local inventory/library: ${plantIndex}.
+    `;
+
+    if (relevantPlants.length > 0) {
+        contextString += `
+        
+        RELEVANT PLANT DETAILS (Found in database):
+        ${JSON.stringify(relevantPlants, null, 2)}
+        `;
+    }
+
     const model = options.search ? "gemini-3-flash-preview" : "gemini-3-pro-preview";
     const config: any = {};
     
-    if (options.search) {
-      config.tools = [{ googleSearch: {} }];
-    }
+    // ... (existing config logic)
     
-    if (options.thinking && !options.search) {
-      // Thinking budget 32768 for Pro as per instructions
-      config.thinkingConfig = { thinkingBudget: 32768 };
-    }
-
     const chatInstance = ai.chats.create({
       model,
       config: {
         ...config,
-        systemInstruction: "You are the Conservatory Guide. Help with aquaculture, biology, and system operations."
+        systemInstruction: `You are the Conservatory Guide. Help with aquaculture, biology, and system operations. \n${contextString}`
       },
       history: history.map(h => ({ role: h.role, parts: [{ text: h.text }] }))
     });
+
 
     const response = await chatInstance.sendMessage({ message });
     

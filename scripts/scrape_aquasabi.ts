@@ -35,7 +35,8 @@ const CATEGORIES = [
   '/aquatic-plants-background',
   '/aquatic-plants-mosses',
   '/aquatic-plants-floating-plants',
-  '/aquatic-plants-rare-plants'
+  '/aquatic-plants-rare-plants',
+  '/aquatic-plants' // Catch-all for any missed plants
 ];
 
 async function main() {
@@ -56,48 +57,96 @@ async function main() {
       console.log("Starting Crawl of Aquasabi Categories (Playwright)...");
     
       for (const cat of CATEGORIES) {
-          let pageNum = 1;
-          let hasNextPage = true;
-    
-          while (hasNextPage) {
-            const catUrl = `${BASE_URL}${cat}?p=${pageNum}`;
-            console.log(`Navigating to ${cat} (Page ${pageNum})...`);
-            
-            try {
-                await page.goto(catUrl, { waitUntil: 'domcontentloaded' });
-                
-                // Wait briefly for content
-                try {
-                    // Verified selector
-                    await page.waitForSelector('.product-wrapper', { timeout: 30000 });
-                } catch (e) {
-                    console.log(`No products found for ${cat} page ${pageNum}. Stopping category.`);
-                    hasNextPage = false;
-                    continue;
-                }
-    
-                // Extract links
-                const hrefs = await page.$$eval('.product-wrapper .productbox-image a', (links) => 
-                    links.map(l => l.getAttribute('href'))
-                );
-    
-                if (hrefs.length === 0) {
-                    hasNextPage = false;
-                } else {
-                    hrefs.forEach(href => {
-                        if (href) productUrls.add(href.startsWith('http') ? href : `${BASE_URL}${href}`);
-                    });
-                    console.log(`  Found ${hrefs.length} products on page ${pageNum}.`);
-                    pageNum++;
-                }
-                
-                // Safety break (User mentioned ~26 pages, so 50 is safe)
-                if (pageNum > 50) hasNextPage = false;
-    
-            } catch (e) {
-                console.error(`Failed to crawl category ${cat} page ${pageNum}:`, e.message);
-                hasNextPage = false;
-            }
+          // Navigate once to the category
+          const catUrl = `${BASE_URL}${cat}`;
+          console.log(`Navigating to ${cat}...`);
+          
+          try {
+              await page.goto(catUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              
+              // Wait for initial products
+              await page.waitForSelector('.product-wrapper', { timeout: 30000 });
+              
+              // 1. Dismiss Cookie Banner (if present)
+              try {
+                  const cookieBtn = await page.$('.cc-btn.cc-dismiss, .cc-btn.cc-allow, button:has-text("Accept"), button:has-text("Zustimmen")');
+                  if (cookieBtn && await cookieBtn.isVisible()) {
+                      console.log("  Dismissing cookie banner...");
+                      await cookieBtn.click();
+                      await new Promise(r => setTimeout(r, 1000));
+                  }
+              } catch (e) { /* create no noise */ }
+
+              // Try to find total count for progress logging
+              let totalItems = 0;
+              try {
+                  const countText = await page.$eval('.filter-product-count', el => el.textContent);
+                  if (countText) {
+                      const match = countText.match(/(\d+)/);
+                      if (match) totalItems = parseInt(match[1]);
+                      console.log(`  Category reports ${totalItems} total items.`);
+                  }
+              } catch (e) { }
+
+              let moreButtonExists = true;
+              while (moreButtonExists) {
+                  // Get current count
+                  const currentCount = await page.$$eval('.product-wrapper', els => els.length);
+                  console.log(`  Currently loaded: ${currentCount} items.`);
+
+                  // Look for "Show more" button
+                  // Scroll to bottom first to ensure it handles lazy loading / visibility
+                  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+                  await new Promise(r => setTimeout(r, 1000));
+
+                  const button = await page.$('text="Show more items"'); 
+                  
+                  if (button && await button.isVisible()) {
+                      console.log("  Clicking 'Show more items'...");
+                      
+                      // ROBUST CLICK STRATEGY
+                      try {
+                          // 1. Force scroll
+                          await button.scrollIntoViewIfNeeded();
+                          
+                          // 2. JS Click (Bypasses overlays/viewport checks)
+                          await page.evaluate(el => (el as HTMLElement).click(), button);
+                          
+                      } catch (err) {
+                          console.log("  JS Click failed, trying force click...");
+                          await button.click({ force: true });
+                      }
+                      
+                      // Wait for new items to load
+                      try {
+                          await page.waitForFunction((prevCount) => {
+                              return document.querySelectorAll('.product-wrapper').length > prevCount;
+                          }, currentCount, { timeout: 15000 });
+                      } catch (e) {
+                          console.warn("  Wait for new items timed out (or no new items).");
+                          moreButtonExists = false;
+                      }
+                      
+                      // Small pause for stability
+                      await new Promise(r => setTimeout(r, 1500));
+                  } else {
+                      console.log("  No more 'Show more' button found. Finished loading category.");
+                      moreButtonExists = false;
+                  }
+              }
+
+              // Extract all links
+              const hrefs = await page.$$eval('.product-wrapper .productbox-image a', (links) => 
+                  links.map(l => l.getAttribute('href'))
+              );
+
+              hrefs.forEach(href => {
+                  if (href) productUrls.add(href.startsWith('http') ? href : `${BASE_URL}${href}`);
+              });
+              console.log(`  Extracted ${hrefs.length} total unique product URLs from ${cat}.`);
+
+          } catch (e) {
+              console.error(`Failed to crawl category ${cat}:`, e.message);
           }
       }
       sortedUrls = [...productUrls].sort();

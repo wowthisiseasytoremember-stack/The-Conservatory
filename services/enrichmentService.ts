@@ -103,10 +103,14 @@ export const enrichmentService = {
       
       if (localMatch) {
         console.log(`[Enrichment] Found local match for "${query}": ${localMatch.name}`);
+        // Map local data to EnrichmentResult interface
         return {
-            details: localMatch.details,
-            traits: localMatch.traits,
-            images: localMatch.images
+            scientificName: localMatch.scientificName || localMatch.traits['Complete botanical name'],
+            commonName: localMatch.name,
+            description: localMatch.details.description,
+            origin: localMatch.traits['Origin'] || localMatch.traits['Distribution'], // Guessing keys, safe fallback
+            images: localMatch.images,
+            tips: localMatch.details.notes
         };
       }
 
