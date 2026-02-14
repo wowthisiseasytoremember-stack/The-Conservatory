@@ -8,6 +8,10 @@
     ],
     "rewrites": [
       {
+        "source": "/api/proxy",
+        "function": "proxy"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

@@ -6,36 +6,17 @@ import { test, expect, Page } from '@playwright/test';
 // ---------------------------------------------------------------------------
 
 async function setupTestEnvironment(page: Page) {
+  // Mock removed to use REAL API/DB
+  // await page.route('/api/proxy', ...);
+
   await page.goto('/');
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(1000);
   
   await page.evaluate(() => {
-    // Mock Vision API results
     // @ts-ignore
-    window.mockVisionIdentify = () => Promise.resolve({
-      species: 'Spathiphyllum wallisii',
-      common_name: 'Peace Lily',
-      kingdom: 'Plantae',
-      confidence: 0.94,
-      reasoning: 'Mock: Distinctive white spathe and dark green leaves identified.'
-    });
-
-    // Mock Gemini AI
-    // @ts-ignore
-    window.mockGeminiParse = (text: string) => {
-      if (text.match(/create.*tank/i)) {
-        return Promise.resolve({
-          intent: 'MODIFY_HABITAT',
-          targetHabitatName: 'Studio Room',
-          habitatParams: { name: 'Studio Room', type: 'Terrestrial', size: 1, unit: 'pot' },
-        });
-      }
-      return Promise.resolve({ intent: 'QUERY', aiReasoning: 'Mock fallback' });
-    };
-
-    // @ts-ignore
-    window.setTestUser({ uid: 'visionary-id', email: 'vision@test.com' });
+    // Pass 'true' to enable REAL backend writes
+    window.setTestUser({ uid: 'visionary-id', email: 'vision@test.com' }, true);
   });
 
   await expect(page.locator('h1')).toContainText(/Activity|Collection/, { timeout: 15000 });

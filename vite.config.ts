@@ -8,6 +8,13 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: {
+          '/api': {
+            target: 'https://us-central1-the-conservatory-d858b.cloudfunctions.net',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/api\/proxy/, '/proxy')
+          }
+        }
       },
       plugins: [react()],
       resolve: {

@@ -22,7 +22,8 @@ const App: React.FC = () => {
     activeHabitatId, researchProgress, activeBiomeTheme,
     processVoiceInput, commitPendingAction, discardPending, 
     updateSlot, updateEntity, addGroup, testConnection, login, logout,
-    createActionFromVision, setActiveHabitat, deepResearchAll, resetResearchProgress
+    createActionFromVision, setActiveHabitat, deepResearchAll, resetResearchProgress,
+    clearDatabase
   } = useConservatory();
   
   const [activeTab, setActiveTab] = useState<'feed' | 'entities'>('feed');
@@ -88,6 +89,12 @@ const App: React.FC = () => {
         />
       }
     >
+      <button 
+        onClick={clearDatabase}
+        style={{ position: 'absolute', top: 10, right: 100, zIndex: 9999, background: 'red', color: 'white', padding: '5px' }}
+      >
+        Clear DB
+      </button>
       <DevTools />
 
       {/* Confirmation UI */}

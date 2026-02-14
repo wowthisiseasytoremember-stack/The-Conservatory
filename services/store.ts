@@ -47,14 +47,14 @@ class ConservatoryStore {
     // @ts-ignore
     if (typeof window !== 'undefined') {
       // @ts-ignore
-      window.setTestUser = (user: User) => {
-        console.log("Setting Test User:", user);
+      window.setTestUser = (user: User, useRealBackend = false) => {
+        console.log("Setting Test User:", user, "Real Backend:", useRealBackend);
         // Prevent Firebase auth from overwriting test user
         this._isTestMode = true;
         this.clearSync();
         this.user = user;
-        // Mark test mode to skip Firestore writes
-        (window as any).__TEST_MODE__ = true;
+        // Mark test mode to skip Firestore writes ONLY if not using real backend
+        (window as any).__TEST_MODE__ = !useRealBackend;
         this.notify();
       };
       
@@ -99,6 +99,32 @@ class ConservatoryStore {
     } catch (e) {
       console.error("Logout failed", e);
     }
+  }
+
+  // TEST UTILITY: Clears all data from Firestore
+  async clearDatabase() {
+    console.warn("CLEARING DATABASE...");
+    const batch = writeBatch(db);
+    
+    // Clear Events
+    const eventsSnapshot = await getDocs(collection(db, 'events'));
+    eventsSnapshot.forEach((doc) => batch.delete(doc.ref));
+
+    // Clear Entities
+    const entitiesSnapshot = await getDocs(collection(db, 'entities'));
+    entitiesSnapshot.forEach((doc) => batch.delete(doc.ref));
+
+    // Clear Groups
+    const groupsSnapshot = await getDocs(collection(db, 'groups'));
+    groupsSnapshot.forEach((doc) => batch.delete(doc.ref));
+
+    await batch.commit();
+    console.log("DATABASE CLEARED.");
+    
+    this.events = [];
+    this.entities = [];
+    this.groups = [];
+    this.persistLocal();
   }
 
   private loadLocal() {
@@ -961,11 +987,12 @@ export const store = new ConservatoryStore();
 export function useConservatory() {
   const [data, setData] = useState({
     events: store.getEvents(),
-    entities: store.getEntities(),
-    groups: store.getGroups(),
-    messages: store.getMessages(),
-    pendingAction: store.getPendingAction(),
-    liveTranscript: store.getLiveTranscript(),
+    testConnection: store.testConnection.bind(store),
+    login: store.login.bind(store),
+    logout: store.logout.bind(store),
+    clearDatabase: store.clearDatabase.bind(store),
+    createActionFromVision: store.createActionFromVision.bind(store),
+    setDeepResearch: store.setDeepResearch.bind(store),
     user: store.getUser(),
     activeHabitatId: store.getActiveHabitatId(),
     researchProgress: store.getResearchProgress()

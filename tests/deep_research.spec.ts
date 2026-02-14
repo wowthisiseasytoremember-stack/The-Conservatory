@@ -6,37 +6,18 @@ import { test, expect, Page } from '@playwright/test';
 // ---------------------------------------------------------------------------
 
 async function setupTestEnvironment(page: Page) {
+  // Mock /api/proxy for Gemini calls
+    // Mock removed to use REAL API/DB
+    // await page.route('/api/proxy', async route => { ... });
+
   await page.goto('/');
   await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(1000);
-  
-  await page.evaluate(() => {
-    // Mock Gemini AI
+  await page.evaluate(async () => {
     // @ts-ignore
-    window.mockGeminiParse = (text: string) => {
-      if (text.match(/create.*tank/i)) {
-        return Promise.resolve({
-          intent: 'MODIFY_HABITAT',
-          targetHabitatName: 'Research Lab',
-          habitatParams: { name: 'Research Lab', type: 'Freshwater', size: 10, unit: 'gallon' },
-        });
-      }
-      if (text.match(/added.*neon tetra/i)) {
-        return Promise.resolve({
-          intent: 'ACCESSION_ENTITY',
-          targetHabitatName: 'Research Lab',
-          candidates: [
-            { commonName: 'Neon Tetra', scientificName: 'Paracheirodon innesi', quantity: 1, traits: [{ type: 'AQUATIC', parameters: {} }] }
-          ],
-        });
-      }
-      return Promise.resolve({ intent: 'QUERY', aiReasoning: 'Mock fallback' });
-    };
-
-    // @ts-ignore
-    window.setTestUser({ uid: 'researcher-id', email: 'research@test.com' });
+    // Pass 'true' to enable REAL backend writes
+    window.setTestUser({ uid: 'researcher-id', email: 'research@test.com' }, true);
   });
-
+  
   await expect(page.locator('h1')).toContainText(/Activity|Collection/, { timeout: 15000 });
 }
 
@@ -65,33 +46,37 @@ async function goToCollection(page: Page) {
 // ---------------------------------------------------------------------------
 
 test.describe('Deep Research Enrichment Pipeline', () => {
-
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.evaluate(() => localStorage.clear());
     await setupTestEnvironment(page);
   });
 
   test('entities are added in "queued" state and can be enriched', async ({ page }) => {
-    // 1. Create habitat
-    await sendVoiceCommand(page, 'Create a tank called Research Lab.');
+    const timestamp = Date.now();
+    const habitatName = `Research Lab ${timestamp}`;
+    
+    // 1. Create a habitat (using voice for E2E realism)
+    await sendVoiceCommand(page, `Create a tank called ${habitatName}`);
     await confirmAction(page);
+    
+    // Wait for habitat to be created
+    await expect(page.locator(`text=${habitatName}`)).toBeVisible({ timeout: 15000 });
 
-    // 2. Add entity (should be queued)
-    await sendVoiceCommand(page, 'I added a Neon Tetra to Research Lab.');
+    // 2. Add an entity (using voice)
+    await sendVoiceCommand(page, `I added a Neon Tetra to ${habitatName}`);
     await confirmAction(page);
 
     await goToCollection(page);
     
     // 3. Select the habitat to see the entities
-    const labBtn = page.getByRole('button').filter({ hasText: 'Research Lab' }).first();
+    const labBtn = page.getByRole('button').filter({ hasText: habitatName }).first();
     await expect(labBtn).toBeVisible({ timeout: 15000 });
     await labBtn.click();
     await page.waitForTimeout(500); // Wait for list animation
 
     // 4. Verify "Research" button is visible because of queued entity
     const researchBtn = page.getByTestId('research-habitat-btn');
-    await expect(researchBtn).toBeVisible({ timeout: 10000 });
+    // Research button might take a moment if the entity list is refreshing
+    await expect(researchBtn).toBeVisible({ timeout: 15000 });
 
     // 5. Start research
     await researchBtn.click();
