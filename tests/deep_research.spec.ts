@@ -21,6 +21,11 @@ async function setupTestEnvironment(page: Page) {
   await expect(page.locator('h1')).toContainText(/Activity|Collection/, { timeout: 15000 });
 }
 
+test.beforeEach(async ({ page }) => {
+    page.on('console', msg => console.log(`[Browser Console] ${msg.text()}`));
+    await setupTestEnvironment(page);
+});
+
 async function sendVoiceCommand(page: Page, text: string) {
   await page.evaluate((t) => {
     // @ts-ignore
@@ -46,6 +51,7 @@ async function goToCollection(page: Page) {
 // ---------------------------------------------------------------------------
 
 test.describe('Deep Research Enrichment Pipeline', () => {
+    test.setTimeout(90000); // 90s for cold start
   test.beforeEach(async ({ page }) => {
     await setupTestEnvironment(page);
   });

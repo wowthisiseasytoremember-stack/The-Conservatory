@@ -1,7 +1,7 @@
 
 import { onRequest } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Use Gen 2 functions for better performance/concurrency
 export const proxy = onRequest({ cors: true }, async (req, res) => {
@@ -27,7 +27,7 @@ export const proxy = onRequest({ cors: true }, async (req, res) => {
   }
 
   try {
-    const genAI = new GoogleGenAI({ apiKey });
+    const genAI = new GoogleGenerativeAI(apiKey);
     const modelInstance = genAI.getGenerativeModel({ 
       model: model || "gemini-1.5-flash",
       systemInstruction: systemInstruction,
