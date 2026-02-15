@@ -211,8 +211,8 @@ export const SpeciesPlacard: React.FC = () => {
               return null;
             })}
           </div>
-        </div>
-      )}
+        ) : null}
+      </div>
 
       {/* Personal History Timeline */}
       <div>

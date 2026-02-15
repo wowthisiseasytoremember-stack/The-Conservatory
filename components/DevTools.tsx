@@ -323,7 +323,7 @@ export const DevTools: React.FC = () => {
           )}
         </div>
 
-      ) : (
+      ) : activeTab === 'contractor' ? (
         /* ============== CONTRACTOR/ADVISORY TAB ============== */
         <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300 overflow-y-auto custom-scrollbar">
             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
@@ -422,7 +422,8 @@ export const DevTools: React.FC = () => {
                 </div>
             )}
         </div>
-      ) : (
+
+      ) : activeTab === 'backend' ? (
         /* ============== BACKEND VERIFICATION TAB ============== */
         <div className="space-y-3 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-right-4 duration-200">
           <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-3">
@@ -561,7 +562,7 @@ export const DevTools: React.FC = () => {
             </div>
           )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 };
