@@ -1,13 +1,22 @@
 
-import React from 'react';
-import { AppEvent, EventStatus } from '../types';
+import React, { useMemo } from 'react';
+import { AppEvent, EventStatus, Entity } from '../types';
 import { CheckCircle2, Clock, AlertCircle, Sparkles, Terminal, Activity, Droplets, Thermometer } from 'lucide-react';
+import { FeaturedSpecimenCard } from './FeaturedSpecimenCard';
+import { enrichEvent, EnrichedEvent } from './WonderFeedHelpers';
 
 interface EventFeedProps {
   events: AppEvent[];
+  entities?: Entity[];
+  onEntityClick?: (entity: Entity) => void;
 }
 
-export const EventFeed: React.FC<EventFeedProps> = ({ events }) => {
+export const EventFeed: React.FC<EventFeedProps> = ({ events, entities = [], onEntityClick }) => {
+  // Enrich events with biological context
+  const enrichedEvents = useMemo(() => {
+    return events.map(event => enrichEvent(event, entities, events)).filter((e): e is EnrichedEvent => e !== null);
+  }, [events, entities]);
+
   const getStatusIcon = (status: EventStatus) => {
     switch (status) {
       case EventStatus.PENDING:
@@ -42,29 +51,85 @@ export const EventFeed: React.FC<EventFeedProps> = ({ events }) => {
 
   return (
     <div className="space-y-4 pb-32">
+      {/* Featured Specimen Card */}
+      {entities.length > 0 && onEntityClick && (
+        <FeaturedSpecimenCard 
+          entities={entities} 
+          onEntityClick={onEntityClick}
+        />
+      )}
+
       <h2 className="text-xl font-serif font-bold text-emerald-400 mb-6 flex items-center gap-2">
-        Activity Log
+        Wonder Feed
       </h2>
       {events.length === 0 && (
         <div className="py-12 text-center text-slate-500 italic">
           No records yet. Start by speaking to the system.
         </div>
       )}
-      {events.map((event) => (
-        <div 
-          key={event.id} 
-          className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 transition-all hover:bg-slate-900"
-        >
-          <div className="flex justify-between items-start mb-2">
-            <span className="text-[10px] text-slate-500 uppercase tracking-wider font-mono">
-              {new Date(event.timestamp).toLocaleTimeString()}
-            </span>
-            <div className="flex items-center gap-2">
-              {getStatusIcon(event.status)}
+      {events.map((event) => {
+        // Try to find enriched version, fallback to null if not enriched
+        const enriched = enrichedEvents.find(e => e.event.id === event.id) || null;
+        
+        // Use enriched rendering if available
+        if (enriched) {
+          return (
+            <div 
+              key={event.id} 
+              className={`
+                rounded-xl p-4 transition-all hover:scale-[1.01] border
+                ${enriched.visualStyle === 'celebratory' 
+                  ? 'bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/15' 
+                  : enriched.visualStyle === 'magical'
+                  ? 'bg-purple-500/10 border-purple-500/30 hover:bg-purple-500/15'
+                  : enriched.visualStyle === 'clinical'
+                  ? 'bg-cyan-500/10 border-cyan-500/30 hover:bg-cyan-500/15'
+                  : 'bg-slate-900/50 border-slate-800 hover:bg-slate-900'
+                }
+              `}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-mono">
+                  {new Date(event.timestamp).toLocaleTimeString()}
+                </span>
+                <div className="flex items-center gap-2">
+                  {getStatusIcon(event.status)}
+                </div>
+              </div>
+              
+              <p className="text-slate-200 text-sm leading-relaxed font-medium">
+                {enriched.enrichedText}
+              </p>
+
+              {/* Trend indicator for clinical events */}
+              {enriched.trend && enriched.trend.direction !== 'stable' && (
+                <div className="mt-2 text-xs text-slate-400 flex items-center gap-1">
+                  <span className={`${enriched.trend.direction === 'up' ? 'text-red-400' : 'text-blue-400'}`}>
+                    {enriched.trend.direction === 'up' ? '↑' : '↓'} {enriched.trend.delta.toFixed(1)}
+                  </span>
+                  <span className="text-slate-500">over {enriched.trend.period}</span>
+                </div>
+              )}
             </div>
-          </div>
-          
-          <p className="text-slate-200 text-sm mb-3 font-medium">"{event.raw_input}"</p>
+          );
+        }
+
+        // Fallback to default rendering for non-enriched events
+        return (
+          <div 
+            key={event.id} 
+            className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 transition-all hover:bg-slate-900"
+          >
+            <div className="flex justify-between items-start mb-2">
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-mono">
+                {new Date(event.timestamp).toLocaleTimeString()}
+              </span>
+              <div className="flex items-center gap-2">
+                {getStatusIcon(event.status)}
+              </div>
+            </div>
+            
+            <p className="text-slate-200 text-sm mb-3 font-medium">"{event.raw_input}"</p>
 
           {/* Logic Anchor 3: Display Domain Event Payload */}
           {event.domain_event && (
@@ -115,7 +180,8 @@ export const EventFeed: React.FC<EventFeedProps> = ({ events }) => {
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

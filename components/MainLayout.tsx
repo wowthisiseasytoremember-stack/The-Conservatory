@@ -1,13 +1,11 @@
 
 import React from 'react';
-import { Leaf, Activity, LayoutGrid, Settings, AlertCircle, LogOut } from 'lucide-react';
+import { Leaf, Settings, AlertCircle, LogOut } from 'lucide-react';
 import { ConnectionStatus } from '../services/connectionService';
 import { BiomeTheme } from '../types';
 
 interface MainLayoutProps {
   children: React.ReactNode;
-  activeTab: 'feed' | 'entities';
-  setActiveTab: (tab: 'feed' | 'entities') => void;
   connectionStatus: ConnectionStatus;
   onOpenSettings: () => void;
   onLogout: () => void;
@@ -15,12 +13,13 @@ interface MainLayoutProps {
   voiceButtonComponent: React.ReactNode;
   biomeTheme?: BiomeTheme;
   liveTranscript?: string;
+  routeTitle?: string;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({
-  children, activeTab, setActiveTab, connectionStatus,
+  children, connectionStatus,
   onOpenSettings, onLogout, photoIdentifyComponent, voiceButtonComponent,
-  biomeTheme = 'default', liveTranscript
+  biomeTheme = 'default', liveTranscript, routeTitle = 'The Conservatory'
 }) => {
   return (
     <div
@@ -56,7 +55,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             </div>
           </div>
           <h1 className="text-3xl font-serif font-bold tracking-tight" style={{ color: 'var(--bio-text-primary)' }}>
-            {activeTab === 'feed' ? 'Activity' : 'Collection'}
+            {routeTitle}
           </h1>
         </div>
         <div className="flex gap-2">
@@ -84,38 +83,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         {children}
       </main>
 
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-2xl mx-auto px-6 pb-6 z-40 pointer-events-none">
-        <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-2 flex items-center justify-around shadow-2xl pointer-events-auto">
-          <button 
-            onClick={() => setActiveTab('feed')}
-            className={`flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 transition-all ${
-              activeTab === 'feed' ? 'text-emerald-400' : 'text-slate-500'
-            }`}
-            style={activeTab === 'feed' ? { background: 'var(--bio-accent-muted)', color: 'var(--bio-accent)' } : {}}
-          >
-            <Activity className="w-5 h-5" />
-            <span className="text-xs font-bold uppercase tracking-widest">Feed</span>
-          </button>
-
-          <div className="w-20" /> {/* Voice Spacer */}
-
-          <button 
-            onClick={() => setActiveTab('entities')}
-            className={`flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 transition-all ${
-              activeTab === 'entities' ? 'text-emerald-400' : 'text-slate-500'
-            }`}
-            style={activeTab === 'entities' ? { background: 'var(--bio-accent-muted)', color: 'var(--bio-accent)' } : {}}
-          >
-            <LayoutGrid className="w-5 h-5" />
-            <span className="text-xs font-bold uppercase tracking-widest">Collection</span>
-          </button>
-        </div>
-      </nav>
-
       {/* Rapid Voice Reflection Overlay */}
       {liveTranscript && (
-        <div className="fixed inset-x-0 top-1/2 -translate-y-1/2 z-[60] flex items-center justify-center pointer-events-none px-12">
+        <div className="fixed inset-x-0 top-1/2 -translate-y-1/2 z-[60] flex items-center justify-center pointer-events-none px-12" style={{ zIndex: 60 }}>
           <div className="bg-emerald-500/10 backdrop-blur-3xl border border-emerald-500/20 px-8 py-6 rounded-3xl shadow-[0_0_100px_rgba(16,185,129,0.1)] animate-pulse max-w-lg text-center">
             <p className="text-2xl font-serif text-emerald-100/90 leading-relaxed italic">
               "{liveTranscript}"

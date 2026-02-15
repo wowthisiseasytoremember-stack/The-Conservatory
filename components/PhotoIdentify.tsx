@@ -1,7 +1,7 @@
 
 import React, { useRef, useState } from 'react';
 import { Camera, RefreshCw, Check, X, Layers } from 'lucide-react';
-import { geminiService } from '../services/geminiService';
+import { VisionServiceFactory } from '../services/vision/VisionServiceFactory';
 import { IdentifyResult, RackContainer } from '../types';
 import { RackReviewModal } from './RackReviewModal';
 import { store } from '../services/store';
@@ -22,6 +22,9 @@ export const PhotoIdentify: React.FC<PhotoIdentifyProps> = ({ onConfirmRack }) =
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // Get vision service instance (factory handles Gemini vs shared service)
+  const visionService = VisionServiceFactory.create();
 
   const startCamera = async (newMode: 'single' | 'rack') => {
     setMode(newMode);
@@ -49,14 +52,34 @@ export const PhotoIdentify: React.FC<PhotoIdentifyProps> = ({ onConfirmRack }) =
 
     try {
       if (mode === 'single') {
-        const result = await geminiService.identifyPhoto(base64);
+        const result = await visionService.identifySpecies(base64);
         setIdResult(result);
       } else {
-        const result = await geminiService.analyzeRackScene(base64);
+        const result = await visionService.analyzeRackScene(base64);
         setRackResult(result.containers);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      // Show error toast with retry option
+      const { toastManager } = await import('./Toast');
+      const { isRetryableError } = await import('../utils/retry');
+      
+      const errorMessage = `Photo identification failed: ${e.message || 'Unknown error'}.`;
+      const canRetry = isRetryableError(e);
+      
+      toastManager.error(
+        errorMessage,
+        8000,
+        canRetry ? {
+          action: {
+            label: 'Retry',
+            onClick: async () => {
+              // Retry by re-capturing
+              await capture();
+            }
+          }
+        } : undefined
+      );
     } finally {
       setIsLoading(false);
     }

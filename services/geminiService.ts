@@ -11,6 +11,9 @@ import {
   BiologicalDiscoverySchema 
 } from '../src/schemas.js';
 import { plantService } from './plantService.js';
+import { logger, logAICall, logCache } from './logger.js';
+import { trackCost, calculateCost } from './costTracker.js';
+import { LRUCache } from '../utils/LRUCache.js';
 
 const withTimeout = <T>(promise: Promise<T>, ms: number = 45000): Promise<T> => {
   return Promise.race([
@@ -96,36 +99,116 @@ const PENDING_ACTION_SCHEMA = {
 };
 
 // Internal helper to call the secure Vercel API proxy
+/**
+ * Calls the Firebase Cloud Function proxy for Gemini API requests.
+ * 
+ * The `/api/proxy` route is rewritten by firebase.json to the `proxy` Cloud Function
+ * (see functions/src/index.ts). This keeps API keys secure on the server.
+ */
 async function callProxy(config: {
   model: string;
   contents: any;
   systemInstruction?: string;
   generationConfig?: any;
-}) {
-  const res = await fetch('/api/proxy', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  operation?: string; // For cost tracking
+}): Promise<any> {
+  const startTime = Date.now();
+  const operation = config.operation || 'ai_call';
+  
+  try {
+    const res = await fetch('/api/proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: config.model,
+        contents: config.contents,
+        systemInstruction: config.systemInstruction,
+        config: config.generationConfig
+      })
+    });
+    
+    if (!res.ok) {
+      const err = await res.json();
+      const duration = Date.now() - startTime;
+      
+      // Track failed call (no cost but track the attempt)
+      await trackCost({
+        model: config.model,
+        operation,
+        estimatedCost: 0,
+        duration,
+        success: false,
+        error: err.error || 'AI Proxy Error'
+      });
+      
+      throw new Error(err.error || 'AI Proxy Error');
+    }
+    
+    const result = await res.json();
+    const duration = Date.now() - startTime;
+    
+    // Estimate tokens (rough approximation)
+    // Input: count characters in prompt (roughly 4 chars per token)
+    const inputText = JSON.stringify(config.contents) + (config.systemInstruction || '');
+    const estimatedInputTokens = Math.ceil(inputText.length / 4);
+    
+    // Output: count characters in response (roughly 4 chars per token)
+    const outputText = result.text || '';
+    const estimatedOutputTokens = Math.ceil(outputText.length / 4);
+    
+    const cost = calculateCost(config.model, estimatedInputTokens, estimatedOutputTokens);
+    
+    // Track successful call
+    await trackCost({
       model: config.model,
-      contents: config.contents,
-      systemInstruction: config.systemInstruction,
-      config: config.generationConfig
-    })
-  });
-  
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'AI Proxy Error');
+      operation,
+      inputTokens: estimatedInputTokens,
+      outputTokens: estimatedOutputTokens,
+      totalTokens: estimatedInputTokens + estimatedOutputTokens,
+      estimatedCost: cost,
+      duration,
+      success: true
+    });
+    
+    return result;
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    
+    // Track error (no cost but track the attempt)
+    await trackCost({
+      model: config.model,
+      operation,
+      estimatedCost: 0,
+      duration,
+      success: false,
+      error: error.message || 'Unknown error'
+    });
+    
+    throw error;
   }
-  
-  return await res.json();
 }
+
+// Intent parsing cache with LRU eviction (max 100 entries)
+const intentCache = new LRUCache<string, any>(100);
 
 export const geminiService = {
   /**
    * Fast parsing for voice commands (gemini-flash-lite-latest)
+   * 
+   * Caches results to avoid re-parsing identical commands.
+   * Cache key: transcription + entity count (entities change infrequently)
    */
   async parseVoiceCommand(transcription: string, entities: Entity[]): Promise<any> {
+    // Create cache key from transcription and entity count
+    // (Entity count is a proxy for context - if entities change, re-parse)
+    const cacheKey = `${transcription.toLowerCase().trim()}:${entities.length}`;
+    
+    // Check cache first
+    if (intentCache.has(cacheKey)) {
+      logCache('debug', 'Intent cache hit', { key: cacheKey.substring(0, 50), hit: true });
+      return intentCache.get(cacheKey);
+    }
+    
     const entityIndex = entities.map(e => ({ id: e.id, name: e.name, aliases: e.aliases }));
 
     const systemInstruction = `
@@ -138,6 +221,7 @@ export const geminiService = {
       model: "gemini-flash-lite-latest",
       contents: transcription,
       systemInstruction,
+      operation: 'parse_voice_command',
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: PENDING_ACTION_SCHEMA,
@@ -145,7 +229,199 @@ export const geminiService = {
     }));
 
     const data = JSON.parse(response.text || '{}');
-    return PendingActionSchema.parse(data);
+    
+    // Permissive validation: Extract valid data, store invalid in overflow
+    // Never block - always return something usable
+    const result = PendingActionSchema.safeParse(data);
+    
+    if (!result.success) {
+      logger.warn({ validationErrors: result.error.errors }, 'Gemini validation errors (storing in overflow)');
+      
+      // Extract valid data and move invalid to overflow
+      const validData: any = {
+        intent: data.intent || null,
+        targetHabitatName: data.targetHabitatName,
+        aiReasoning: data.aiReasoning || 'Parsed with some validation issues',
+        isAmbiguous: data.isAmbiguous,
+        observationNotes: data.observationNotes,
+        observationParams: data.observationParams,
+        habitatParams: data.habitatParams,
+      };
+      
+      // Process candidates - extract valid, store invalid in overflow
+      if (data.candidates) {
+        if (!Array.isArray(data.candidates)) {
+          // Candidates is not an array - store in overflow
+          if (!validData.overflow) validData.overflow = {};
+          validData.overflow.rawCandidates = data.candidates;
+          validData.candidates = []; // Empty array as fallback
+        } else {
+          // Ensure candidates is an array before mapping
+          const candidatesArray = Array.isArray(data.candidates) ? data.candidates : [];
+          validData.candidates = candidatesArray.map((c: any, idx: number) => {
+          const validCandidate: any = {
+            commonName: c.commonName || `Unknown Species ${idx + 1}`,
+            scientificName: c.scientificName,
+            quantity: typeof c.quantity === 'number' ? c.quantity : undefined,
+            traits: [],
+          };
+          
+          const invalidData: any = {};
+          
+              // Process traits - only include valid ones
+          if (c.traits && Array.isArray(c.traits)) {
+            c.traits.forEach((t: any, traitIdx: number) => {
+              if (!t || !t.type) {
+                invalidData[`trait_${traitIdx}`] = t;
+                return;
+              }
+              
+              const validTrait: any = {
+                type: t.type,
+                parameters: t.parameters && typeof t.parameters === 'object' && !Array.isArray(t.parameters) 
+                  ? {} // Will be populated below
+                  : {},
+              };
+              
+              // Only include parameters that pass validation
+              // Handle undefined, null, or invalid parameters
+              if (t.parameters !== undefined && t.parameters !== null) {
+                // Ensure parameters is an object, not array or other type
+                if (typeof t.parameters !== 'object' || Array.isArray(t.parameters)) {
+                  // Store invalid parameters structure in overflow
+                  if (!invalidData.parameters) invalidData.parameters = {};
+                  invalidData.rawParameters = t.parameters;
+                  // Don't reset - just skip invalid parameters
+                } else {
+                  // parameters is a valid object - process it
+                
+                  Object.keys(t.parameters).forEach(key => {
+                    const value = t.parameters[key];
+                    
+                    // Validate based on schema
+                    try {
+                      // Check if it's a valid enum or type
+                      if (key === 'diet' && ['carnivore', 'herbivore', 'omnivore'].includes(value)) {
+                        validTrait.parameters[key] = value;
+                    } else if (key === 'lightReq') {
+                      // Normalize lightReq values
+                      const normalized = String(value).toLowerCase();
+                      if (normalized === 'medium' || normalized === 'med') {
+                        validTrait.parameters[key] = 'med';
+                      } else if (['low', 'high'].includes(normalized)) {
+                        validTrait.parameters[key] = normalized;
+                      } else {
+                        // Invalid value - store in overflow
+                        if (!invalidData.parameters) invalidData.parameters = {};
+                        invalidData.parameters[key] = value;
+                      }
+                      } else if (key === 'salinity' && ['fresh', 'brackish', 'marine'].includes(value)) {
+                        validTrait.parameters[key] = value;
+                      } else if (key === 'growth_rate') {
+                        // Normalize growth_rate values
+                        const normalized = String(value).toLowerCase();
+                        if (normalized === 'medium' || normalized === 'med') {
+                          validTrait.parameters[key] = 'medium';
+                        } else if (['slow', 'fast'].includes(normalized)) {
+                          validTrait.parameters[key] = normalized;
+                        } else {
+                          if (!invalidData.parameters) invalidData.parameters = {};
+                          invalidData.parameters[key] = value;
+                        }
+                      } else if (key === 'difficulty' && ['easy', 'medium', 'hard', 'very_hard'].includes(value)) {
+                        validTrait.parameters[key] = value;
+                      } else if (key === 'placement' && ['foreground', 'midground', 'background', 'floating', 'epiphyte'].includes(value)) {
+                        validTrait.parameters[key] = value;
+                      } else if ((key === 'co2' || key === 'molting' || key === 'colony' || key === 'stable') && typeof value === 'boolean') {
+                        validTrait.parameters[key] = value;
+                      } else if ((key === 'pH' || key === 'temp' || key === 'humidity' || key === 'ammonia' || key === 'nitrates' || key === 'growth_height' || key === 'estimatedCount') && typeof value === 'number') {
+                        validTrait.parameters[key] = value;
+                      } else if ((key === 'substrate') && typeof value === 'string') {
+                        validTrait.parameters[key] = value;
+                      } else {
+                        // Invalid value - store in overflow
+                        if (!invalidData.parameters) invalidData.parameters = {};
+                        invalidData.parameters[key] = value;
+                      }
+                    } catch (e) {
+                      // Store in overflow if validation fails
+                      if (!invalidData.parameters) invalidData.parameters = {};
+                      invalidData.parameters[key] = value;
+                    }
+                  });
+                }
+              }
+              // If parameters is undefined or null, validTrait.parameters remains {} (empty object)
+              
+              // Only add trait if it has valid type
+              if (validTrait.type) {
+                validCandidate.traits.push(validTrait);
+              } else {
+                invalidData[`trait_${traitIdx}`] = t;
+              }
+              
+              // Store any invalid trait data
+              if (Object.keys(invalidData).length > 0) {
+                if (!validCandidate.overflow) validCandidate.overflow = {};
+                Object.assign(validCandidate.overflow, invalidData);
+              }
+            });
+          } else if (c.traits) {
+            // Traits is not an array - store in overflow
+            if (!validCandidate.overflow) validCandidate.overflow = {};
+            validCandidate.overflow.rawTraits = c.traits;
+          }
+          
+          // Store any other invalid candidate data
+          Object.keys(c).forEach(key => {
+            if (!['commonName', 'scientificName', 'quantity', 'traits'].includes(key)) {
+              if (!validCandidate.overflow) validCandidate.overflow = {};
+              validCandidate.overflow[key] = c[key];
+            }
+          });
+          
+          return validCandidate;
+          });
+        }
+      } else if (data.candidates) {
+        // Candidates exists but is not an array - store in overflow
+        if (!validData.overflow) validData.overflow = {};
+        validData.overflow.rawCandidates = data.candidates;
+        validData.candidates = []; // Empty array as fallback
+      } else {
+        // No candidates at all - empty array
+        validData.candidates = [];
+      }
+      
+      // Store any other invalid top-level data
+      Object.keys(data).forEach(key => {
+        if (!['intent', 'targetHabitatName', 'candidates', 'observationNotes', 'observationParams', 'habitatParams', 'aiReasoning', 'isAmbiguous'].includes(key)) {
+          if (!validData.overflow) validData.overflow = {};
+          validData.overflow[key] = data[key];
+        }
+      });
+      
+      // Store validation errors for debugging
+      if (!validData.overflow) validData.overflow = {};
+      validData.overflow.validationErrors = (result.error?.errors || []).map((e: any) => ({
+        path: (e.path || []).join('.'),
+        message: e.message || 'Unknown validation error',
+        code: e.code || 'unknown'
+      }));
+      
+      // Cache and return the permissive result
+      intentCache.set(cacheKey, validData);
+      logCache('debug', 'Intent cache stored (permissive validation)', { key: cacheKey.substring(0, 50) });
+      return validData;
+    }
+    
+    const parsed = result.data;
+    
+    // Cache the result
+    intentCache.set(cacheKey, parsed);
+    logCache('debug', 'Intent cache stored', { key: cacheKey.substring(0, 50) });
+    
+    return parsed;
   },
 
   /**
@@ -154,6 +430,7 @@ export const geminiService = {
   async identifyPhoto(base64Data: string): Promise<IdentifyResult> {
     const response = await withTimeout(callProxy({
       model: "gemini-pro-latest",
+      operation: 'identify_photo',
       contents: [
         { role: 'user', parts: [
           { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
@@ -185,6 +462,7 @@ export const geminiService = {
   async analyzeRackScene(base64Data: string): Promise<{ containers: RackContainer[] }> {
     const response = await withTimeout(callProxy({
       model: "gemini-pro-latest",
+      operation: 'analyze_rack_scene',
       contents: [
         { role: 'user', parts: [
           { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
@@ -239,6 +517,7 @@ export const geminiService = {
   async getAdvisoryReport(intent: string): Promise<AdvisoryReport> {
     const response = await withTimeout(callProxy({
       model: "gemini-pro-latest",
+      operation: 'generate_advisory_report',
       contents: `Propose an implementation strategy for the following user request: ${intent}`,
       generationConfig: {
         systemInstruction: "You are an expert system architect specializing in digital twin management. Provide implementation reports.",
@@ -266,6 +545,7 @@ export const geminiService = {
   async getIntentStrategy(input: string, context: any): Promise<any> {
     const response = await withTimeout(callProxy({
       model: "gemini-pro-latest",
+      operation: 'get_intent_strategy',
       contents: `The user said: "${input}". 
                  Context: ${JSON.stringify(context)}.
                  Analyze what they want and provide a strategy.`,
@@ -304,6 +584,7 @@ export const geminiService = {
   async getEcosystemNarrative(snapshot: any): Promise<{ webOfLife: string; biomicStory: string; evolutionaryTension: string }> {
     const response = await withTimeout(callProxy({
       model: "gemini-pro-latest",
+      operation: 'get_ecosystem_narrative',
       contents: `Synthesize the biological connections of this habitat: ${JSON.stringify(snapshot)}`,
       systemInstruction: `
         You are the Master Ecologist. 
@@ -337,6 +618,7 @@ export const geminiService = {
   async generateHabitatVisualPrompt(narrative: string): Promise<string> {
     const response = await withTimeout(callProxy({
       model: "gemini-pro-latest",
+      operation: 'generate_habitat_visual_prompt',
       contents: `Based on this ecosystem narrative, generate a detailed image generation prompt for a premium botanical illustration: ${narrative}`,
       systemInstruction: "Generate a descriptive, photographic, or artistic image prompt focusing on botanical accuracy and atmospheric beauty. No titles or text.",
     }));
@@ -349,6 +631,7 @@ export const geminiService = {
   async getBiologicalDiscovery(speciesName: string): Promise<{ mechanism: string; evolutionaryAdvantage: string; synergyNote: string }> {
     const response = await withTimeout(callProxy({
       model: "gemini-pro-latest",
+      operation: 'get_biological_discovery',
       contents: `Identify the biological mechanism or ethological secret of: ${speciesName}.`,
       systemInstruction: `
         You are the Chief Biologist of The Conservatory. 
@@ -436,6 +719,7 @@ export const geminiService = {
     
     const response = await callProxy({
       model,
+      operation: 'chat',
       contents: [
         ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'model', parts: [{ text: h.text }] })),
         { role: 'user', parts: [{ text: message }] }

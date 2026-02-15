@@ -1,6 +1,7 @@
 
 import { Entity, EntityTrait } from '../types';
 import { plantService } from './plantService';
+import { logger } from './logger';
 
 interface EnrichmentResult {
   scientificName?: string;
@@ -39,7 +40,7 @@ export const enrichmentService = {
         }
       };
     } catch (e) {
-      console.warn("GBIF Search Failed", e);
+      logger.warn({ err: e, operation: 'gbif_search' }, "GBIF search failed");
       return null;
     }
   },
@@ -66,7 +67,7 @@ export const enrichmentService = {
         commonName: title 
       };
     } catch (e) {
-      console.warn("Wiki Search Failed", e);
+      logger.warn({ err: e, operation: 'wikipedia_search' }, "Wikipedia search failed");
       return null;
     }
   },
@@ -86,7 +87,7 @@ export const enrichmentService = {
             images: best.default_photo ? [best.default_photo.medium_url] : []
         };
     } catch (e) {
-        console.warn("iNaturalist Search Failed", e);
+        logger.warn({ err: e, operation: 'inaturalist_search' }, "iNaturalist search failed");
         return null;
     }
   },
@@ -102,7 +103,7 @@ export const enrichmentService = {
       const localMatch = plantService.search(query);
       
       if (localMatch) {
-        console.log(`[Enrichment] Found local match for "${query}": ${localMatch.name}`);
+        logger.info({ query, matchName: localMatch.name }, "Found local plant library match");
         // Map local data to EnrichmentResult interface
         return {
             scientificName: localMatch.scientificName || localMatch.traits['Complete botanical name'],
@@ -114,11 +115,11 @@ export const enrichmentService = {
         };
       }
 
-      console.warn(`[Enrichment] No local match found for "${query}"`);
+      logger.warn({ query }, "No local plant library match found");
       return null;
 
     } catch (e) {
-      console.warn("Aquasabi Lookup Failed", e);
+      logger.warn({ err: e, operation: 'aquasabi_lookup' }, "Aquasabi lookup failed");
       return null;
     }
   }

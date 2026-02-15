@@ -1,7 +1,8 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Entity, EntityType, EntityGroup } from '../types';
-import { Waves, Flower2, Bug, Package, ChevronRight, Settings2, Search } from 'lucide-react';
+import { Waves, Flower2, Bug, Package, ChevronRight, Settings2, Search, Sparkles } from 'lucide-react';
 import { useConservatory } from '../services/store';
 
 interface EntityListProps {
@@ -15,7 +16,8 @@ interface EntityListProps {
 export const EntityList: React.FC<EntityListProps> = ({ 
   entities, groups, activeHabitatId, onSetActiveHabitat, onEditEntity 
 }) => {
-  const { deepResearchHabitat } = useConservatory();
+  const navigate = useNavigate();
+  const { deepResearchHabitat, enrichEntity } = useConservatory();
   const getIcon = (type: EntityType) => {
     switch (type) {
       case EntityType.HABITAT: return <Waves className="w-5 h-5 text-cyan-400" />;
@@ -36,9 +38,9 @@ export const EntityList: React.FC<EntityListProps> = ({
         key={e.id} 
         onClick={() => {
           if (isHabitat) {
-            onSetActiveHabitat(isActive ? null : e.id);
+            navigate(`/habitat/${e.id}`);
           } else {
-            onEditEntity(e);
+            navigate(`/species/${e.id}`);
           }
         }}
         data-testid={isHabitat ? `habitat-card-${e.id}` : `entity-card-${e.id}`}
@@ -91,9 +93,59 @@ export const EntityList: React.FC<EntityListProps> = ({
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" title="Has custom aliases" />
           )}
         </div>
+        {/* Enrichment Status Badge */}
+        {!isHabitat && e.enrichment_status && (
+          <div className="mt-2 flex items-center gap-1">
+            {e.enrichment_status === 'queued' && (
+              <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/30">
+                📋 Queued
+              </span>
+            )}
+            {e.enrichment_status === 'pending' && (
+              <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/30 animate-pulse">
+                🔬 Enriching...
+              </span>
+            )}
+            {e.enrichment_status === 'complete' && (
+              <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                ✓ Enriched
+              </span>
+            )}
+            {e.enrichment_status === 'failed' && (
+              <span className="text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded border border-red-500/30">
+                ⚠ Failed
+              </span>
+            )}
+          </div>
+        )}
+        {/* Discovery Preview */}
+        {!isHabitat && e.enrichment_status === 'complete' && e.overflow?.discovery?.mechanism && (
+          <div className="mt-1.5 text-[10px] text-slate-400 italic line-clamp-2">
+            🧬 {e.overflow.discovery.mechanism.split('.')[0]}...
+          </div>
+        )}
+        {/* Research Button for Non-Enriched Entities */}
+        {!isHabitat && e.enrichment_status !== 'complete' && e.enrichment_status !== 'pending' && (
+          <button
+            onClick={(evt) => {
+              evt.stopPropagation();
+              enrichEntity(e.id);
+            }}
+            className="mt-2 text-[9px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-2 py-1 rounded border border-emerald-500/30 transition-colors flex items-center gap-1 font-bold"
+            title="Research this species"
+          >
+            <Sparkles className="w-2.5 h-2.5" />
+            Research
+          </button>
+        )}
       </button>
     );
   };
+
+  // Count enrichment queue
+  const queuedCount = entities.filter(e => 
+    e.type !== EntityType.HABITAT && e.enrichment_status === 'queued'
+  ).length;
 
   // Group entities by their group_id
   const entitiesByGroup = groups.reduce((acc, g) => {
@@ -105,6 +157,15 @@ export const EntityList: React.FC<EntityListProps> = ({
 
   return (
     <div className="space-y-10 pb-20">
+      {/* Enrichment Queue Counter */}
+      {queuedCount > 0 && (
+        <div className="sticky top-4 z-10 flex items-center justify-center mb-4">
+          <div className="text-xs bg-amber-500/20 text-amber-400 px-4 py-2 rounded-full border border-amber-500/30 flex items-center gap-2 font-bold">
+            <Sparkles className="w-3 h-3" />
+            {queuedCount} {queuedCount === 1 ? 'species' : 'species'} queued for research
+          </div>
+        </div>
+      )}
       {/* Grouped View */}
       {groups.map(g => (
         entitiesByGroup[g.id]?.length > 0 && (

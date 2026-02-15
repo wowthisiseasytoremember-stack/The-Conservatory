@@ -223,7 +223,7 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 70 }}>
       <div className="bg-slate-900 w-full max-w-md border border-slate-800 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in duration-200 flex flex-col max-h-[85vh]">
         
         <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-black/20">

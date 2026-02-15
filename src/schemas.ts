@@ -30,7 +30,7 @@ export const TraitParametersSchema = z.object({
  */
 export const TraitSchema = z.object({
   type: z.enum(['AQUATIC', 'TERRESTRIAL', 'PHOTOSYNTHETIC', 'INVERTEBRATE', 'VERTEBRATE', 'COLONY']),
-  parameters: TraitParametersSchema
+  parameters: TraitParametersSchema.optional().default({})
 });
 
 /**

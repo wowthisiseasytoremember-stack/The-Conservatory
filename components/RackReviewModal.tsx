@@ -25,7 +25,7 @@ export const RackReviewModal: React.FC<RackReviewModalProps> = ({ containers, on
   };
 
   return (
-    <div className="fixed inset-0 z-[80] bg-black/90 backdrop-blur-md flex flex-col p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-[80] bg-black/90 backdrop-blur-md flex flex-col p-6 overflow-y-auto" style={{ zIndex: 80 }}>
       <div className="flex justify-between items-center mb-8 shrink-0">
         <div>
           <h2 className="text-2xl font-serif font-bold text-white">Rack Detected</h2>

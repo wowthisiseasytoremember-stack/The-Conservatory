@@ -50,24 +50,29 @@ const TRAIT_PARAM_DEFS: Record<string, Array<{ key: string; label: string; icon:
 // ----------------------------------------------------------------------
 // SUB-COMPONENT: Trait Editor (with nested parameters)
 // ----------------------------------------------------------------------
-const TraitList: React.FC<{ traits: EntityTrait[], onChange: (traits: EntityTrait[]) => void }> = ({ traits, onChange }) => {
+const TraitList: React.FC<{ traits: EntityTrait[], onChange: (traits: EntityTrait[]) => void }> = ({ traits = [], onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Ensure traits is always an array
+  const safeTraits = Array.isArray(traits) ? traits : [];
   
   const allTypes = ['AQUATIC', 'TERRESTRIAL', 'PHOTOSYNTHETIC', 'INVERTEBRATE', 'VERTEBRATE', 'COLONY'];
   
   const toggleTrait = (type: string) => {
-    const exists = traits.find(t => t.type === type);
+    const exists = safeTraits.find(t => t.type === type);
     if (exists) {
-      onChange(traits.filter(t => t.type !== type));
+      onChange(safeTraits.filter(t => t.type !== type));
     } else {
-      onChange([...traits, { type: type as any, parameters: {} }]);
+      onChange([...safeTraits, { type: type as any, parameters: {} }]);
     }
   };
 
   const updateParam = (traitType: string, paramKey: string, value: any) => {
-    onChange(traits.map(t => {
+    onChange(safeTraits.map(t => {
       if (t.type !== traitType) return t;
-      return { ...t, parameters: { ...t.parameters, [paramKey]: value } } as EntityTrait;
+      // Ensure parameters exists
+      const currentParams = t.parameters || {};
+      return { ...t, parameters: { ...currentParams, [paramKey]: value } } as EntityTrait;
     }));
   };
 
@@ -82,7 +87,7 @@ const TraitList: React.FC<{ traits: EntityTrait[], onChange: (traits: EntityTrai
           {/* Trait Toggle Buttons */}
           <div className="flex flex-wrap gap-2 mb-4">
             {allTypes.map(type => {
-              const isSelected = traits.some(t => t.type === type);
+              const isSelected = safeTraits.some(t => t.type === type);
               return (
                 <button
                   key={type}
@@ -100,7 +105,7 @@ const TraitList: React.FC<{ traits: EntityTrait[], onChange: (traits: EntityTrai
           </div>
 
           {/* Nested Parameter Editors for Selected Traits */}
-          {traits.map(trait => {
+          {safeTraits.map(trait => {
             const defs = TRAIT_PARAM_DEFS[trait.type];
             if (!defs || defs.length === 0) return null;
             return (
@@ -114,7 +119,7 @@ const TraitList: React.FC<{ traits: EntityTrait[], onChange: (traits: EntityTrai
                       </label>
                       {def.type === 'select' ? (
                         <select
-                          value={(trait.parameters as any)?.[def.key] ?? ''}
+                          value={((trait.parameters || {}) as any)?.[def.key] ?? ''}
                           onChange={(e) => {
                             let val: any = e.target.value;
                             if (val === 'true') val = true;
@@ -165,8 +170,8 @@ const TraitList: React.FC<{ traits: EntityTrait[], onChange: (traits: EntityTrai
       className="inline-flex flex-wrap gap-1 mx-1 align-middle cursor-pointer hover:bg-slate-800/50 rounded px-1 transition-colors group"
     >
       <span className="text-slate-600 font-bold text-lg select-none group-hover:text-slate-400">[</span>
-      {traits.length === 0 ? <span className="text-amber-500 font-bold italic text-sm px-1">No Traits</span> : null}
-      {traits.map((t, i) => {
+      {safeTraits.length === 0 ? <span className="text-amber-500 font-bold italic text-sm px-1">No Traits</span> : null}
+      {safeTraits.map((t, i) => {
         const paramCount = Object.values(t.parameters || {}).filter(v => v !== undefined && v !== null).length;
         return (
           <span key={i} className="text-cyan-400 font-bold text-sm bg-cyan-950/40 px-1.5 rounded border border-cyan-500/20 shadow-sm">
@@ -312,8 +317,8 @@ export const ConfirmationCard: React.FC<ConfirmationCardProps> = ({ action, onCo
 
   // RENDER: PHASE 2 - REVIEW / MAD LIBS FORM
   return (
-    <div className="fixed inset-x-4 top-24 z-[55] animate-in slide-in-from-top duration-500 max-w-2xl mx-auto">
-      <div className="bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
+    <div className="fixed inset-x-4 top-24 z-[55] animate-in slide-in-from-top duration-500 max-w-2xl mx-auto" style={{ maxHeight: 'calc(100vh - 8rem)', zIndex: 55 }}>
+      <div className="bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 8rem)' }}>
         
         {/* Header */}
         <div className="bg-black/40 p-4 border-b border-slate-800 flex justify-between items-center">
@@ -327,13 +332,13 @@ export const ConfirmationCard: React.FC<ConfirmationCardProps> = ({ action, onCo
         </div>
 
         {/* Scrollable Content */}
-        <div className="p-6 overflow-y-auto custom-scrollbar">
+        <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 16rem)', scrollbarWidth: 'thin' }}>
           
           {/* INTENT: ACCESSION (New Entities) */}
           {action.intent === 'ACCESSION_ENTITY' && (
              <div className="text-xl leading-relaxed text-slate-300 font-serif">
                 I am adding
-                {action.candidates.map((candidate, i) => (
+                {(action.candidates || []).map((candidate, i) => (
                   <div key={i} className="my-3 pl-4 border-l-2 border-emerald-500/30">
                      <div className="flex items-center flex-wrap">
                         <Slot 
@@ -349,7 +354,7 @@ export const ConfirmationCard: React.FC<ConfirmationCardProps> = ({ action, onCo
                         />
                         <span className="mx-1">which are</span>
                         <TraitList 
-                          traits={candidate.traits} 
+                          traits={candidate.traits || []} 
                           onChange={(v) => onUpdate(`candidates.${i}.traits`, v)} 
                         />
                      </div>

@@ -64,7 +64,7 @@ export const DeepResearchLoader: React.FC<DeepResearchLoaderProps> = ({ progress
     : 0;
 
   return (
-    <div className="fixed inset-0 z-[80] bg-black/85 backdrop-blur-md flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-[80] bg-black/85 backdrop-blur-md flex items-center justify-center p-6" style={{ zIndex: 80 }}>
       <div className="bg-slate-900 w-full max-w-md border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
 
         {/* Header */}
