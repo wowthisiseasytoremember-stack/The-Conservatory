@@ -13,10 +13,10 @@ import { useConservatory } from '../../services/store';
 export const HabitatDiorama: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { entities } = useConservatory();
+  const { entities, getHabitatInhabitants } = useConservatory();
 
   const habitat = entities.find(e => e.id === id && e.type === 'HABITAT');
-  const residents = entities.filter(e => e.type === 'ORGANISM' && e.habitat_id === id);
+  const residents = habitat ? getHabitatInhabitants(habitat.id) : [];
 
   if (!habitat) {
     return (

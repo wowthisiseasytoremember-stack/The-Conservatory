@@ -62,6 +62,10 @@ class ConservatoryStore {
       // Expose processVoiceInput for E2E tests
       // @ts-ignore
       window.processVoiceInput = (text: string) => this.processVoiceInput(text);
+      
+      // Expose store instance for E2E tests
+      // @ts-ignore
+      window.__conservatoryStore = this;
     }
   }
 

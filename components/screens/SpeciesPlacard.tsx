@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useConservatory } from '../../services/store';
 import { Entity } from '../../types';
+import { WireframePlaceholder } from '../WireframePlaceholder';
 
 /**
  * SpeciesPlacard / Organism Detail
@@ -14,17 +15,10 @@ import { Entity } from '../../types';
 export const SpeciesPlacard: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { entities } = useConservatory();
+  const { entities, getRelatedEntities } = useConservatory();
 
-  const organism = entities.find(e => e.id === id && e.type === 'ORGANISM');
-  const habitat = organism ? entities.find(e => e.id === organism.habitat_id && e.type === 'HABITAT') : null;
-  const tankmates = organism && habitat
-    ? entities.filter(e => 
-        e.type === 'ORGANISM' && 
-        e.habitat_id === habitat.id && 
-        e.id !== organism.id
-      )
-    : [];
+  const organism = entities.find(e => e.id === id && (e.type === 'ORGANISM' || e.type === 'PLANT' || e.type === 'COLONY'));
+  const { habitat, tankmates } = organism ? getRelatedEntities(organism.id) : { habitat: null, tankmates: [] };
 
   if (!organism) {
     return (
@@ -51,102 +45,108 @@ export const SpeciesPlacard: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="grid grid-cols-1 gap-8 p-6 max-w-4xl mx-auto">
       <button
         onClick={() => navigate(-1)}
-        className="text-emerald-400 hover:text-emerald-300"
+        className="text-emerald-400 hover:text-emerald-300 text-sm uppercase tracking-wider self-start"
       >
         ← Back
       </button>
 
-      {/* Header */}
-      <div>
-        <h2 className="text-3xl font-serif mb-2">{organism.name}</h2>
-        {organism.scientificName && (
-          <p className="text-slate-400 italic">{organism.scientificName}</p>
-        )}
-        {/* Taxonomy info from overflow or details */}
-        {organism.overflow?.taxonomy && (
-          <div className="mt-2 text-xs text-slate-500 flex items-center gap-1">
-            {organism.overflow.taxonomy.kingdom && <span>{organism.overflow.taxonomy.kingdom}</span>}
-            {organism.overflow.taxonomy.family && (
-              <>
-                <span className="text-slate-700">·</span>
-                <span>{organism.overflow.taxonomy.family}</span>
-              </>
-            )}
-            {organism.overflow.taxonomy.genus && (
-              <>
-                <span className="text-slate-700">·</span>
-                <span>{organism.overflow.taxonomy.genus}</span>
-              </>
-            )}
+      {/* Header: Hero Image + Name Overlay */}
+      <div className="relative">
+        {organism.overflow?.images?.[0] ? (
+          <div className="relative w-full aspect-[16/9] rounded-lg overflow-hidden">
+            <img 
+              src={organism.overflow.images[0]} 
+              alt={organism.name}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
           </div>
+        ) : (
+          <WireframePlaceholder 
+            aspectRatio="16/9" 
+            label="Organism Illustration (Draws in)" 
+            pattern="grid"
+            className="rounded-lg"
+          />
         )}
+        <div className="absolute bottom-0 left-0 right-0 p-6">
+          <h1 className="text-4xl font-serif font-bold text-white mb-2">{organism.name}</h1>
+          {organism.scientificName && (
+            <p className="text-white/90 italic text-lg">{organism.scientificName}</p>
+          )}
+        </div>
       </div>
 
-      {/* Hero image */}
-      {organism.overflow?.images?.[0] ? (
-        <div className="relative w-full h-64 rounded-lg overflow-hidden mb-4">
-          <img 
-            src={organism.overflow.images[0]} 
-            alt={organism.name}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+      {/* Taxonomy Ribbon */}
+      {organism.overflow?.taxonomy ? (
+        <div className="text-xs text-slate-400 uppercase tracking-widest font-mono text-center py-2 border-y border-slate-700/50">
+          {organism.overflow.taxonomy.kingdom && <span>{organism.overflow.taxonomy.kingdom}</span>}
+          {organism.overflow.taxonomy.family && (
+            <>
+              <span className="mx-2">·</span>
+              <span>{organism.overflow.taxonomy.family}</span>
+            </>
+          )}
+          {organism.overflow.taxonomy.genus && (
+            <>
+              <span className="mx-2">·</span>
+              <span>{organism.overflow.taxonomy.genus}</span>
+            </>
+          )}
         </div>
       ) : (
-        <div className="w-full h-64 bg-slate-800 rounded-lg flex items-center justify-center text-slate-500 mb-4">
-          [Organism Illustration Placeholder]
-        </div>
+        <WireframePlaceholder height="40px" label="Taxonomy Ribbon" pattern="lines" />
       )}
 
-      {/* Discovery Secrets Section */}
-      {organism.overflow?.discovery && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold">Discovery Secrets</h3>
-          <div className="space-y-3">
+      {/* Discovery Secrets Section: The "Why" */}
+      <div className="grid grid-cols-1 gap-6">
+        <h2 className="text-2xl font-serif font-bold">Discovery Secrets</h2>
+        {organism.overflow?.discovery ? (
+          <div className="grid grid-cols-1 gap-6">
             {organism.overflow.discovery.mechanism && (
-              <div>
-                <h4 className="font-semibold mb-1">🔬 Mechanism</h4>
-                <p className="text-slate-300 text-sm leading-relaxed">
+              <div className="p-4 bg-slate-800/30 rounded-lg border border-slate-700/50">
+                <h3 className="text-emerald-400 font-semibold mb-2 flex items-center gap-2">
+                  <span>🔬</span> Mechanism
+                </h3>
+                <p className="text-slate-300 leading-relaxed font-serif italic">
                   {organism.overflow.discovery.mechanism}
                 </p>
               </div>
             )}
             {organism.overflow.discovery.evolutionaryAdvantage && (
-              <div>
-                <h4 className="font-semibold mb-1">🌍 Evolutionary Advantage</h4>
-                <p className="text-slate-300 text-sm leading-relaxed">
+              <div className="p-4 bg-slate-800/30 rounded-lg border border-slate-700/50">
+                <h3 className="text-cyan-400 font-semibold mb-2 flex items-center gap-2">
+                  <span>🌍</span> Evolutionary Advantage
+                </h3>
+                <p className="text-slate-300 leading-relaxed font-serif italic">
                   {organism.overflow.discovery.evolutionaryAdvantage}
                 </p>
               </div>
             )}
             {organism.overflow.discovery.synergyNote && (
-              <div>
-                <h4 className="font-semibold mb-1">🤝 Synergy</h4>
-                <p className="text-slate-300 text-sm leading-relaxed">
+              <div className="p-4 bg-slate-800/30 rounded-lg border border-slate-700/50">
+                <h3 className="text-amber-400 font-semibold mb-2 flex items-center gap-2">
+                  <span>🤝</span> Synergy
+                </h3>
+                <p className="text-slate-300 leading-relaxed font-serif italic">
                   {organism.overflow.discovery.synergyNote}
                 </p>
               </div>
             )}
           </div>
-        </div>
-      )}
-      {organism.enrichment_status !== 'complete' && !organism.overflow?.discovery && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold">Discovery Secrets</h3>
-          <p className="text-slate-400 text-sm italic">
-            Enrichment in progress... Discovery secrets will appear here once research is complete.
-          </p>
-        </div>
-      )}
+        ) : (
+          <WireframePlaceholder height="300px" label="Discovery Secrets (Researching...)" pattern="dots" />
+        )}
+      </div>
 
-      {/* Traits Dashboard */}
-      {organism.traits && organism.traits.length > 0 && (
-        <div>
-          <h3 className="text-xl font-semibold mb-2">Traits</h3>
-          <div className="bg-slate-800 rounded-lg p-4 space-y-3">
+      {/* Traits Dashboard: Visual Grid */}
+      <div className="grid grid-cols-1 gap-4">
+        <h2 className="text-2xl font-serif font-bold">Traits</h2>
+        {organism.traits && organism.traits.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {organism.traits.map((trait, idx) => {
               if (trait.type === 'AQUATIC' && trait.parameters) {
                 return (

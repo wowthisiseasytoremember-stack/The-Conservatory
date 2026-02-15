@@ -8,10 +8,12 @@ import { AdvisoryReport, EntityType } from '../types';
 export const DevTools: React.FC = () => {
   const { 
     processVoiceInput, testConnection, entities, enrichEntity, commitPendingAction,
-    deepResearchAll 
+    deepResearchAll, getHabitatInhabitants, getEntityHabitat, getRelatedEntities,
+    calculateGrowthRate, getGrowthTimeline, computeHabitatSynergies,
+    getFeaturedSpecimen, getHabitatHealth, getEcosystemFacts
   } = useConservatory();
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'scenarios' | 'actions' | 'contractor'>('scenarios');
+  const [activeTab, setActiveTab] = useState<'scenarios' | 'actions' | 'contractor' | 'backend'>('scenarios');
   const [dbStatus, setDbStatus] = useState<'idle' | 'testing' | 'success' | 'fail'>('idle');
   const [dbError, setDbError] = useState<string | null>(null);
   const [actionLog, setActionLog] = useState<string[]>([]);
@@ -167,13 +169,20 @@ export const DevTools: React.FC = () => {
            >
              <Beaker className="w-4 h-4" />
            </button>
-           <button 
-             onClick={() => setActiveTab('contractor')}
-             className={`p-1.5 rounded-md transition-all ${activeTab === 'contractor' ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
-             title="Advisory Service"
-           >
-             <Bot className="w-4 h-4" />
-           </button>
+          <button 
+            onClick={() => setActiveTab('contractor')}
+            className={`p-1.5 rounded-md transition-all ${activeTab === 'contractor' ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            title="Advisory Service"
+          >
+            <Bot className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => setActiveTab('backend')}
+            className={`p-1.5 rounded-md transition-all ${activeTab === 'backend' ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            title="Backend Verification"
+          >
+            <Database className="w-4 h-4" />
+          </button>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[9px] text-slate-600 font-mono">{entities.length} entities</span>
@@ -412,6 +421,145 @@ export const DevTools: React.FC = () => {
                     </button>
                 </div>
             )}
+        </div>
+      ) : (
+        /* ============== BACKEND VERIFICATION TAB ============== */
+        <div className="space-y-3 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-right-4 duration-200">
+          <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-3">
+            <h4 className="text-cyan-400 font-bold text-xs flex items-center gap-2 mb-1">
+              <Database className="w-3 h-3" /> Backend Verification
+            </h4>
+            <p className="text-[10px] text-cyan-500/70 leading-relaxed">
+              Test the 5 critical backend fixes: relationships, growth tracking, synergies, voice observations, and feature manifest.
+            </p>
+          </div>
+
+          {/* Entity Relationships */}
+          <div className="space-y-1.5">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">1. Entity Relationships</div>
+            <button 
+              onClick={() => {
+                const habitat = habitats[0];
+                if (!habitat) {
+                  log('⚠️ No habitats found. Create one first!');
+                  return;
+                }
+                const inhabitants = getHabitatInhabitants(habitat.id);
+                log(`✅ getHabitatInhabitants(${habitat.name}): ${inhabitants.length} entities`);
+                console.log('Inhabitants:', inhabitants);
+                if (inhabitants.length > 0) {
+                  const related = getRelatedEntities(inhabitants[0].id);
+                  log(`✅ getRelatedEntities(${inhabitants[0].name}): habitat + ${related.tankmates.length} tankmates`);
+                  console.log('Related:', related);
+                  const entityHabitat = getEntityHabitat(inhabitants[0].id);
+                  log(`✅ getEntityHabitat(${inhabitants[0].name}): ${entityHabitat?.name || 'null'}`);
+                  console.log('Entity Habitat:', entityHabitat);
+                }
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-cyan-500/10 hover:border-cyan-500/30 border border-transparent text-xs transition-all"
+            >
+              Test Relationships
+            </button>
+          </div>
+
+          {/* Growth Tracking */}
+          <div className="space-y-1.5">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">2. Growth Tracking</div>
+            <button 
+              onClick={() => {
+                const entity = organisms.find(e => e.observations?.length > 0);
+                if (!entity) {
+                  log('⚠️ No entities with observations found. Log some growth first!');
+                  return;
+                }
+                const rate = calculateGrowthRate(entity.id, 'growth');
+                log(`✅ calculateGrowthRate(${entity.name}): ${rate.rate?.toFixed(2)} ${rate.trend || 'N/A'}`);
+                console.log('Growth Rate:', rate);
+                const timeline = getGrowthTimeline(entity.id, 'growth');
+                log(`✅ getGrowthTimeline(${entity.name}): ${timeline.length} data points`);
+                console.log('Timeline:', timeline);
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-purple-500/10 hover:border-purple-500/30 border border-transparent text-xs transition-all"
+            >
+              Test Growth Tracking
+            </button>
+          </div>
+
+          {/* Synergy Computation */}
+          <div className="space-y-1.5">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">3. Synergy Computation</div>
+            <button 
+              onClick={() => {
+                const habitat = habitats[0];
+                if (!habitat) {
+                  log('⚠️ No habitats found.');
+                  return;
+                }
+                const synergies = computeHabitatSynergies(habitat.id);
+                log(`✅ computeHabitatSynergies(${habitat.name}): ${synergies.length} synergies`);
+                console.log('Synergies:', synergies);
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-emerald-500/10 hover:border-emerald-500/30 border border-transparent text-xs transition-all"
+            >
+              Test Synergies
+            </button>
+          </div>
+
+          {/* Voice Observation Logging */}
+          <div className="space-y-1.5">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">4. Voice Observation Logging</div>
+            <button 
+              onClick={() => {
+                const habitat = habitats[0];
+                if (!habitat) {
+                  log('⚠️ No habitats found. Create one first!');
+                  return;
+                }
+                processVoiceInput(`Log pH of 6.8 in ${habitat.name}`);
+                log(`📝 Voice command sent: "Log pH of 6.8 in ${habitat.name}"`);
+                log('→ Check ConfirmationCard, then confirm to test observation logging');
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-amber-500/10 hover:border-amber-500/30 border border-transparent text-xs transition-all"
+            >
+              Test Voice Observation
+            </button>
+          </div>
+
+          {/* Feature Manifest Backend */}
+          <div className="space-y-1.5">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">5. Feature Manifest Backend</div>
+            <button 
+              onClick={() => {
+                const featured = getFeaturedSpecimen();
+                log(`✅ getFeaturedSpecimen(): ${featured?.name || 'null'}`);
+                console.log('Featured Specimen:', featured);
+                const habitat = habitats[0];
+                if (habitat) {
+                  const health = getHabitatHealth(habitat.id);
+                  log(`✅ getHabitatHealth(${habitat.name}): ${health.score}/100`);
+                  console.log('Habitat Health:', health);
+                }
+                const facts = getEcosystemFacts(5);
+                log(`✅ getEcosystemFacts(5): ${facts.length} facts`);
+                console.log('Ecosystem Facts:', facts);
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-violet-500/10 hover:border-violet-500/30 border border-transparent text-xs transition-all"
+            >
+              Test Feature Manifest
+            </button>
+          </div>
+
+          {/* Results Log */}
+          {actionLog.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Test Results</div>
+              <div className="bg-black/40 rounded-lg p-2 text-[10px] font-mono text-slate-500 space-y-0.5 max-h-32 overflow-y-auto">
+                {actionLog.map((msg, i) => (
+                  <div key={i} className={i === 0 ? 'text-emerald-400' : ''}>{msg}</div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
