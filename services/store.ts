@@ -7,10 +7,11 @@ import {
 } from '../types';
 import { geminiService } from './geminiService';
 import { 
-  db, auth, collection, addDoc, doc, getDoc, setDoc, serverTimestamp, 
+  db, auth, collection, addDoc, doc, getDoc, getDocs, setDoc, serverTimestamp, 
   onSnapshot, query, orderBy, limit, signInWithPopup, signOut, 
   onAuthStateChanged, googleProvider, User, writeBatch
 } from './firebase';
+
 import { connectionService, ConnectionStatus } from './connectionService';
 import { mockFirestore } from './MockFirestoreService';
 import { logger, logEnrichment, logFirestore, logAICall } from './logger';
@@ -826,66 +827,8 @@ class ConservatoryStore {
             }
           }
         }
-      } else if (intent === 'LOG_OBSERVATION') {
-        // CRITICAL FIX: Append observations to entities
-        const targetHabitatId = safePayload.targetHabitatId || 
-          this.entities.find(e => e.type === EntityType.HABITAT && e.name.toLowerCase().trim() === (safePayload.targetHabitatName || '').toLowerCase().trim())?.id;
-        
-        if (targetHabitatId && safePayload.observationParams) {
-          // Get all organisms in this habitat
-          const habitatEntities = this.getHabitatInhabitants(targetHabitatId);
-          
-          // Create observation entries for each parameter
-          const timestamp = Date.now();
-          const observations: Array<{ timestamp: number; type: 'growth' | 'parameter' | 'note'; label: string; value: number; unit?: string }> = [];
-          
-          Object.entries(safePayload.observationParams).forEach(([key, value]) => {
-            if (typeof value === 'number') {
-              observations.push({
-                timestamp,
-                type: key === 'growth_cm' ? 'growth' : 'parameter',
-                label: key,
-                value,
-                unit: key === 'temp' ? '°F' : key === 'pH' ? '' : key === 'growth_cm' ? 'cm' : undefined
-              });
-            }
-          });
-          
-          // If observationNotes exists, add as a note observation
-          if (safePayload.observationNotes) {
-            observations.push({
-              timestamp,
-              type: 'note',
-              label: 'note',
-              value: 0, // Notes don't have numeric values
-              unit: undefined
-            });
-          }
-          
-          // Append observations to each entity in the habitat
-          for (const entity of habitatEntities) {
-            const existingObs = entity.observations || [];
-            const updatedObs = [...existingObs, ...observations];
-            
-            const idx = this.entities.findIndex(e => e.id === entity.id);
-            if (idx !== -1) {
-              this.entities[idx] = { ...this.entities[idx], observations: updatedObs, updated_at: timestamp };
-              
-              if (!isTestMode) {
-                batch.update(doc(db, 'entities', entity.id), { 
-                  observations: updatedObs, 
-                  updated_at: timestamp 
-                });
-              } else {
-                mockFirestore.updateDoc('entities', entity.id, { 
-                  observations: updatedObs, 
-                  updated_at: timestamp 
-                });
-              }
-            }
-          }
-        }
       }
+
 
       if (!isTestMode) {
         await batch.commit();

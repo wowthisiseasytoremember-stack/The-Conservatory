@@ -31,6 +31,23 @@ export class MockFirestoreService {
     return Promise.resolve({ id });
   }
 
+  async updateDoc(collectionName: string, id: string, data: any) {
+    const existing = collectionName === 'entities' ? this.entities.get(id) : this.events.get(id);
+    if (!existing) {
+      console.warn(`[MockFirestore] updateDoc ${collectionName}/${id} - Document not found`);
+      return Promise.resolve();
+    }
+    const updated = { ...existing, ...data };
+    if (collectionName === 'entities') {
+      this.entities.set(id, updated);
+    } else {
+      this.events.set(id, updated);
+    }
+    console.log(`[MockFirestore] updateDoc ${collectionName}/${id}`, data);
+    return Promise.resolve();
+  }
+
+
   async commitBatch(operations: any[]) {
     console.log(`[MockFirestore] Committing batch with ${operations.length} operations`);
     for (const op of operations) {

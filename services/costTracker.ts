@@ -59,10 +59,16 @@ export function calculateCost(
 export async function trackCost(record: Omit<CostRecord, 'id' | 'timestamp'>): Promise<void> {
   try {
     // Only track in production or if explicitly enabled
-    if (import.meta.env.DEV && !import.meta.env.VITE_ENABLE_COST_TRACKING) {
+    const isDev = (import.meta as any).env?.DEV || process.env.NODE_ENV === 'development' || process.env.DEV === 'true';
+    const isEnabled = (import.meta as any).env?.VITE_ENABLE_COST_TRACKING === 'true' || process.env.VITE_ENABLE_COST_TRACKING === 'true';
+    
+    if (isDev && !isEnabled) {
       logger.debug({ ...record }, 'Cost tracking skipped (dev mode)');
       return;
     }
+    
+
+
 
     const costRecord: Omit<CostRecord, 'id'> = {
       ...record,
@@ -113,9 +119,10 @@ export async function getCostSummary(
       const data = doc.data();
       records.push({
         id: doc.id,
+        ...data,
         timestamp: data.timestamp?.toDate() || new Date(),
-        ...data
       } as CostRecord);
+
     });
 
     // Filter by date range

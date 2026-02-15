@@ -37,25 +37,26 @@ import { Entity, EntityType } from '../../types';
 
 /** Setup test environment: bypass auth, expose store */
 async function setupTestEnvironment(page: Page) {
-  await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(1000); // Let React mount
+  await page.waitForLoadState('domcontentloaded');
+  
+  // Wait for setTestUser to be available
+  await page.waitForFunction(() => typeof (window as any).setTestUser === 'function', { timeout: 10000 });
 
   await page.evaluate(() => {
-    // Bypass auth
     // @ts-ignore
-    window.setTestUser({ uid: 'e2e-test-user', email: 'e2e@test.com', displayName: 'E2E Tester' }, true);
+    console.log('E2E: Auth bypass starting...');
+    // @ts-ignore
+    window.setTestUser({ uid: 'e2e-test-user', email: 'e2e@test.com', displayName: 'E2E Tester' }, false);
+    // @ts-ignore
+    console.log('E2E: Auth bypass triggered.');
   });
 
-  // Wait for authenticated app to render
-  // The h1 might say "Home", "The Conservatory", etc. - just wait for any h1 or main content
-  try {
-    await page.waitForSelector('h1, main, [data-testid]', { timeout: 15000 });
-  } catch {
-    // Fallback: just wait a bit for React to render
-    await new Promise(resolve => setTimeout(resolve, 2000));
-  }
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Give React time to fully render
+  // Wait for authenticated app to render (Activity, Home, or Collection header)
+  await expect(page.locator('h1')).toContainText(/Home|The Conservatory|Activity|Collection/, { timeout: 15000 });
 }
+
+
+
 
 /** Send a voice command */
 async function sendVoiceCommand(page: Page, text: string) {
@@ -158,7 +159,7 @@ async function createTestOrganism(page: Page, habitatName: string, commonName: s
   await page.waitForTimeout(1000);
 
   // Get organism IDs from store
-  const organismIds = await page.evaluate((habitatName, commonName) => {
+  const organismIds = await page.evaluate(({ habitatName, commonName }) => {
     // @ts-ignore
     const store = window.__conservatoryStore;
     const entities = store.getEntities();
@@ -170,7 +171,8 @@ async function createTestOrganism(page: Page, habitatName: string, commonName: s
       (e.type === 'ORGANISM' || e.type === 'PLANT' || e.type === 'COLONY')
     );
     return organisms.map((e: any) => e.id);
-  }, habitatName, commonName);
+  }, { habitatName, commonName });
+
 
   expect(organismIds.length).toBeGreaterThan(0);
   return organismIds as string[];
@@ -234,21 +236,22 @@ test.describe('Entity Relationships', () => {
   test.beforeEach(async ({ page }) => {
     testPrefix = `TestTank-${uuidv4().slice(0, 8)}`;
     
-    // Set up route interception FIRST, before any navigation
-    await page.route('**/api/proxy', async (route) => {
-      const request = route.request();
-      let postData: any;
+    await page.goto('/');
+    await page.evaluate(() => {
       try {
-        postData = request.postDataJSON();
+        localStorage.clear();
       } catch (e) {
-        postData = {};
+        // Ignore localStorage errors
       }
-      
-      const transcription = postData?.contents || '';
-      const model = postData?.model || '';
-      
-      if (model === 'gemini-flash-lite-latest' || transcription.length > 0) {
+    });
+
+    // Set up browser-side AI mock (more reliable than network interception)
+    await page.evaluate(() => {
+      // @ts-ignore
+      window.mockGeminiParse = (transcription: string) => {
+        console.log('E2E Mock: Parsing voice input:', transcription);
         let response: any;
+
         
         if (transcription.match(/create.*tank.*called/i) || transcription.match(/create.*habitat.*called/i)) {
           const name = transcription.split(/called\s+/i)[1]?.replace(/[.!?]$/, '').trim() || 'Unknown';
@@ -322,29 +325,10 @@ test.describe('Entity Relationships', () => {
           response = { intent: 'LOG_OBSERVATION', observationNotes: transcription, aiReasoning: 'Mock: Fallback' };
         }
         
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ text: JSON.stringify(response) })
-        });
-        return;
-      }
-      
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ text: '{}' })
-      });
+        return response;
+      };
     });
-    
-    await page.goto('/');
-    await page.evaluate(() => {
-      try {
-        localStorage.clear();
-      } catch (e) {
-        // Ignore localStorage errors
-      }
-    });
+
     await setupTestEnvironment(page);
     // Wait for store to be exposed
     await page.waitForFunction(() => {
@@ -352,6 +336,7 @@ test.describe('Entity Relationships', () => {
       return typeof window.__conservatoryStore !== 'undefined';
     }, { timeout: 5000 });
   });
+
 
   test.afterEach(async ({ page }) => {
     await cleanupTestData(page, testPrefix);

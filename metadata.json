@@ -1,8 +1,0 @@
-{
-  "name": "The Conservatory",
-  "description": "A voice-first aquaculture and plant tracking system with event-sourced data integrity and Gemini-powered intelligence.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone"
-  ]
-}

@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { calculateCost, trackCost, getCostSummary } from './costTracker';
-import { collection, addDoc, getDocs } from './firebase';
+import { collection, addDoc, getDocs, query, orderBy } from './firebase';
 
 // Mock Firebase
 vi.mock('./firebase', () => ({
   collection: vi.fn(),
   addDoc: vi.fn(),
   getDocs: vi.fn(),
+  query: vi.fn((q) => q),
+  orderBy: vi.fn((field, dir) => ({ field, dir })),
   serverTimestamp: vi.fn(() => new Date()),
   db: {},
 }));
@@ -78,7 +80,7 @@ describe('costTracker', () => {
 
   describe('trackCost', () => {
     it('should skip tracking in dev mode by default', async () => {
-      vi.stubEnv('VITE_ENABLE_COST_TRACKING', undefined);
+      vi.stubEnv('VITE_ENABLE_COST_TRACKING', 'false');
       vi.stubEnv('DEV', 'true');
       
       await trackCost({
@@ -92,11 +94,10 @@ describe('costTracker', () => {
     });
 
     it('should track costs when enabled in dev', async () => {
-      vi.stubEnv('VITE_ENABLE_COST_TRACKING', 'true');
-      vi.stubEnv('DEV', 'true');
-      
       const mockAddDoc = vi.mocked(addDoc).mockResolvedValue({ id: 'test-id' } as any);
       vi.mocked(collection).mockReturnValue({} as any);
+      vi.stubEnv('DEV', 'true');
+      vi.stubEnv('VITE_ENABLE_COST_TRACKING', 'true');
       
       await trackCost({
         model: 'gemini-pro-latest',
@@ -180,7 +181,7 @@ describe('costTracker', () => {
         {
           id: '1',
           data: () => ({
-            timestamp: { toDate: () => new Date('2025-01-01') },
+            timestamp: { toDate: () => new Date('2025-01-01T12:00:00.000Z') },
             model: 'gemini-pro-latest',
             operation: 'parse_voice_command',
             estimatedCost: 0.001,
@@ -190,7 +191,7 @@ describe('costTracker', () => {
         {
           id: '2',
           data: () => ({
-            timestamp: { toDate: () => new Date('2025-01-02') },
+            timestamp: { toDate: () => new Date('2025-01-02T12:00:00.000Z') },
             model: 'gemini-pro-latest',
             operation: 'identify_photo',
             estimatedCost: 0.002,
@@ -200,7 +201,7 @@ describe('costTracker', () => {
         {
           id: '3',
           data: () => ({
-            timestamp: { toDate: () => new Date('2025-01-03') },
+            timestamp: { toDate: () => new Date('2025-01-03T12:00:00.000Z') },
             model: 'gemini-flash-lite-latest',
             operation: 'parse_voice_command',
             estimatedCost: 0.0005,
@@ -215,10 +216,10 @@ describe('costTracker', () => {
       } as any);
       
       const summary = await getCostSummary(
-        new Date('2025-01-01'),
-        new Date('2025-01-31')
+        new Date('2025-01-01T00:00:00Z'),
+        new Date('2025-01-31T23:59:59Z')
       );
-      
+
       expect(summary.totalCost).toBeCloseTo(0.0035, 10);
       expect(summary.totalCalls).toBe(3);
       expect(summary.byModel['gemini-pro-latest'].cost).toBeCloseTo(0.003, 10);

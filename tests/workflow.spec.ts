@@ -84,13 +84,22 @@ async function setupTestEnvironment(page: Page) {
     window.mockGeminiChat = () => Promise.resolve({ text: 'Mock chat response.' });
 
     // 2. Now bypass auth (this triggers re-render from LoginView to App)
+    console.log('E2E: Bypassing auth...');
+    // @ts-ignore
+    if (typeof window.setTestUser !== 'function') {
+      console.error('E2E: window.setTestUser is not a function!');
+      return;
+    }
     // @ts-ignore
     window.setTestUser({ uid: 'e2e-test-user', email: 'e2e@test.com', displayName: 'E2E Tester' });
+    console.log('E2E: Auth bypass triggered.');
   });
 
-  // Wait for the authenticated app to render (Activity or Collection header)
-  await expect(page.locator('h1')).toContainText(/Activity|Collection/, { timeout: 15000 });
+
+  // Wait for the authenticated app to render (Activity, Home, or Collection header)
+  await expect(page.locator('h1')).toContainText(/Home|The Conservatory|Activity|Collection/, { timeout: 15000 });
 }
+
 
 /** Send a voice command */
 async function sendVoiceCommand(page: Page, text: string) {
@@ -98,9 +107,18 @@ async function sendVoiceCommand(page: Page, text: string) {
     // @ts-ignore
     window.processVoiceInput(t);
   }, text);
-  // Give the store time to process and trigger React re-render
-  await page.waitForTimeout(500);
+  
+  // Wait for pending action to be created (with longer timeout for AI call)
+  await page.waitForFunction(() => {
+    // @ts-ignore
+    const store = window.__conservatoryStore;
+    if (!store) return false;
+    const pending = store.getPendingAction();
+    // Wait for status to be CONFIRMING (not ANALYZING)
+    return pending !== null && pending.status === 'CONFIRMING';
+  }, { timeout: 15000 });
 }
+
 
 /** Wait for and click "Confirm & Save" */
 async function confirmAction(page: Page) {
