@@ -1,0 +1,28 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper: Is the user authenticated?
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Allow authenticated users to upload images to specific folders
+    match /observations/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /habitats/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /organisms/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Default: Deny all
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

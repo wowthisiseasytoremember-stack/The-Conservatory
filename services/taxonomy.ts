@@ -30,6 +30,26 @@ export const taxonomyService = {
   },
 
   /**
+   * Resolves a Vision result against the local library to find the most accurate ID.
+   * Priority: Scientific Name match > Common Name match.
+   */
+  async resolveVisionResult(scientificName: string, commonName: string): Promise<SpeciesRecord | null> {
+    // 1. Try scientific name (highest precision)
+    if (scientificName) {
+      const sciMatch = await speciesLibrary.findByName(scientificName);
+      if (sciMatch) return sciMatch;
+    }
+
+    // 2. Try common name
+    if (commonName) {
+      const comMatch = await speciesLibrary.findByName(commonName);
+      if (comMatch) return comMatch;
+    }
+
+    return null;
+  },
+
+  /**
    * Enriches a new entity with data from the species library if available.
    */
   async autoEnrich(entity: Partial<Entity>): Promise<Partial<Entity>> {

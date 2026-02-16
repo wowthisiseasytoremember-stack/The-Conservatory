@@ -17,6 +17,7 @@ import { mockFirestore } from './MockFirestoreService';
 import { logger, logEnrichment, logFirestore, logAICall } from './logger';
 import { imageService } from './imageService';
 import { taxonomyService } from './taxonomy';
+import { calculateHabitatHealth, calculateParameterTrend } from './ecosystem';
 
 class ConservatoryStore {
   private events: AppEvent[] = [];
@@ -383,41 +384,12 @@ class ConservatoryStore {
    * Calculate habitat health score (0-100)
    * Based on: parameter stability, biodiversity, observation recency
    */
-  getHabitatHealth(habitatId: string): { score: number; factors: { stability: number; biodiversity: number; recency: number } } {
+  getHabitatHealth(habitatId: string) {
     const habitat = this.entities.find(e => e.id === habitatId && e.type === EntityType.HABITAT);
-    if (!habitat) return { score: 0, factors: { stability: 0, biodiversity: 0, recency: 0 } };
+    if (!habitat) return { score: 0, factors: { stability: 0, biodiversity: 0, recency: 0 }, details: [] };
 
     const inhabitants = this.getHabitatInhabitants(habitatId);
-    
-    // Biodiversity score (0-40 points): More species = better
-    const uniqueSpecies = new Set(inhabitants.map(e => e.name)).size;
-    const biodiversity = Math.min(40, uniqueSpecies * 5); // Max 8 species = 40 points
-    
-    // Stability score (0-40 points): Based on recent observations
-    // For now, assume stable if habitat has been updated recently
-    const daysSinceUpdate = (Date.now() - (habitat.updated_at || habitat.created_at)) / (1000 * 60 * 60 * 24);
-    const stability = daysSinceUpdate < 7 ? 40 : daysSinceUpdate < 30 ? 30 : 20;
-    
-    // Recency score (0-20 points): Recent observations = active monitoring
-    const recentEvents = this.events.filter(e => {
-      const domainEvent = e.domain_event;
-      if (!domainEvent) return false;
-      const eventHabitatId = domainEvent.payload?.targetHabitatId || 
-        (domainEvent.payload?.targetHabitatName && 
-         this.entities.find(ent => ent.name === domainEvent.payload.targetHabitatName)?.id);
-      return eventHabitatId === habitatId;
-    });
-    const daysSinceLastEvent = recentEvents.length > 0 
-      ? (Date.now() - recentEvents[0].timestamp) / (1000 * 60 * 60 * 24)
-      : 999;
-    const recency = daysSinceLastEvent < 1 ? 20 : daysSinceLastEvent < 7 ? 15 : daysSinceLastEvent < 30 ? 10 : 0;
-    
-    const score = Math.round(biodiversity + stability + recency);
-    
-    return {
-      score: Math.min(100, score),
-      factors: { stability, biodiversity, recency }
-    };
+    return calculateHabitatHealth(habitat, inhabitants);
   }
 
   /**
@@ -956,24 +928,44 @@ class ConservatoryStore {
    * Creates a PendingAction directly from a vision identification result,
    * bypassing the voice-processing loop entirely.
    */
-  createActionFromVision(result: IdentifyResult, imageBase64: string, habitatId?: string) {
+  async createActionFromVision(result: IdentifyResult, imageBase64: string, habitatId?: string) {
+    // Win #2: Cross-reference with Species Library
+    const canonicalMatch = await taxonomyService.resolveVisionResult(result.species, result.common_name);
+    
+    const candidateName = canonicalMatch?.commonName || result.common_name;
+    const scientificName = canonicalMatch?.scientificName || result.species;
+    const traits = canonicalMatch?.enrichmentData.overflow?.traits || (result.kingdom?.toLowerCase() === 'plantae'
+      ? [{ type: 'PHOTOSYNTHETIC' as const, parameters: {} }]
+      : [{ type: 'INVERTEBRATE' as const, parameters: {} }]);
+
     this.pendingAction = {
       status: 'CONFIRMING',
-      transcript: `[Photo ID] ${result.common_name}`,
+      transcript: `[Photo ID] ${candidateName}`,
       intent: 'ACCESSION_ENTITY',
       targetHabitatId: habitatId || null,
       candidates: [{
-        commonName: result.common_name,
-        scientificName: result.species,
+        commonName: candidateName,
+        scientificName: scientificName,
         quantity: 1,
-        traits: result.kingdom?.toLowerCase() === 'plantae'
-          ? [{ type: 'PHOTOSYNTHETIC' as const, parameters: {} }]
-          : [{ type: 'INVERTEBRATE' as const, parameters: {} }]
+        traits
       }],
       imageBase64,
-      aiReasoning: result.reasoning,
-      isAmbiguous: result.confidence < 0.6
+      aiReasoning: canonicalMatch 
+        ? `Verified against local species library. ${result.reasoning}`
+        : result.reasoning,
+      isAmbiguous: !canonicalMatch && result.confidence < 0.6
     };
+
+    // If we have a library match, we can skip future enrichment for this candidate
+    if (canonicalMatch) {
+      this.pendingAction.candidates[0] = {
+        ...this.pendingAction.candidates[0],
+        ...canonicalMatch.enrichmentData.details,
+        ...canonicalMatch.enrichmentData.overflow,
+        enrichment_status: 'complete'
+      } as any;
+    }
+
     this.persistLocal();
   }
 

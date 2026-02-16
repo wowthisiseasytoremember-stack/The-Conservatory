@@ -117,3 +117,27 @@ export function checkCompatibility(entityA: Entity, entityB: Entity): { compatib
 
   return { compatible: true, reason: "Environmental parameters align" };
 }
+
+/**
+ * Analyzes the trend of a parameter based on historical observations.
+ * Returns: 'increasing' | 'decreasing' | 'stable' | 'unknown'
+ */
+export function calculateParameterTrend(observations: any[], parameter: string): 'increasing' | 'decreasing' | 'stable' | 'unknown' {
+  const relevant = observations
+    .filter(o => o.label === parameter)
+    .sort((a, b) => b.timestamp - a.timestamp) // Newest first
+    .slice(0, 5);
+
+  if (relevant.length < 2) return 'unknown';
+
+  const values = relevant.map(o => o.value).reverse(); // Chronological
+  const first = values[0];
+  const last = values[values.length - 1];
+  
+  const diff = last - first;
+  const threshold = parameter === 'pH' ? 0.1 : parameter === 'temp' ? 1 : 0.5;
+
+  if (Math.abs(diff) < threshold) return 'stable';
+  return diff > 0 ? 'increasing' : 'decreasing';
+}
+

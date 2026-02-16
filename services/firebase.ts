@@ -15,8 +15,14 @@ import {
   query,
   orderBy,
   limit,
+  where,
   writeBatch
 } from 'firebase/firestore';
+export { 
+  collection, addDoc, updateDoc, setDoc, doc, getDoc, getDocs,
+  serverTimestamp, onSnapshot, query, orderBy, 
+  limit, where, writeBatch
+};
 import type { FieldValue } from 'firebase/firestore';
 import { getAnalytics } from 'firebase/analytics';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -103,10 +109,7 @@ export const logout = () => signOut(auth);
  * Explicitly export firebase functions used by store.ts and other services
  */
 export { 
-  collection, addDoc, updateDoc, setDoc, doc, getDoc, getDocs,
-  serverTimestamp, onSnapshot, query, orderBy, 
-  limit, onAuthStateChanged, signInWithPopup, signOut, 
-  writeBatch
+  onAuthStateChanged, signInWithPopup, signOut
 };
 
 export { ref, uploadString, getDownloadURL };
