@@ -114,6 +114,7 @@ export interface PendingAction {
   };
 
   imageBase64?: string; // For photo-originated actions
+  isBulk?: boolean; // For "All tanks" actions
 
   aiReasoning?: string;
   isAmbiguous?: boolean;

@@ -566,6 +566,8 @@ class ConservatoryStore {
         ? this.resolveEntity(result.targetHabitatName, currentEntities)
         : { match: null, isAmbiguous: false };
       
+      const isBulk = ['all tanks', 'every tank', 'all habitats', 'every habitat'].some(phrase => text.toLowerCase().includes(phrase));
+
       this.pendingAction = {
         status: 'CONFIRMING',
         transcript: text,
@@ -577,7 +579,8 @@ class ConservatoryStore {
         observationNotes: result.observationNotes,
         observationParams: result.observationParams,
         aiReasoning: result.aiReasoning,
-        isAmbiguous: result.isAmbiguous || habitatResolution.isAmbiguous
+        isAmbiguous: result.isAmbiguous || habitatResolution.isAmbiguous,
+        isBulk
       };
       
       this.persistLocal();
@@ -770,92 +773,100 @@ class ConservatoryStore {
           }
         }
       } else if (intent === 'LOG_OBSERVATION') {
-        // CRITICAL FIX: Append observations to entities
-        const targetHabitatId = safePayload.targetHabitatId || 
-          this.entities.find(e => e.type === EntityType.HABITAT && e.name.toLowerCase().trim() === (safePayload.targetHabitatName || '').toLowerCase().trim())?.id;
+        // Win #8: Bulk Support
+        const targets: string[] = [];
+        if (safePayload.isBulk) {
+          targets.push(...this.entities.filter(e => e.type === EntityType.HABITAT).map(e => e.id));
+        } else {
+          const targetId = safePayload.targetHabitatId || 
+            this.entities.find(e => e.type === EntityType.HABITAT && e.name.toLowerCase().trim() === (safePayload.targetHabitatName || '').toLowerCase().trim())?.id;
+          if (targetId) targets.push(targetId);
+        }
         
-        if (targetHabitatId && safePayload.observationParams) {
-          // Get all organisms in this habitat
-          const habitatEntities = this.entities.filter(e => 
-            e.habitat_id === targetHabitatId && 
-            (e.type === EntityType.ORGANISM || e.type === EntityType.PLANT || e.type === EntityType.COLONY)
-          );
-          
-          // Create observation entries for each parameter
-          const timestamp = Date.now();
-          const observations: Array<{ timestamp: number; type: 'growth' | 'parameter' | 'note'; label: string; value: number; unit?: string }> = [];
-          
-          Object.entries(safePayload.observationParams).forEach(([key, value]) => {
-            if (typeof value === 'number') {
+        if (targets.length > 0 && safePayload.observationParams) {
+          for (const targetHabitatId of targets) {
+            // Get all organisms in this habitat
+            const habitatEntities = this.entities.filter(e => 
+              e.habitat_id === targetHabitatId && 
+              (e.type === EntityType.ORGANISM || e.type === EntityType.PLANT || e.type === EntityType.COLONY)
+            );
+            
+            // Create observation entries for each parameter
+            const timestamp = Date.now();
+            const observations: Array<{ timestamp: number; type: 'growth' | 'parameter' | 'note'; label: string; value: number; unit?: string }> = [];
+            
+            Object.entries(safePayload.observationParams).forEach(([key, value]) => {
+              if (typeof value === 'number') {
+                observations.push({
+                  timestamp,
+                  type: key === 'growth_cm' ? 'growth' : 'parameter',
+                  label: key,
+                  value,
+                  unit: key === 'temp' ? '°F' : key === 'pH' ? '' : key === 'growth_cm' ? 'cm' : undefined
+                });
+              }
+            });
+            
+            // If observationNotes exists, add as a note observation
+            if (safePayload.observationNotes) {
               observations.push({
                 timestamp,
-                type: key === 'growth_cm' ? 'growth' : 'parameter',
-                label: key,
-                value,
-                unit: key === 'temp' ? '°F' : key === 'pH' ? '' : key === 'growth_cm' ? 'cm' : undefined
+                type: 'note',
+                label: 'note',
+                value: 0, // Notes don't have numeric values
+                unit: undefined
               });
             }
-          });
-          
-          // If observationNotes exists, add as a note observation
-          if (safePayload.observationNotes) {
-            observations.push({
-              timestamp,
-              type: 'note',
-              label: 'note',
-              value: 0, // Notes don't have numeric values
-              unit: undefined
-            });
-          }
-          
-          // Append observations to each entity in the habitat
-          for (const entity of habitatEntities) {
-            const existingObs = entity.observations || [];
-            const updatedObs = [...existingObs, ...observations];
             
-            const idx = this.entities.findIndex(e => e.id === entity.id);
-            if (idx !== -1) {
-              this.entities[idx] = { ...this.entities[idx], observations: updatedObs, updated_at: timestamp };
+            // Append observations to each entity in the habitat
+            for (const entity of habitatEntities) {
+              const existingObs = entity.observations || [];
+              const updatedObs = [...existingObs, ...observations];
+              
+              const idx = this.entities.findIndex(e => e.id === entity.id);
+              if (idx !== -1) {
+                this.entities[idx] = { ...this.entities[idx], observations: updatedObs, updated_at: timestamp };
+                
+                if (!isTestMode) {
+                  batch.update(doc(db, 'entities', entity.id), { 
+                    observations: updatedObs, 
+                    updated_at: timestamp 
+                  });
+                } else {
+                  mockFirestore.updateDoc('entities', entity.id, { 
+                    observations: updatedObs, 
+                    updated_at: timestamp 
+                  });
+                }
+              }
+            }
+
+            // Win #9: Habitat-Level Aggregation
+            // Also update the habitat entity itself with these observations
+            const habitatIdx = this.entities.findIndex(e => e.id === targetHabitatId);
+            if (habitatIdx !== -1) {
+              const hExistingObs = this.entities[habitatIdx].observations || [];
+              const hUpdatedObs = [...hExistingObs, ...observations];
+              this.entities[habitatIdx] = { ...this.entities[habitatIdx], observations: hUpdatedObs, updated_at: timestamp };
               
               if (!isTestMode) {
-                batch.update(doc(db, 'entities', entity.id), { 
-                  observations: updatedObs, 
+                batch.update(doc(db, 'entities', targetHabitatId), { 
+                  observations: hUpdatedObs, 
                   updated_at: timestamp 
                 });
+                
+                // Also write to sub-collection for easier querying
+                const obsColRef = collection(db, 'entities', targetHabitatId, 'habitat_observations');
+                observations.forEach(o => {
+                  const oRef = doc(obsColRef);
+                  batch.set(oRef, { ...o, timestamp: serverTimestamp() });
+                });
               } else {
-                mockFirestore.updateDoc('entities', entity.id, { 
-                  observations: updatedObs, 
+                mockFirestore.updateDoc('entities', targetHabitatId, { 
+                  observations: hUpdatedObs, 
                   updated_at: timestamp 
                 });
               }
-            }
-          }
-
-          // Win #9: Habitat-Level Aggregation
-          // Also update the habitat entity itself with these observations
-          const habitatIdx = this.entities.findIndex(e => e.id === targetHabitatId);
-          if (habitatIdx !== -1) {
-            const hExistingObs = this.entities[habitatIdx].observations || [];
-            const hUpdatedObs = [...hExistingObs, ...observations];
-            this.entities[habitatIdx] = { ...this.entities[habitatIdx], observations: hUpdatedObs, updated_at: timestamp };
-            
-            if (!isTestMode) {
-              batch.update(doc(db, 'entities', targetHabitatId), { 
-                observations: hUpdatedObs, 
-                updated_at: timestamp 
-              });
-              
-              // Also write to sub-collection for easier querying
-              const obsColRef = collection(db, 'entities', targetHabitatId, 'habitat_observations');
-              observations.forEach(o => {
-                const oRef = doc(obsColRef);
-                batch.set(oRef, { ...o, timestamp: serverTimestamp() });
-              });
-            } else {
-              mockFirestore.updateDoc('entities', targetHabitatId, { 
-                observations: hUpdatedObs, 
-                updated_at: timestamp 
-              });
             }
           }
         }
@@ -1427,6 +1438,10 @@ export function useConservatory() {
     // Growth tracking
     calculateGrowthRate: useCallback((entityId: string, metric?: string) => store.calculateGrowthRate(entityId, metric), []),
     getGrowthTimeline: useCallback((entityId: string, metric?: string) => store.getGrowthTimeline(entityId, metric), []),
+    calculateParameterTrend: useCallback((habitatId: string, parameter: string) => {
+      const habitat = store.getEntities().find(e => e.id === habitatId);
+      return calculateParameterTrend(habitat?.observations || [], parameter);
+    }, []),
     // Synergy computation
     computeHabitatSynergies: useCallback((habitatId: string) => store.computeHabitatSynergies(habitatId), []),
     // Feature Manifest backend

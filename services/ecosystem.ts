@@ -141,3 +141,25 @@ export function calculateParameterTrend(observations: any[], parameter: string):
   return diff > 0 ? 'increasing' : 'decreasing';
 }
 
+/**
+ * Finds compatible species from the library for a given entity.
+ */
+export async function findCompatibleTankmates(entity: Entity, libraryRecords: any[]): Promise<any[]> {
+  const aquatic = entity.traits.find(t => t.type === 'AQUATIC')?.parameters;
+  if (!aquatic || !aquatic.pH) return [];
+
+  return libraryRecords.filter(record => {
+    const libAquatic = record.traits?.AQUATIC; // Assuming flattened traits in library for speed
+    if (!libAquatic || !libAquatic.pH) return false;
+
+    // Check pH overlap
+    const phMatch = Math.abs(libAquatic.pH - aquatic.pH) <= 1.0;
+    
+    // Check Temp overlap if available
+    const tempMatch = !libAquatic.temp || !aquatic.temp || Math.abs(libAquatic.temp - aquatic.temp) <= 8;
+
+    return phMatch && tempMatch && record.name !== entity.name;
+  }).slice(0, 5); // Return top 5 suggestions
+}
+
+

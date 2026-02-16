@@ -91,4 +91,23 @@ describe('Ecosystem Engine Simulation', () => {
     const report = calculateHabitatHealth(mockHabitat, manyInhabitants);
     expect(report.factors.biodiversity).toBe(20); // 4 species * 5
   });
+
+  describe('Compatibility Checks', () => {
+    it('should mark species with similar pH as compatible', () => {
+      const fishA: any = { traits: [{ type: 'AQUATIC', parameters: { pH: 7.0 } }] };
+      const fishB: any = { traits: [{ type: 'AQUATIC', parameters: { pH: 7.5 } }] };
+      const result = checkCompatibility(fishA, fishB);
+      expect(result.compatible).toBe(true);
+    });
+
+    it('should mark species with wildly different pH as incompatible', () => {
+      const fishA: any = { traits: [{ type: 'AQUATIC', parameters: { pH: 6.0 } }] };
+      const fishB: any = { traits: [{ type: 'AQUATIC', parameters: { pH: 8.5 } }] };
+      const result = checkCompatibility(fishA, fishB);
+      expect(result.compatible).toBe(false);
+      expect(result.reason).toContain('pH requirements differ');
+    });
+  });
 });
+
+import { checkCompatibility } from './ecosystem';
