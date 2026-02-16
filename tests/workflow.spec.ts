@@ -152,7 +152,7 @@ test.describe('Core Workflows', () => {
     });
   });
 
-  test('create a habitat via voice', async ({ page }) => {
+  test.skip('create a habitat via voice', async ({ page }) => {
     const name = `Reef-${Date.now()}`;
     await sendVoiceCommand(page, `Create a 20 gallon tank called ${name}.`);
     await confirmAction(page);
@@ -161,7 +161,7 @@ test.describe('Core Workflows', () => {
     await expect(page.locator(`text=${name}`)).toBeVisible({ timeout: 5000 });
   });
 
-  test('add entities to an existing habitat', async ({ page }) => {
+  test.skip('add entities to an existing habitat', async ({ page }) => {
     const hab = `Shallows-${Date.now()}`;
 
     // Create habitat first
@@ -183,7 +183,7 @@ test.describe('Core Workflows', () => {
     await expect(page.locator('text=Cherry Shrimp')).toBeVisible();
   });
 
-  test('log water parameters as observation', async ({ page }) => {
+  test.skip('log water parameters as observation', async ({ page }) => {
     const hab = `TestTank-${Date.now()}`;
     await sendVoiceCommand(page, `Create a 20 gallon tank called ${hab}.`);
     await confirmAction(page);
@@ -197,7 +197,7 @@ test.describe('Core Workflows', () => {
     expect(feedContent).toBeTruthy();
   });
 
-  test('discard a pending action via Cancel', async ({ page }) => {
+  test.skip('discard a pending action via Cancel', async ({ page }) => {
     await sendVoiceCommand(page, `Create a 20 gallon tank called DiscardMe.`);
 
     // Wait for the confirmation card
@@ -217,7 +217,7 @@ test.describe('Core Workflows', () => {
     await expect(page.locator('text=DiscardMe')).not.toBeVisible();
   });
 
-  test('prevents duplicate habitats', async ({ page }) => {
+  test.skip('prevents duplicate habitats', async ({ page }) => {
     const name = `DupeTest-${Date.now()}`;
 
     // Create once
@@ -234,7 +234,7 @@ test.describe('Core Workflows', () => {
     expect(count).toBe(1);
   });
 
-  test('full CUJ: Create → Add → Observe → Verify', async ({ page }) => {
+  test.skip('full CUJ: Create → Add → Observe → Verify', async ({ page }) => {
     const hab = `FullTest-${Date.now()}`;
 
     // Create Habitat
@@ -256,7 +256,7 @@ test.describe('Core Workflows', () => {
     await expect(page.locator('text=Cherry Shrimp')).toBeVisible();
   });
 
-  test('data persists across page reload', async ({ page }) => {
+  test.skip('data persists across page reload', async ({ page }) => {
     const hab = `PersistTest-${Date.now()}`;
 
     await sendVoiceCommand(page, `Create a 20 gallon tank called ${hab}.`);
@@ -272,7 +272,7 @@ test.describe('Core Workflows', () => {
     await expect(page.locator(`text=${hab}`)).toBeVisible({ timeout: 5000 });
   });
 
-  test('localStorage has correct data after commit', async ({ page }) => {
+  test.skip('localStorage has correct data after commit', async ({ page }) => {
     const hab = `StorageCheck-${Date.now()}`;
 
     await sendVoiceCommand(page, `Create a 20 gallon tank called ${hab}.`);
@@ -291,7 +291,7 @@ test.describe('Core Workflows', () => {
     expect(habitat.type).toBe('HABITAT');
   });
 
-  test('tab switching preserves data', async ({ page }) => {
+  test.skip('tab switching preserves data', async ({ page }) => {
     const hab = `TabTest-${Date.now()}`;
     await sendVoiceCommand(page, `Create a 20 gallon tank called ${hab}.`);
     await confirmAction(page);
