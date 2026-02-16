@@ -1,0 +1,1 @@
+function i(e){var t,s,u,n;return!!(e instanceof TypeError&&e.message.includes("fetch")||e.status>=500&&e.status<600||e.status===429||(t=e.message)!=null&&t.includes("timeout")||(s=e.message)!=null&&s.includes("Timed out")||(u=e.message)!=null&&u.includes("network")||(n=e.message)!=null&&n.includes("ECONNREFUSED"))}export{i as isRetryableError};

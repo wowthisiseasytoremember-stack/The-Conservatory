@@ -10,11 +10,16 @@ View your app in AI Studio: https://ai.studio/apps/drive/1xG-F7VEkiylEB0D9HVLxQE
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js
 
 1. Install dependencies:
    `npm install`
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## Architecture
+
+- **Backend**: Standardized on Firebase Functions for AI proxying (Intent parsing, Vision). This replaces the legacy Vercel proxy for better integration with Firestore.
+- **Store**: Uses a centralized Zustand store with persistence to Firestore and LocalStorage.
+- **Testing**: Comprehensive E2E coverage with Playwright and unit testing with Vitest.

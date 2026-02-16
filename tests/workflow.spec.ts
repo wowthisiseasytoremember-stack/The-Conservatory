@@ -6,16 +6,9 @@ import { test, expect, Page } from '@playwright/test';
 
 /** Bypass auth and install Gemini mocks before each test */
 async function setupTestEnvironment(page: Page) {
-  await page.goto('/');
-  
-  // Wait for the page to actually load (either login screen or app)
-  await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(1000); // Let React mount
-  
-  await page.evaluate(() => {
-    // 1. Install mocks FIRST before bypassing auth
-    
-    // Mock Gemini AI (voice parser)
+  // Use addInitScript to ensure mocks and auth persist across reloads
+  await page.addInitScript(() => {
+    // 1. Install Gemini Mocks
     // @ts-ignore
     window.mockGeminiParse = (text: string) => {
       // --- CREATE HABITAT ---
@@ -64,36 +57,32 @@ async function setupTestEnvironment(page: Page) {
           aiReasoning: 'Mock: Logging water parameters'
         });
       }
-      // --- AMBIGUOUS ---
-      if (text.match(/do the thing/i)) {
-        return Promise.resolve({ intent: null, isAmbiguous: true, aiReasoning: 'Mock: Ambiguous' });
-      }
       // --- FALLBACK ---
       return Promise.resolve({ intent: 'LOG_OBSERVATION', observationNotes: text, aiReasoning: 'Mock: Fallback' });
     };
 
-    // Mock Strategy Agent
     // @ts-ignore
     window.mockGeminiStrategy = () => Promise.resolve({
       advice: 'Could you be more specific?',
       suggestedCommand: 'Create a 20 gallon tank called My Tank.',
     });
 
-    // Mock Chat
     // @ts-ignore
     window.mockGeminiChat = () => Promise.resolve({ text: 'Mock chat response.' });
 
-    // 2. Now bypass auth (this triggers re-render from LoginView to App)
-    console.log('E2E: Bypassing auth...');
-    // @ts-ignore
-    if (typeof window.setTestUser !== 'function') {
-      console.error('E2E: window.setTestUser is not a function!');
-      return;
-    }
-    // @ts-ignore
-    window.setTestUser({ uid: 'e2e-test-user', email: 'e2e@test.com', displayName: 'E2E Tester' });
-    console.log('E2E: Auth bypass triggered.');
+    // 2. Poll for setTestUser and apply it
+    const interval = setInterval(() => {
+      // @ts-ignore
+      if (typeof window.setTestUser === 'function') {
+        // @ts-ignore
+        window.setTestUser({ uid: 'e2e-test-user', email: 'e2e@test.com', displayName: 'E2E Tester' });
+        clearInterval(interval);
+      }
+    }, 50);
   });
+
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
 
 
   // Wait for the authenticated app to render (Activity, Home, or Collection header)
@@ -131,13 +120,13 @@ async function confirmAction(page: Page) {
 
 /** Switch to Collection tab */
 async function goToCollection(page: Page) {
-  await page.getByRole('button', { name: /Collection/i }).click();
+  await page.goto('/entities');
   await page.waitForTimeout(500);
 }
 
 /** Switch to Feed tab */
 async function goToFeed(page: Page) {
-  await page.getByRole('button', { name: /Feed/i }).click();
+  await page.goto('/feed');
   await page.waitForTimeout(500);
 }
 
