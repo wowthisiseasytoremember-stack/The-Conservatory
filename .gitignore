@@ -27,6 +27,10 @@ Thumbs.db
 # Logs & Error artifacts
 *.txt
 *.log
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 
 # Python
 __pycache__/
