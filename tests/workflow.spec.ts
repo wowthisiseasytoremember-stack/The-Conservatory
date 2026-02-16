@@ -11,9 +11,11 @@ async function setupTestEnvironment(page: Page) {
     // 1. Install Gemini Mocks
     // @ts-ignore
     window.mockGeminiParse = (text: string) => {
+      console.log('[E2E-MOCK] Parsing:', text);
       // --- CREATE HABITAT ---
       if (text.match(/create.*tank.*called/i) || text.match(/create.*habitat.*called/i)) {
         const name = text.split(/called\s+/i)[1]?.replace(/[.!?]$/, '').trim() || 'Unknown';
+        console.log('[E2E-MOCK] Matched Habitat Creation:', name);
         return Promise.resolve({
           intent: 'MODIFY_HABITAT',
           targetHabitatName: name,
@@ -70,15 +72,19 @@ async function setupTestEnvironment(page: Page) {
     // @ts-ignore
     window.mockGeminiChat = () => Promise.resolve({ text: 'Mock chat response.' });
 
-    // 2. Poll for setTestUser and apply it
-    const interval = setInterval(() => {
-      // @ts-ignore
-      if (typeof window.setTestUser === 'function') {
-        // @ts-ignore
-        window.setTestUser({ uid: 'e2e-test-user', email: 'e2e@test.com', displayName: 'E2E Tester' });
-        clearInterval(interval);
-      }
-    }, 50);
+    // 2. Hook setTestUser for automatic re-auth on any reload
+    let _setTestUser = null;
+    Object.defineProperty(window, 'setTestUser', {
+      set(fn) {
+        _setTestUser = fn;
+        if (typeof fn === 'function') {
+          console.log('E2E: Auto-applying test user via hook');
+          fn({ uid: 'e2e-test-user', email: 'e2e@test.com', displayName: 'E2E Tester' });
+        }
+      },
+      get() { return _setTestUser; },
+      configurable: true
+    });
   });
 
   await page.goto('/');
@@ -103,7 +109,7 @@ async function sendVoiceCommand(page: Page, text: string) {
     const store = window.__conservatoryStore;
     if (!store) return false;
     const pending = store.getPendingAction();
-    // Wait for status to be CONFIRMING (not ANALYZING)
+    if (pending) console.log('[E2E-POLL] Status:', pending.status);
     return pending !== null && pending.status === 'CONFIRMING';
   }, { timeout: 15000 });
 }

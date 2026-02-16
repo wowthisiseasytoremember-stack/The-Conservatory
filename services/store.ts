@@ -557,6 +557,7 @@ class ConservatoryStore {
     };
     this.notify();
 
+    console.log('[STORE] processVoiceInput:', text);
     try {
       const currentEntities = [...this.entities]; 
       
@@ -564,6 +565,8 @@ class ConservatoryStore {
       const result = (window as any).mockGeminiParse 
         ? await (window as any).mockGeminiParse(text, currentEntities)
         : await geminiService.parseVoiceCommand(text, currentEntities);
+      
+      console.log('[STORE] Parse Result:', JSON.stringify(result));
       
       // Intent Sovereignty: If the parser is unsure, call the Strategy Agent
       if (!result.intent || result.isAmbiguous) {
@@ -630,8 +633,12 @@ class ConservatoryStore {
   }
 
   async commitPendingAction() {
-    if (!this.pendingAction) return;
+    if (!this.pendingAction) {
+      console.warn('[STORE] commitPendingAction: No pending action');
+      return;
+    }
     
+    console.log('[STORE] Committing:', JSON.stringify(this.pendingAction));
     this.pendingAction.status = 'COMMITTING';
     this.notify();
 
@@ -835,12 +842,9 @@ class ConservatoryStore {
       }
       this.persistLocal();
 
-      // Entities are queued for research — no auto-enrichment.
-      // User triggers Deep Research when ready (per-habitat or global).
-      if (newEntityIds.length > 0) {
-        logger.info({ count: newEntityIds.length }, "Entities queued for deep research");
-      }
+      this.notify();
     } catch (e: any) {
+      console.error('[STORE] Commit error:', e);
       logFirestore('error', "Persistence failed", { error: e });
       const idx = this.events.findIndex(e => e.id === tempId);
       if (idx !== -1) {
