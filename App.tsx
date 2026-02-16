@@ -117,12 +117,6 @@ const App: React.FC = () => {
         />
       }
     >
-      <button 
-        onClick={clearDatabase}
-        style={{ position: 'absolute', top: 10, right: 100, zIndex: 9999, background: 'red', color: 'white', padding: '5px' }}
-      >
-        Clear DB
-      </button>
       <DevTools />
 
       {/* Confirmation UI */}

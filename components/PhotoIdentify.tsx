@@ -94,7 +94,9 @@ export const PhotoIdentify: React.FC<PhotoIdentifyProps> = ({ onConfirmRack }) =
 
   const handleConfirmVision = (result: IdentifyResult) => {
     // Direct store action — bypasses voice simulator entirely
-    store.createActionFromVision(result);
+    if (capturedImage) {
+      store.createActionFromVision(result, capturedImage);
+    }
     handleClose();
   };
 

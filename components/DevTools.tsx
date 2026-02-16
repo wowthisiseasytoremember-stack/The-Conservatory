@@ -10,7 +10,7 @@ export const DevTools: React.FC = () => {
     processVoiceInput, testConnection, entities, enrichEntity, commitPendingAction,
     deepResearchAll, getHabitatInhabitants, getEntityHabitat, getRelatedEntities,
     calculateGrowthRate, getGrowthTimeline, computeHabitatSynergies,
-    getFeaturedSpecimen, getHabitatHealth, getEcosystemFacts
+    getFeaturedSpecimen, getHabitatHealth, getEcosystemFacts, clearDatabase
   } = useConservatory();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'scenarios' | 'actions' | 'contractor' | 'backend'>('scenarios');
@@ -547,6 +547,23 @@ export const DevTools: React.FC = () => {
               className="w-full text-left px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-violet-500/10 hover:border-violet-500/30 border border-transparent text-xs transition-all"
             >
               Test Feature Manifest
+            </button>
+          </div>
+
+          {/* DANGER ZONE */}
+          <div className="pt-4 border-t border-slate-800 space-y-1.5">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-red-500">Danger Zone</div>
+            <button 
+              onClick={() => {
+                if (window.confirm('Are you absolutely sure? This will wipe ALL Firestore data for this user.')) {
+                  clearDatabase();
+                  log('💥 Database Wiped');
+                }
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-xs text-red-400 transition-all flex items-center gap-2"
+            >
+              <AlertTriangle className="w-3 h-3" />
+              Clear Database
             </button>
           </div>
 

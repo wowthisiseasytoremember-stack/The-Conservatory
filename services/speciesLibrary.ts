@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, serverTimestamp } from './firebase';
+import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, limit } from './firebase';
 import { db } from './firebase';
 import { logCache, logFirestore } from './logger';
 
@@ -10,6 +10,7 @@ export interface SpeciesRecord {
   commonName: string;
   scientificName?: string;
   morphVariant?: string;
+  aliases?: string[];
   enrichmentData: {
     details?: any;
     overflow?: any;
@@ -65,16 +66,7 @@ class SpeciesLibrary {
       
       if (docSnap.exists()) {
         const data = docSnap.data();
-        const enrichedAt = data.enrichedAt?.toDate() || new Date();
-        const record: SpeciesRecord = {
-          id: data.id,
-          commonName: data.commonName,
-          scientificName: data.scientificName,
-          morphVariant: data.morphVariant,
-          enrichmentData: data.enrichmentData,
-          enrichedAt,
-          expiresAt: data.expiresAt?.toDate() || this.calculateExpiration(enrichedAt)
-        };
+        const record = this.mapDocToRecord(data);
         
         // Check TTL before returning
         if (this.isExpired(record)) {
@@ -92,6 +84,55 @@ class SpeciesLibrary {
     }
     
     return null;
+  }
+
+  /**
+   * Find a species by various name fields (case-insensitive where possible)
+   */
+  async findByName(name: string): Promise<SpeciesRecord | null> {
+    const normalized = name.toLowerCase().trim();
+    
+    // 1. Try exact key match first
+    const exact = await this.get(normalized);
+    if (exact) return exact;
+
+    try {
+      const colRef = collection(db, 'species_library');
+      
+      // 2. Search by commonName
+      const q1 = query(colRef, where('commonName', '==', name), limit(1));
+      const s1 = await getDocs(q1);
+      if (!s1.empty) return this.mapDocToRecord(s1.docs[0].data());
+
+      // 3. Search by scientificName
+      const q2 = query(colRef, where('scientificName', '==', name), limit(1));
+      const s2 = await getDocs(q2);
+      if (!s2.empty) return this.mapDocToRecord(s2.docs[0].data());
+
+      // 4. Search in aliases array (Note: array-contains is for exact matches)
+      const q3 = query(colRef, where('aliases', 'array-contains', name), limit(1));
+      const s3 = await getDocs(q3);
+      if (!s3.empty) return this.mapDocToRecord(s3.docs[0].data());
+
+    } catch (error) {
+      logFirestore('error', `Species library search error`, { error, name });
+    }
+
+    return null;
+  }
+
+  private mapDocToRecord(data: any): SpeciesRecord {
+    const enrichedAt = data.enrichedAt?.toDate() || new Date();
+    return {
+      id: data.id,
+      commonName: data.commonName,
+      scientificName: data.scientificName,
+      morphVariant: data.morphVariant,
+      aliases: data.aliases,
+      enrichmentData: data.enrichmentData,
+      enrichedAt,
+      expiresAt: data.expiresAt?.toDate() || this.calculateExpiration(enrichedAt)
+    };
   }
   
   /**
@@ -147,6 +188,9 @@ class SpeciesLibrary {
       }
       if (recordWithTTL.morphVariant !== undefined && recordWithTTL.morphVariant !== null) {
         firestoreData.morphVariant = recordWithTTL.morphVariant;
+      }
+      if (recordWithTTL.aliases !== undefined) {
+        firestoreData.aliases = recordWithTTL.aliases;
       }
       
       await setDoc(docRef, firestoreData, { merge: true });

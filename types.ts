@@ -113,6 +113,8 @@ export interface PendingAction {
     location?: string;
   };
 
+  imageBase64?: string; // For photo-originated actions
+
   aiReasoning?: string;
   isAmbiguous?: boolean;
   intentStrategy?: {

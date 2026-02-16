@@ -15,6 +15,8 @@ import {
 import { connectionService, ConnectionStatus } from './connectionService';
 import { mockFirestore } from './MockFirestoreService';
 import { logger, logEnrichment, logFirestore, logAICall } from './logger';
+import { imageService } from './imageService';
+import { taxonomyService } from './taxonomy';
 
 class ConservatoryStore {
   private events: AppEvent[] = [];
@@ -679,6 +681,16 @@ class ConservatoryStore {
     const batch = writeBatch(db);
 
     try {
+      let uploadedImageUrl: string | undefined;
+      if (safePayload.imageBase64 && !isTestMode) {
+        try {
+          uploadedImageUrl = await imageService.uploadImage(safePayload.imageBase64, 'observations');
+          safePayload.photoUrl = uploadedImageUrl; // Attach to payload too
+        } catch (e) {
+          logger.error({ err: e }, "Image upload failed, continuing without photo");
+        }
+      }
+
       if (!isTestMode) {
         const eventRef = doc(collection(db, 'events'));
         batch.set(eventRef, this.cleanDataObject({
@@ -715,10 +727,13 @@ class ConservatoryStore {
             aliases: [],
             traits: [{ type: 'AQUATIC', parameters: { salinity: safePayload.habitatParams?.type === 'Saltwater' ? 'marine' : 'fresh' } }],
             confidence: 1,
-            enrichment_status: 'none',
+            enrichment_status: 'queued',
             created_at: Date.now(),
             updated_at: Date.now(),
-            overflow: otherHabitatParams
+            overflow: {
+              ...otherHabitatParams,
+              illustration: uploadedImageUrl // Use photo as temporary illustration
+            }
           });
           
           // Optimistic Update
@@ -749,7 +764,7 @@ class ConservatoryStore {
           if (cand.traits?.some((t: any) => t.type === 'COLONY')) type = EntityType.COLONY;
 
           const { commonName, scientificName, quantity, traits, ...otherCandidateProps } = cand;
-          const entityData: any = this.cleanDataObject({
+          let entityData: any = this.cleanDataObject({
             name: cand.commonName,
             scientificName: cand.scientificName, 
             habitat_id: targetHabitatId,
@@ -761,8 +776,18 @@ class ConservatoryStore {
             enrichment_status: 'queued',
             created_at: Date.now(),
             updated_at: Date.now(),
-            overflow: otherCandidateProps
+            overflow: {
+              ...otherCandidateProps,
+              images: uploadedImageUrl ? [uploadedImageUrl] : []
+            }
           });
+
+          // Win #8: Taxonomy Normalization
+          try {
+            entityData = await taxonomyService.autoEnrich(entityData);
+          } catch (e) {
+            logger.warn({ err: e }, "Auto-enrichment failed, falling back to queue");
+          }
 
           // Optimistic Update
           this.entities.push({ id, ...entityData });
@@ -831,6 +856,34 @@ class ConservatoryStore {
                   updated_at: timestamp 
                 });
               }
+            }
+          }
+
+          // Win #9: Habitat-Level Aggregation
+          // Also update the habitat entity itself with these observations
+          const habitatIdx = this.entities.findIndex(e => e.id === targetHabitatId);
+          if (habitatIdx !== -1) {
+            const hExistingObs = this.entities[habitatIdx].observations || [];
+            const hUpdatedObs = [...hExistingObs, ...observations];
+            this.entities[habitatIdx] = { ...this.entities[habitatIdx], observations: hUpdatedObs, updated_at: timestamp };
+            
+            if (!isTestMode) {
+              batch.update(doc(db, 'entities', targetHabitatId), { 
+                observations: hUpdatedObs, 
+                updated_at: timestamp 
+              });
+              
+              // Also write to sub-collection for easier querying
+              const obsColRef = collection(db, 'entities', targetHabitatId, 'habitat_observations');
+              observations.forEach(o => {
+                const oRef = doc(obsColRef);
+                batch.set(oRef, { ...o, timestamp: serverTimestamp() });
+              });
+            } else {
+              mockFirestore.updateDoc('entities', targetHabitatId, { 
+                observations: hUpdatedObs, 
+                updated_at: timestamp 
+              });
             }
           }
         }
@@ -903,7 +956,7 @@ class ConservatoryStore {
    * Creates a PendingAction directly from a vision identification result,
    * bypassing the voice-processing loop entirely.
    */
-  createActionFromVision(result: IdentifyResult, habitatId?: string) {
+  createActionFromVision(result: IdentifyResult, imageBase64: string, habitatId?: string) {
     this.pendingAction = {
       status: 'CONFIRMING',
       transcript: `[Photo ID] ${result.common_name}`,
@@ -917,6 +970,7 @@ class ConservatoryStore {
           ? [{ type: 'PHOTOSYNTHETIC' as const, parameters: {} }]
           : [{ type: 'INVERTEBRATE' as const, parameters: {} }]
       }],
+      imageBase64,
       aiReasoning: result.reasoning,
       isAmbiguous: result.confidence < 0.6
     };
@@ -1342,6 +1396,11 @@ export function useConservatory() {
         messages: store.getMessages(),
         pendingAction: store.getPendingAction(),
         liveTranscript: store.getLiveTranscript(),
+        testConnection: store.testConnection.bind(store),
+        login: store.login.bind(store),
+        logout: store.logout.bind(store),
+        clearDatabase: store.clearDatabase.bind(store),
+        createActionFromVision: store.createActionFromVision.bind(store),
         user: store.getUser(),
         activeHabitatId: store.getActiveHabitatId(),
         researchProgress: store.getResearchProgress()
@@ -1362,7 +1421,7 @@ export function useConservatory() {
     addGroup: useCallback((name: string) => store.addGroup(name), []),
     testConnection: useCallback(() => store.testConnection(), []),
     enrichEntity: useCallback((id: string) => store.enrichEntity(id), []),
-    createActionFromVision: useCallback((result: IdentifyResult, habitatId?: string) => store.createActionFromVision(result, habitatId), []),
+    createActionFromVision: useCallback((result: IdentifyResult, imageBase64: string, habitatId?: string) => store.createActionFromVision(result, imageBase64, habitatId), []),
     deepResearch: useCallback((ids: string[]) => store.deepResearch(ids), []),
     deepResearchHabitat: useCallback((habitatId: string) => store.deepResearchHabitat(habitatId), []),
     deepResearchAll: useCallback(() => store.deepResearchAll(), []),

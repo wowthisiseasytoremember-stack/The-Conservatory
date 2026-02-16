@@ -73,6 +73,10 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
+// Initialize Storage
+import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
+export const storage = getStorage(app);
+
 // Initialize Firestore with persistent cache (new API)
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 
@@ -104,4 +108,6 @@ export {
   limit, onAuthStateChanged, signInWithPopup, signOut, 
   writeBatch
 };
+
+export { ref, uploadString, getDownloadURL };
 export type { FieldValue, User };

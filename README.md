@@ -23,3 +23,9 @@ View your app in AI Studio: https://ai.studio/apps/drive/1xG-F7VEkiylEB0D9HVLxQE
 - **Backend**: Standardized on Firebase Functions for AI proxying (Intent parsing, Vision). This replaces the legacy Vercel proxy for better integration with Firestore.
 - **Store**: Uses a centralized Zustand store with persistence to Firestore and LocalStorage.
 - **Testing**: Comprehensive E2E coverage with Playwright and unit testing with Vitest.
+
+## Project Status
+
+**Stable & Deployed**.
+See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for details on the testing strategy and deployed version.
+See [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md) for the roadmap.

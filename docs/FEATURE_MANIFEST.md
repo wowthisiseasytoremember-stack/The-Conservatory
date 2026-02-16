@@ -4,6 +4,12 @@ Every feature, tweak, new component, and desired end state — organized by surf
 
 ---
 
+> [!NOTE]
+> **Status: Roadmap**
+> This document acts as the comprehensive feature roadmap and design reference. For the current implemented status, see [PROJECT_STATUS.md](PROJECT_STATUS.md).
+>
+> ---
+
 ## 🏛️ A. DASHBOARD (Home Screen Reimagining)
 
 The home screen is currently: Event Feed OR Entity List. Two tabs. This should feel like entering a conservatory.
