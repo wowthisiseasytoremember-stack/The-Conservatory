@@ -657,8 +657,9 @@ class ConservatoryStore {
 
     try {
       let uploadedImageUrl: string | undefined;
-      if (safePayload.imageBase64 && !isTestMode) {
+      if (safePayload.imageBase64) {
         try {
+          // Always try upload if image is present (mocks will handle it in test)
           uploadedImageUrl = await imageService.uploadImage(safePayload.imageBase64, 'observations');
           safePayload.photoUrl = uploadedImageUrl; // Attach to payload too
         } catch (e) {

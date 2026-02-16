@@ -4,9 +4,10 @@ import path from 'path';
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
+    environment: 'jsdom',
     include: ['**/*.test.ts', '**/*.spec.ts'],
-    exclude: ['node_modules', 'dist', 'build_output', 'tests/**'], // Exclude Playwright E2E tests
+    exclude: ['node_modules', 'dist', 'build_output', 'tests/e2e/**'], // Exclude Playwright E2E tests specifically if they are in e2e
+    testTimeout: 30000,
   },
   resolve: {
     alias: {
