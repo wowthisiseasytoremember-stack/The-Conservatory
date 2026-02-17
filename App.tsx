@@ -30,7 +30,7 @@ const App: React.FC = () => {
     activeHabitatId, researchProgress, activeBiomeTheme,
     processVoiceInput, commitPendingAction, discardPending, 
     updateSlot, updateEntity, addGroup, testConnection, login, logout,
-    createActionFromVision, setActiveHabitat, deepResearchAll, resetResearchProgress,
+    createActionFromVision, createActionsFromRack, setActiveHabitat, deepResearchAll, resetResearchProgress,
     clearDatabase
   } = useConservatory();
   
@@ -40,6 +40,19 @@ const App: React.FC = () => {
   const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: 'success' | 'error' | 'info' | 'loading'; duration?: number }>>([]);
 
   useEffect(() => {
+    // Global Error Hardening
+    const handleError = (event: ErrorEvent) => {
+      console.error('[App] Global Error:', event.error);
+      toastManager.error(`Unexpected Error: ${event.message}`, 5000);
+    };
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      console.error('[App] Unhandled Rejection:', event.reason);
+      toastManager.error(`Source Error: ${event.reason?.message || 'Check connection'}`, 5000);
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleRejection);
+    
     // @ts-ignore
     window.processVoiceInput = processVoiceInput;
     // @ts-ignore
@@ -54,7 +67,11 @@ const App: React.FC = () => {
     };
     checkDb();
     const interval = setInterval(checkDb, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleRejection);
+      clearInterval(interval);
+    };
   }, [testConnection, user, processVoiceInput, entities]);
 
   // Subscribe to toast manager
@@ -68,9 +85,14 @@ const App: React.FC = () => {
   };
 
   const handleRackConfirm = (containers: RackContainer[]) => {
-    containers.forEach(c => {
-      processVoiceInput(`Create a new habitat: ${c.size_estimate} tank located at ${c.shelf_level} shelf, ${c.horizontal_position}. It has ${c.primary_species.map(s => s.common_name).join(', ')}.`);
-    });
+    // Hardening: Use direct store method instead of risky voice template looping
+    if (containers.length > 0) {
+      // @ts-ignore
+      if (typeof createActionsFromRack === 'function') {
+        // @ts-ignore
+        createActionsFromRack(containers);
+      }
+    }
   };
 
   // Subscription to toast manager moved up or handled by store

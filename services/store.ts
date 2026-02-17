@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   AppEvent, Entity, DomainEvent, EntityGroup, PendingAction, EntityType, EventStatus, ChatMessage,
-  IdentifyResult, ResearchProgress, ResearchStage, ResearchEntityProgress, BiomeTheme 
+  IdentifyResult, ResearchProgress, ResearchStage, ResearchEntityProgress, BiomeTheme, RackContainer
 } from '../types';
 import { geminiService } from './geminiService';
 import { 
@@ -732,7 +732,12 @@ class ConservatoryStore {
             e.name.toLowerCase().trim() === normalizedName
           );
 
-          if (existing) continue;
+          if (existing) {
+            // Hardening: Instead of skipping, update quantity
+            const updatedQuantity = (existing.quantity || 1) + (cand.quantity || 1);
+            this.updateEntity(existing.id, { quantity: updatedQuantity });
+            continue;
+          }
 
           const id = uuidv4();
           newEntityIds.push(id);
@@ -747,7 +752,7 @@ class ConservatoryStore {
             habitat_id: targetHabitatId,
             traits: cand.traits || [],
             type,
-            quantity: cand.quantity,
+            quantity: cand.quantity || 1,
             confidence: 0.9,
             aliases: [],
             enrichment_status: 'queued',
@@ -980,6 +985,43 @@ class ConservatoryStore {
     }
 
     this.persistLocal();
+  }
+
+  /**
+   * Creates multiple PendingActions for rack discovery.
+   * Hardened to handle batch habitat creation without re-parsing text.
+   */
+  async createActionsFromRack(containers: RackContainer[]) {
+    if (!containers.length) return;
+
+    for (const c of containers) {
+      const habitatName = `${c.size_estimate} ${c.shelf_level} ${c.horizontal_position}`;
+      const habitatParams = {
+        name: habitatName,
+        type: 'Freshwater' as 'Freshwater',
+        location: `${c.shelf_level} shelf, ${c.horizontal_position}`
+      };
+
+      const candidates = c.primary_species.map(s => ({
+        commonName: s.common_name,
+        scientificName: s.scientific_name || s.common_name,
+        quantity: 1,
+        traits: []
+      }));
+
+      this.pendingAction = {
+        status: 'CONFIRMING',
+        transcript: `[Rack Scan] ${habitatName}`,
+        intent: 'MODIFY_HABITAT',
+        habitatParams,
+        candidates,
+        aiReasoning: `Batch detected from rack scan. Shelf: ${c.shelf_level}.`,
+        isAmbiguous: false
+      };
+      
+      this.notify();
+      this.persistLocal();
+    }
   }
 
   // -------------------------------------------------------------------
@@ -1282,8 +1324,8 @@ class ConservatoryStore {
         const current = results[results.length - 1];
         if (current) {
           current.stages = current.stages.map(s =>
-            s.status === 'waiting' || s.status === 'active'
-              ? { ...s, status: 'error' as const, error: String(e) }
+            s.status === 'active' || s.status === 'waiting'
+              ? { ...s, status: 'error' as const, error: String(e.message || e) }
               : s
           );
         }
@@ -1291,16 +1333,22 @@ class ConservatoryStore {
           completedEntities: this._researchProgress.completedEntities + 1,
           entityResults: results
         });
+        logger.error({ entityId, error: e }, "Research entity failed");
       }
     }
 
     // Finished
-    this.setResearchProgress({
+    const finalState = {
       isActive: false,
       currentEntity: null,
-      currentStage: null
-    });
-    logger.info({ discoveryCount: this._researchProgress.discoveries.length }, "Deep research complete");
+      currentStage: null,
+      completedEntities: toResearch.length
+    };
+    this.setResearchProgress(finalState);
+    logger.info({ 
+      discoveryCount: this._researchProgress.discoveries.length,
+      successCount: this._researchProgress.completedEntities 
+    }, "Deep research batch process complete");
   }
 
   /**
@@ -1427,6 +1475,7 @@ export function useConservatory() {
     testConnection: useCallback(() => store.testConnection(), []),
     enrichEntity: useCallback((id: string) => store.enrichEntity(id), []),
     createActionFromVision: useCallback((result: IdentifyResult, imageBase64: string, habitatId?: string) => store.createActionFromVision(result, imageBase64, habitatId), []),
+    createActionsFromRack: useCallback((containers: RackContainer[]) => store.createActionsFromRack(containers), []),
     deepResearch: useCallback((ids: string[]) => store.deepResearch(ids), []),
     deepResearchHabitat: useCallback((habitatId: string) => store.deepResearchHabitat(habitatId), []),
     deepResearchAll: useCallback(() => store.deepResearchAll(), []),

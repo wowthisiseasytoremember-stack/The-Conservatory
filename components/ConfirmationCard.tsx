@@ -203,9 +203,20 @@ const Slot: React.FC<{ value: any, placeholder: string, type?: 'text'|'number', 
         ref={inputRef}
         type={type}
         value={value || ''}
-        onChange={(e) => onChange(type === 'number' ? parseFloat(e.target.value) : e.target.value)}
+        onChange={(e) => {
+          const val = e.target.value;
+          if (val === '') {
+            onChange(undefined);
+          } else {
+            const parsed = parseFloat(val);
+            if (!isNaN(parsed)) onChange(parsed);
+          }
+        }}
         onBlur={() => setIsEditing(false)}
-        onKeyDown={(e) => e.key === 'Enter' && setIsEditing(false)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') setIsEditing(false);
+          if (e.key === 'Escape') setIsEditing(false);
+        }}
         className="bg-slate-800 text-emerald-400 font-bold rounded px-2 py-0.5 outline-none border border-emerald-500/50 min-w-[40px] inline-block align-middle mx-1"
         placeholder={placeholder}
       />
