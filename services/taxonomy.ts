@@ -1,5 +1,5 @@
-
 import { speciesLibrary, SpeciesRecord } from './speciesLibrary';
+import { logger } from './logger';
 import { Entity, EntityType } from '../types';
 
 /**
@@ -16,13 +16,13 @@ export const taxonomyService = {
    * @returns Canonical record if found, null otherwise
    */
   async normalizeSpecies(name: string): Promise<SpeciesRecord | null> {
-    console.log(`[Taxonomy] Normalizing: ${name}`);
+    logger.debug({ name }, `[Taxonomy] Normalizing`);
     
     // 1. Try exact match in library
     const match = await speciesLibrary.findByName(name);
     
     if (match) {
-      console.log(`[Taxonomy] Found canonical match for ${name}: ${match.scientificName || match.commonName}`);
+      logger.info({ name, match }, `[Taxonomy] Found canonical match`);
       return match;
     }
     

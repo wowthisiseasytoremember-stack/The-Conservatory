@@ -18,6 +18,8 @@ import { logger, logEnrichment, logFirestore, logAICall } from './logger';
 import { imageService } from './imageService';
 import { taxonomyService } from './taxonomy';
 import { calculateHabitatHealth, calculateParameterTrend } from './ecosystem';
+import { STORAGE_KEYS } from '../src/constants';
+import { safeStorage } from '../src/utils/storage';
 
 class ConservatoryStore {
   private events: AppEvent[] = [];
@@ -138,29 +140,26 @@ class ConservatoryStore {
 
   private loadLocal() {
     try {
-        const savedEvents = localStorage.getItem('conservatory_events');
-        const savedEntities = localStorage.getItem('conservatory_entities');
-        const savedGroups = localStorage.getItem('conservatory_groups');
-        const savedMessages = localStorage.getItem('conservatory_messages');
-        
-        if (savedEvents) this.events = JSON.parse(savedEvents);
-        if (savedEntities) this.entities = JSON.parse(savedEntities);
-        if (savedGroups) this.groups = JSON.parse(savedGroups);
-        if (savedMessages) this.messages = JSON.parse(savedMessages);
+      this.events = safeStorage.getItem(STORAGE_KEYS.EVENTS, []);
+      this.entities = safeStorage.getItem(STORAGE_KEYS.ENTITIES, []);
+      this.groups = safeStorage.getItem(STORAGE_KEYS.GROUPS, []);
+      this.messages = safeStorage.getItem(STORAGE_KEYS.MESSAGES, []);
+      this.activeHabitatId = localStorage.getItem(STORAGE_KEYS.HABITAT_ID);
+      this.notify();
     } catch (e) {
-        logger.warn("Local storage corrupted, starting fresh");
+      logger.error(e, 'Store: Failed to load local data');
     }
   }
 
   private persistLocal() {
     try {
-        localStorage.setItem('conservatory_events', JSON.stringify(this.events));
-        localStorage.setItem('conservatory_entities', JSON.stringify(this.entities));
-        localStorage.setItem('conservatory_groups', JSON.stringify(this.groups));
-        localStorage.setItem('conservatory_messages', JSON.stringify(this.messages));
-        this.notify();
+      safeStorage.setItem(STORAGE_KEYS.EVENTS, this.events);
+      safeStorage.setItem(STORAGE_KEYS.ENTITIES, this.entities);
+      safeStorage.setItem(STORAGE_KEYS.GROUPS, this.groups);
+      safeStorage.setItem(STORAGE_KEYS.MESSAGES, this.messages);
+      this.notify();
     } catch (e) {
-        logger.error({ err: e }, "LocalStorage write failed");
+      logger.error(e, 'Store: Failed to persist local data');
     }
   }
 
@@ -239,6 +238,8 @@ class ConservatoryStore {
 
   setActiveHabitat(id: string | null) {
     this.activeHabitatId = id;
+    if (id) localStorage.setItem(STORAGE_KEYS.HABITAT_ID, id);
+    else localStorage.removeItem(STORAGE_KEYS.HABITAT_ID);
     this.persistLocal();
   }
 
@@ -531,7 +532,7 @@ class ConservatoryStore {
     };
     this.notify();
 
-    console.log('[STORE] processVoiceInput:', text);
+// processVoiceInput log removed
     try {
       const currentEntities = [...this.entities]; 
       
@@ -540,7 +541,7 @@ class ConservatoryStore {
         ? await (window as any).mockGeminiParse(text, currentEntities)
         : await geminiService.parseVoiceCommand(text, currentEntities);
       
-      console.log('[STORE] Parse Result:', JSON.stringify(result));
+// Parse Result log removed
       
       // Intent Sovereignty: If the parser is unsure, call the Strategy Agent
       if (!result.intent || result.isAmbiguous) {
@@ -615,7 +616,7 @@ class ConservatoryStore {
       return;
     }
     
-    console.log('[STORE] Committing:', JSON.stringify(this.pendingAction));
+// Committing log removed
     this.pendingAction.status = 'COMMITTING';
     this.notify();
 

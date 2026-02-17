@@ -73,17 +73,7 @@ const App: React.FC = () => {
     });
   };
 
-  // Determine the biome theme based on the active habitat's traits
-  const activeHabitat = entities.find(e => e.id === activeHabitatId);
-  let biomeTheme: BiomeTheme = 'default';
-  
-  if (activeHabitat) {
-    const traits = activeHabitat.traits || [];
-    if (traits.some(t => t.parameters?.salinity === 'marine')) biomeTheme = 'marine';
-    else if (traits.some(t => t.type === 'TERRESTRIAL' && (t.parameters?.humidity || 0) > 70)) biomeTheme = 'paludarium';
-    else if (traits.some(t => t.parameters?.salinity === 'brackish')) biomeTheme = 'tanganyika'; // Using tanganyika as proxy for clear/rocky/brackish
-    else if (traits.some(t => t.parameters?.pH && t.parameters.pH < 6.5)) biomeTheme = 'blackwater';
-  }
+  // Subscription to toast manager moved up or handled by store
 
   // Get route title for header
   const getRouteTitle = () => {

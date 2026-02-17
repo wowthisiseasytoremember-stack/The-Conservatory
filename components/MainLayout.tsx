@@ -3,6 +3,7 @@ import React from 'react';
 import { Leaf, Settings, AlertCircle, LogOut } from 'lucide-react';
 import { ConnectionStatus } from '../services/connectionService';
 import { BiomeTheme } from '../types';
+import { Z_INDEX } from '../src/constants';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -85,7 +86,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
       {/* Rapid Voice Reflection Overlay */}
       {liveTranscript && (
-        <div className="fixed inset-x-0 top-1/2 -translate-y-1/2 z-[60] flex items-center justify-center pointer-events-none px-12" style={{ zIndex: 60 }}>
+        <div className={`fixed inset-x-0 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none px-12`} style={{ zIndex: Z_INDEX.TRANSCRIPT_OVERLAY }}>
           <div className="bg-emerald-500/10 backdrop-blur-3xl border border-emerald-500/20 px-8 py-6 rounded-3xl shadow-[0_0_100px_rgba(16,185,129,0.1)] animate-pulse max-w-lg text-center">
             <p className="text-2xl font-serif text-emerald-100/90 leading-relaxed italic">
               "{liveTranscript}"

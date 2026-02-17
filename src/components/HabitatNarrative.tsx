@@ -22,24 +22,32 @@ export const HabitatNarrative: React.FC<HabitatNarrativeProps> = ({ habitatId, s
 
     useEffect(() => {
         if (!habitatId) return;
+        const controller = new AbortController();
 
         const loadNarrative = async () => {
             setLoading(true);
             try {
                 const snapshot = await store.generateHabitatSnapshot(habitatId);
-                if (snapshot) {
+                if (snapshot && !controller.signal.aborted) {
                     setInhabitants(snapshot.inhabitants);
                     const data = await geminiService.getEcosystemNarrative(snapshot);
-                    setNarrative(data);
+                    if (!controller.signal.aborted) {
+                        setNarrative(data);
+                    }
                 }
-            } catch (err) {
-                console.error("Failed to generate ecosystem narrative:", err);
+            } catch (err: any) {
+                if (err.name !== 'AbortError') {
+                    console.error("Failed to generate ecosystem narrative:", err);
+                }
             } finally {
-                setLoading(false);
+                if (!controller.signal.aborted) {
+                    setLoading(false);
+                }
             }
         };
 
         loadNarrative();
+        return () => controller.abort();
     }, [habitatId, store]);
 
     // Helper to wrap species names in DiscoveryHighlight breadcrumbs

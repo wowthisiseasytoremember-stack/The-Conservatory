@@ -40,7 +40,8 @@ export const proxy = onRequest({ cors: true, secrets: ["GEMINI_API_KEY"] }, asyn
     
     const response = await result.response;
     const text = response.text();
-    const candidates = (response as any).candidates;
+    // Use proper response accessors if available, or safe indexing
+    const candidates = response.candidates || [];
 
     res.status(200).json({ 
       text,

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Entity, EntityGroup } from '../types';
 import { X, Tag, Plus, Trash2, FolderOpen, Globe2, CheckCircle2, AlertTriangle, Loader2, TrendingUp, Sparkles } from 'lucide-react';
 import { GrowthChart } from './GrowthChart';
+import { Z_INDEX, ECOSYSTEM_THRESHOLDS } from '../src/constants';
 
 interface EntityDetailModalProps {
   entity: Entity;
@@ -44,14 +45,18 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
   // Chart selection state
   const [activeMetric, setActiveMetric] = useState<string | null>(null);
 
-  // Load GBIF Data on Mount
+  // Load GBIF Data on Mount with AbortController
   useEffect(() => {
+    const controller = new AbortController();
     const fetchGbif = async () => {
       setLoadingGbif(true);
       try {
-        // Use scientific name if available, otherwise common name
         const query = entity.scientificName || entity.name;
-        const res = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(query)}`);
+        const res = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(query)}`, {
+          signal: controller.signal
+        });
+        
+        if (!res.ok) throw new Error(`GBIF error: ${res.status}`);
         const data = await res.json();
         
         if (data.matchType !== 'NONE') {
@@ -66,13 +71,14 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
             matchType: data.matchType,
             status: data.status
           });
-          // Auto-enrich if missing scientific name
           if (!entity.scientificName && data.scientificName) {
             onUpdate({ scientificName: data.scientificName });
           }
         }
-      } catch (e) {
-        console.error("GBIF Error", e);
+      } catch (e: any) {
+        if (e.name !== 'AbortError') {
+          console.error("GBIF Error", e);
+        }
       } finally {
         setLoadingGbif(false);
       }
@@ -81,7 +87,9 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
     if (entity.type === 'ORGANISM' || entity.type === 'PLANT') {
       fetchGbif();
     }
-  }, [entity.id]); // Only run on entity switch
+    
+    return () => controller.abort();
+  }, [entity.id]);
 
   const addAlias = () => {
     if (newAlias.trim() && !entity.aliases.includes(newAlias.trim())) {
@@ -109,8 +117,18 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
   };
 
   const logObservation = () => {
-    const numVal = parseFloat(obsValue);
+    let numVal = parseFloat(obsValue);
     if (isNaN(numVal)) return;
+
+    // WIN #5: Input Sanitization (Input Wild-West)
+    if (obsLabel.toLowerCase() === 'ph') {
+      numVal = Math.max(0, Math.min(14, numVal));
+    } else if (obsLabel.toLowerCase() === 'temp' || obsLabel.toLowerCase() === 'temperature') {
+      numVal = Math.max(-20, Math.min(60, numVal)); // Reasonable bounds
+    } else if (obsLabel.toLowerCase() === 'growth' || obsLabel.toLowerCase() === 'quantity') {
+      numVal = Math.max(0, numVal);
+    }
+
     const existing = entity.observations || [];
     const newObs = {
       timestamp: Date.now(),
@@ -223,7 +241,7 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 70 }}>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.MODAL_BACKDROP }}>
       <div className="bg-slate-900 w-full max-w-md border border-slate-800 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in duration-200 flex flex-col max-h-[85vh]">
         
         <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-black/20">

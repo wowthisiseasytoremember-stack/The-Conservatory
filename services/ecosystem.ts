@@ -1,5 +1,6 @@
 
 import { Entity, EntityType } from '../types';
+import { ECOSYSTEM_THRESHOLDS, TIME } from '../src/constants';
 
 /**
  * ECOSYSTEM ENGINE
@@ -22,27 +23,26 @@ export interface HealthReport {
  * 1. Parameter stability (pH, temp)
  * 2. Biodiversity (number of unique species)
  * 3. Recency of observations
- * 
- * Logic: (100 - (abs(pH_diff) * 10)) + biodiversity_bonus
  */
 export function calculateHabitatHealth(habitat: Entity, inhabitants: Entity[]): HealthReport {
   if (habitat.type !== EntityType.HABITAT) {
     return { score: 0, factors: { stability: 0, biodiversity: 0, recency: 0 }, details: ["Not a habitat"] };
   }
 
-  // 1. Biodiversity Bonus (Max 40 points)
+  // 1. Biodiversity Bonus
   const uniqueSpecies = new Set(inhabitants.map(e => e.scientificName || e.name)).size;
-  const biodiversityScore = Math.min(40, uniqueSpecies * 5);
+  const biodiversityScore = Math.min(
+    ECOSYSTEM_THRESHOLDS.BIODIVERSITY_BONUS_MAX, 
+    uniqueSpecies * ECOSYSTEM_THRESHOLDS.BIODIVERSITY_SPECIES_VALUE
+  );
 
-  // 2. Stability Score (Max 40 points)
-  // Check most recent pH observation vs target
-  let stabilityScore = 30; // Default base
+  // 2. Stability Score
+  let stabilityScore = ECOSYSTEM_THRESHOLDS.PH_STABILITY_MAX * 0.75; // Starting base
   const details: string[] = [];
 
   const aquaticTrait = habitat.traits.find(t => t.type === 'AQUATIC');
-  const targetPH = aquaticTrait?.parameters.pH || 7.0;
+  const targetPH = (aquaticTrait?.type === 'AQUATIC' ? aquaticTrait.parameters.pH : null) || 7.0;
   
-  // Get most recent observation for this habitat
   const observations = habitat.observations || [];
   const latestPHObs = observations
     .filter(o => o.label === 'pH')
@@ -50,24 +50,26 @@ export function calculateHabitatHealth(habitat: Entity, inhabitants: Entity[]): 
 
   if (latestPHObs) {
     const phDiff = Math.abs(latestPHObs.value - targetPH);
-    const phPenalty = phDiff * 10;
-    stabilityScore = Math.max(0, 40 - phPenalty);
-    details.push(`pH stability: ${stabilityScore}/40 (diff: ${phDiff.toFixed(1)})`);
+    const phPenalty = phDiff * ECOSYSTEM_THRESHOLDS.PH_PENALTY_MULTIPLIER;
+    stabilityScore = Math.max(0, ECOSYSTEM_THRESHOLDS.PH_STABILITY_MAX - phPenalty);
+    details.push(`pH stability: ${stabilityScore}/${ECOSYSTEM_THRESHOLDS.PH_STABILITY_MAX} (diff: ${phDiff.toFixed(1)})`);
   } else {
     details.push("No pH data available for stability check.");
   }
 
-  // 3. Recency Score (Max 20 points)
+  // 3. Recency Score
   const lastUpdate = habitat.updated_at || habitat.created_at;
-  const daysSinceUpdate = (Date.now() - lastUpdate) / (1000 * 60 * 60 * 24);
+  const daysSinceUpdate = (Date.now() - lastUpdate) / TIME.MS_IN_DAY;
   
   let recencyScore = 0;
-  if (daysSinceUpdate < 1) recencyScore = 20;
-  else if (daysSinceUpdate < 7) recencyScore = 15;
-  else if (daysSinceUpdate < 30) recencyScore = 10;
-  else recencyScore = 5;
+  const { RECENCY_PENALTY_DAYS, HEALTH_RECENCY_SCORE } = ECOSYSTEM_THRESHOLDS;
   
-  details.push(`Activity recency: ${recencyScore}/20 (${Math.floor(daysSinceUpdate)} days since last update)`);
+  if (daysSinceUpdate < RECENCY_PENALTY_DAYS.FULL) recencyScore = HEALTH_RECENCY_SCORE.NEW;
+  else if (daysSinceUpdate < RECENCY_PENALTY_DAYS.HIGH) recencyScore = HEALTH_RECENCY_SCORE.RECENT;
+  else if (daysSinceUpdate < RECENCY_PENALTY_DAYS.MEDIUM) recencyScore = HEALTH_RECENCY_SCORE.STALE;
+  else recencyScore = HEALTH_RECENCY_SCORE.OLD;
+  
+  details.push(`Activity recency: ${recencyScore}/${HEALTH_RECENCY_SCORE.NEW} (${Math.floor(daysSinceUpdate)} days since last update)`);
 
   const totalScore = Math.min(100, Math.round(biodiversityScore + stabilityScore + recencyScore));
 
@@ -86,31 +88,28 @@ export function calculateHabitatHealth(habitat: Entity, inhabitants: Entity[]): 
  * Checks compatibility between two entities based on their traits.
  */
 export function checkCompatibility(entityA: Entity, entityB: Entity): { compatible: boolean; reason: string } {
-  // Extract pH and Temp ranges from traits
   const getParams = (e: Entity) => {
-    const aquatic = e.traits.find(t => t.type === 'AQUATIC')?.parameters;
+    const aquaticTrait = e.traits.find(t => t.type === 'AQUATIC');
+    const params = aquaticTrait?.type === 'AQUATIC' ? aquaticTrait.parameters : null;
     return {
-      pH: aquatic?.pH,
-      temp: aquatic?.temp
+      pH: params?.pH,
+      temp: params?.temp
     };
   };
 
   const pA = getParams(entityA);
   const pB = getParams(entityB);
 
-  // If one doesn't have params, assume compatible for now
   if (!pA.pH || !pB.pH) return { compatible: true, reason: "Insufficient data for detailed check" };
 
-  // 1. pH Check: within 1.5
   const phDiff = Math.abs(pA.pH - pB.pH);
-  if (phDiff > 1.5) {
+  if (phDiff > ECOSYSTEM_THRESHOLDS.PH_COMPATIBILITY_THRESHOLD) {
     return { compatible: false, reason: `pH requirements differ too much (${pA.pH} vs ${pB.pH})` };
   }
 
-  // 2. Temp Check: within 10 degrees
   if (pA.temp && pB.temp) {
     const tempDiff = Math.abs(pA.temp - pB.temp);
-    if (tempDiff > 10) {
+    if (tempDiff > ECOSYSTEM_THRESHOLDS.TEMP_COMPATIBILITY_THRESHOLD) {
       return { compatible: false, reason: `Temperature requirements differ too much (${pA.temp}°F vs ${pB.temp}°F)` };
     }
   }
@@ -120,22 +119,23 @@ export function checkCompatibility(entityA: Entity, entityB: Entity): { compatib
 
 /**
  * Analyzes the trend of a parameter based on historical observations.
- * Returns: 'increasing' | 'decreasing' | 'stable' | 'unknown'
  */
 export function calculateParameterTrend(observations: any[], parameter: string): 'increasing' | 'decreasing' | 'stable' | 'unknown' {
   const relevant = observations
     .filter(o => o.label === parameter)
-    .sort((a, b) => b.timestamp - a.timestamp) // Newest first
+    .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 5);
 
   if (relevant.length < 2) return 'unknown';
 
-  const values = relevant.map(o => o.value).reverse(); // Chronological
+  const values = relevant.map(o => o.value).reverse();
   const first = values[0];
   const last = values[values.length - 1];
   
   const diff = last - first;
-  const threshold = parameter === 'pH' ? 0.1 : parameter === 'temp' ? 1 : 0.5;
+  let threshold = ECOSYSTEM_THRESHOLDS.TREND_DEFAULT_STABILITY;
+  if (parameter === 'pH') threshold = ECOSYSTEM_THRESHOLDS.TREND_PH_STABILITY;
+  else if (parameter === 'temp') threshold = ECOSYSTEM_THRESHOLDS.TREND_TEMP_STABILITY;
 
   if (Math.abs(diff) < threshold) return 'stable';
   return diff > 0 ? 'increasing' : 'decreasing';
@@ -145,21 +145,30 @@ export function calculateParameterTrend(observations: any[], parameter: string):
  * Finds compatible species from the library for a given entity.
  */
 export async function findCompatibleTankmates(entity: Entity, libraryRecords: any[]): Promise<any[]> {
-  const aquatic = entity.traits.find(t => t.type === 'AQUATIC')?.parameters;
+  const aquaticTrait = entity.traits.find(t => t.type === 'AQUATIC');
+  const aquatic = aquaticTrait?.type === 'AQUATIC' ? aquaticTrait.parameters : null;
   if (!aquatic || !aquatic.pH) return [];
 
   return libraryRecords.filter(record => {
-    const libAquatic = record.traits?.AQUATIC; // Assuming flattened traits in library for speed
-    if (!libAquatic || !libAquatic.pH) return false;
-
-    // Check pH overlap
-    const phMatch = Math.abs(libAquatic.pH - aquatic.pH) <= 1.0;
+    // Support both flattened (legacy) and structured traits
+    let libPH, libTemp;
     
-    // Check Temp overlap if available
-    const tempMatch = !libAquatic.temp || !aquatic.temp || Math.abs(libAquatic.temp - aquatic.temp) <= 8;
+    if (record.traits?.AQUATIC) {
+        libPH = record.traits.AQUATIC.pH;
+        libTemp = record.traits.AQUATIC.temp;
+    } else if (Array.isArray(record.traits)) {
+        const found = record.traits.find((t: any) => t.type === 'AQUATIC');
+        libPH = found?.parameters?.pH;
+        libTemp = found?.parameters?.temp;
+    }
+
+    if (!libPH) return false;
+
+    const phMatch = Math.abs(libPH - aquatic.pH!) <= 1.0;
+    const tempMatch = !libTemp || !aquatic.temp || Math.abs(libTemp - aquatic.temp) <= 8;
 
     return phMatch && tempMatch && record.name !== entity.name;
-  }).slice(0, 5); // Return top 5 suggestions
+  }).slice(0, 5);
 }
 
 
