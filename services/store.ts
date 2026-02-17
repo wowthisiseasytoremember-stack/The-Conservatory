@@ -1415,6 +1415,39 @@ class ConservatoryStore {
     this.persistLocal();
   }
 
+  // -------------------------------------------------------------------
+  // App Store Compliance
+  // -------------------------------------------------------------------
+
+  /**
+   * Hard Delete, required by Apple App Store.
+   * Deletes all local data AND the Firebase Auth user account.
+   */
+  async deleteAccount() {
+    try {
+      if (!this.user) throw new Error("No user signed in");
+      
+      // 1. Clear Data
+      await this.clearDatabase();
+      
+      // 2. Delete Auth User
+      const user = auth.currentUser;
+      if (user) {
+        await user.delete(); // Requires recent login, might throw requires-recent-login
+      }
+      
+      this.logout();
+      logger.info({ userId: this.user.uid }, "User account deleted successfully");
+      return true;
+    } catch (e: any) {
+      logger.error({ error: e, code: e.code }, "Failed to delete account");
+      if (e.code === 'auth/requires-recent-login') {
+        throw new Error("Security Check: Please sign out and sign in again before deleting your account.");
+      }
+      throw e;
+    }
+  }
+
   async testConnection(): Promise<{ success: boolean; error?: string; code?: ConnectionStatus }> {
     return connectionService.testConnection(this.user);
   }
@@ -1482,6 +1515,8 @@ export function useConservatory() {
     resetResearchProgress: useCallback(() => store.resetResearchProgress(), []),
     sendMessage: useCallback((text: string, opts: any) => store.sendMessage(text, opts), []),
     clearMessages: useCallback(() => store.clearMessages(), []),
+    // Compliance
+    deleteAccount: useCallback(() => store.deleteAccount(), []),
     // Entity relationship helpers
     getHabitatInhabitants: useCallback((habitatId: string) => store.getHabitatInhabitants(habitatId), []),
     getEntityHabitat: useCallback((entityId: string) => store.getEntityHabitat(entityId), []),

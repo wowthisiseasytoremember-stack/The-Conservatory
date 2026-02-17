@@ -29,24 +29,8 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import type { User } from 'firebase/auth';
 
 // Helper to resolve environment variables
-const getEnv = (key: string) => {
-  try {
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
-      // @ts-ignore
-      const val = import.meta.env[key];
-      if (val) return val;
-    }
-  } catch (e) {}
-
-  try {
-    if (typeof process !== 'undefined' && process.env) {
-      const val = process.env[key];
-      if (val) return val;
-    }
-  } catch (e) {}
-
-  return undefined;
+const getEnv = (key: keyof ImportMetaEnv) => {
+  return import.meta.env[key];
 };
 
 // 1. Try LocalStorage Override (Runtime Config via UI)
