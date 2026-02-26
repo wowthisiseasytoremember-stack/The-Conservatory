@@ -858,9 +858,10 @@ class ConservatoryStore {
                 let newEchoUrl = this.entities[idx].currentEchoUrl;
                 const oldEchoHistory = this.entities[idx].echoHistory || [];
 
-                if (newObs.type === 'growth' && newEchoUrl) {
+                const growthObs = observations.find(o => o.type === 'growth');
+                if (growthObs && newEchoUrl) {
                   try {
-                    newEchoUrl = await echoEngineService.evolveEcho(newEchoUrl, `grew by ${newObs.value}${newObs.unit}`);
+                    newEchoUrl = await echoEngineService.evolveEcho(newEchoUrl, `${growthObs.label}: ${growthObs.value}${growthObs.unit}`);
                     oldEchoHistory.push(this.entities[idx].currentEchoUrl!);
                   } catch (e) {
                     logger.error({ err: e, entityId: entity.id }, "Failed to evolve Echo for growth observation");
