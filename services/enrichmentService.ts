@@ -1,7 +1,10 @@
 
-import { Entity, EntityTrait } from '../types';
+import { Entity, EntityTrait, RawDataLake, EnrichedData } from '../types';
 import { plantService } from './plantService';
 import { logger } from './logger';
+import { geminiService } from './geminiService';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 
 interface EnrichmentResult {
   scientificName?: string;
@@ -19,6 +22,134 @@ const INAT_API = 'https://api.inaturalist.org/v1';
 
 export const enrichmentService = {
   
+  async enrichEntity(entity: Entity): Promise<EnrichedData> {
+    logger.info({ entityId: entity.id, name: entity.name }, "Starting enrichment pipeline");
+    
+    // 1. Scrape raw data lake
+    const dossier = await this.assembleDossier(entity);
+    
+    // 2. Synthesize with Gemini
+    try {
+      const enriched = await geminiService.synthesizeEnrichmentData(dossier);
+      return enriched;
+    } catch (e) {
+      logger.error({ err: e, entityId: entity.id }, "Failed to synthesize enrichment data");
+      return { source: 'NONE' };
+    }
+  },
+
+  async assembleDossier(entity: Entity): Promise<RawDataLake> {
+    const query = entity.scientificName || entity.name;
+    
+    const results = await Promise.all([
+      this.scrapeWikipediaPage(query),
+      this.scrapeAquasabiPage(query),
+      this.scrapeFlowgrowPage(query),
+      this.scrapeKewPage(query)
+    ]);
+
+    return {
+      entityId: entity.id,
+      scrapedAt: Date.now(),
+      sources: results
+    };
+  },
+
+  async scrapeWikipediaPage(query: string): Promise<RawDataLake['sources'][0]> {
+    const url = `https://en.wikipedia.org/wiki/${encodeURIComponent(query.replace(/ /g, '_'))}`;
+    try {
+      const { data: html } = await axios.get(url, { timeout: 5000 });
+      const $ = cheerio.load(html);
+      
+      // Clean up unnecessary elements
+      $('.reference, .mw-editsection, .infobox, .navbox, .metadata').remove();
+      
+      const content = $('#mw-content-text .mw-parser-output > p')
+        .map((_, el) => $(el).text().trim())
+        .get()
+        .filter(p => p.length > 0)
+        .join('\n\n');
+
+      return { url, content, status: 'success' };
+    } catch (e) {
+      logger.warn({ err: e, url }, "Wikipedia scraping failed");
+      return { url, content: '', status: 'error', error: (e as any).message };
+    }
+  },
+
+  async scrapeAquasabiPage(query: string): Promise<RawDataLake['sources'][0]> {
+    const url = `https://www.aquasabi.com/search?q=${encodeURIComponent(query)}`;
+    try {
+      const { data: html } = await axios.get(url, { timeout: 8000 });
+      const $ = cheerio.load(html);
+      
+      // Find the first product link
+      const firstProductUrl = $('.product--title a').first().attr('href');
+      if (!firstProductUrl) throw new Error("No product found on Aquasabi");
+
+      const { data: productHtml } = await axios.get(firstProductUrl, { timeout: 8000 });
+      const p$ = cheerio.load(productHtml);
+      
+      const content = p$('.product--description').text().trim() + 
+                      '\n\n' + 
+                      p$('.product--properties').text().trim();
+
+      return { url: firstProductUrl, content, status: 'success' };
+    } catch (e) {
+      logger.warn({ err: e, url }, "Aquasabi scraping failed");
+      return { url, content: '', status: 'error', error: (e as any).message };
+    }
+  },
+
+  async scrapeFlowgrowPage(query: string): Promise<RawDataLake['sources'][0]> {
+    // Flowgrow usually uses the scientific name or a search
+    const url = `https://www.flowgrow.de/db/wasserpflanzen?search=${encodeURIComponent(query)}`;
+    try {
+      const { data: html } = await axios.get(url, { timeout: 8000 });
+      const $ = cheerio.load(html);
+      
+      const firstMatch = $('.db-list-item a').first().attr('href');
+      if (!firstMatch) throw new Error("No match on Flowgrow");
+
+      const fullUrl = firstMatch.startsWith('http') ? firstMatch : `https://www.flowgrow.de${firstMatch}`;
+      const { data: matchHtml } = await axios.get(fullUrl, { timeout: 8000 });
+      const m$ = cheerio.load(matchHtml);
+      
+      const content = m$('.db-entry-description').text().trim() + 
+                      '\n\n' + 
+                      m$('.db-entry-properties').text().trim();
+
+      return { url: fullUrl, content, status: 'success' };
+    } catch (e) {
+      logger.warn({ err: e, url }, "Flowgrow scraping failed");
+      return { url, content: '', status: 'error', error: (e as any).message };
+    }
+  },
+
+  async scrapeKewPage(query: string): Promise<RawDataLake['sources'][0]> {
+    const url = `https://powo.science.kew.org/results?q=${encodeURIComponent(query)}`;
+    try {
+      const { data: html } = await axios.get(url, { timeout: 8000 });
+      const $ = cheerio.load(html);
+      
+      const firstLink = $('.search-result-item a').first().attr('href');
+      if (!firstLink) throw new Error("No match on Kew POWO");
+
+      const fullUrl = `https://powo.science.kew.org${firstLink}`;
+      const { data: resultHtml } = await axios.get(fullUrl, { timeout: 8000 });
+      const r$ = cheerio.load(resultHtml);
+      
+      const content = r$('#description-content').text().trim() + 
+                      '\n\n' + 
+                      r$('#distribution-content').text().trim();
+
+      return { url: fullUrl, content, status: 'success' };
+    } catch (e) {
+      logger.warn({ err: e, url }, "Kew scraping failed");
+      return { url, content: '', status: 'error', error: (e as any).message };
+    }
+  },
+
   async searchGBIF(query: string): Promise<EnrichmentResult | null> {
     try {
       const matchRes = await fetch(`${GBIF_API}/species/match?name=${encodeURIComponent(query)}`);

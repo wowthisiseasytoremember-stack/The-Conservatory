@@ -4,6 +4,9 @@ import { Entity, EntityGroup } from '../types';
 import { X, Tag, Plus, Trash2, FolderOpen, Globe2, CheckCircle2, AlertTriangle, Loader2, TrendingUp, Sparkles } from 'lucide-react';
 import { GrowthChart } from './GrowthChart';
 import { Z_INDEX, ECOSYSTEM_THRESHOLDS } from '../src/constants';
+import { artifactGeneratorService } from '../services/ArtifactGenerator';
+import { motion } from 'framer-motion';
+import { ShareCuratorsCardModal } from './ShareCuratorsCardModal';
 
 interface EntityDetailModalProps {
   entity: Entity;
@@ -32,6 +35,8 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
   const [newAlias, setNewAlias] = useState('');
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [cardImageUrlToShare, setCardImageUrlToShare] = useState('');
   
   // GBIF State
   const [gbifData, setGbifData] = useState<GbifData | null>(null);
@@ -44,6 +49,17 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
 
   // Chart selection state
   const [activeMetric, setActiveMetric] = useState<string | null>(null);
+
+  const handleCreateCard = async () => {
+    try {
+      const imageUrl = await artifactGeneratorService.generateCard(entity);
+      setCardImageUrlToShare(imageUrl);
+      setIsShareModalOpen(true);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to generate Curator's Card.");
+    }
+  };
 
   // Load GBIF Data on Mount with AbortController
   useEffect(() => {
@@ -259,6 +275,31 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full text-slate-400">
             <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Visual Echo (Task 3.3) */}
+        {entity.currentEchoUrl && (
+          <div className="flex-shrink-0 bg-black/30 p-4 flex items-center justify-center border-b border-slate-800">
+            <motion.img
+              key={entity.currentEchoUrl} // Key is crucial for re-animation on URL change
+              src={entity.currentEchoUrl}
+              alt={`Stylized echo of ${entity.name}`}
+              className="w-32 h-32 object-contain filter drop-shadow-lg opacity-80"
+              initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 100, damping: 10 }}
+            />
+          </div>
+        )}
+
+        {/* Curator's Card Button */}
+        <div className="p-2 text-center">
+          <button 
+            onClick={handleCreateCard}
+            className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Create Curator's Card
           </button>
         </div>
 
@@ -540,6 +581,13 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
           </section>
         </div>
       </div>
+
+      <ShareCuratorsCardModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        imageUrl={cardImageUrlToShare}
+        entityName={entity.name}
+      />
     </div>
   );
 };

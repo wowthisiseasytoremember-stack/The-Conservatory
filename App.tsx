@@ -20,6 +20,7 @@ import { HabitatDiorama } from './components/screens/HabitatDiorama';
 import { SpeciesPlacard } from './components/screens/SpeciesPlacard';
 import { ParameterDetail } from './components/screens/ParameterDetail';
 import { SettingsScreen } from './components/screens/SettingsScreen';
+import { BlueprintScreen } from './components/screens/BlueprintScreen';
 import { Entity, RackContainer, IdentifyResult, BiomeTheme } from './types';
 import { ConnectionStatus } from './services/connectionService';
 
@@ -149,6 +150,7 @@ const App: React.FC = () => {
         <Route path="/species/:id" element={<SpeciesPlacard />} />
         <Route path="/parameter/:habitatId/:metric" element={<ParameterDetail />} />
         <Route path="/settings" element={<SettingsScreen />} />
+        <Route path="/blueprint" element={<BlueprintScreen />} />
         {/* Legacy routes for backward compatibility */}
         <Route path="/feed" element={
           <EventFeed 

@@ -1,4 +1,3 @@
-
 export type BiomeTheme = 'default' | 'blackwater' | 'tanganyika' | 'paludarium' | 'marine';
 
 export type ActionStatus = 'LISTENING' | 'ANALYZING' | 'CONFIRMING' | 'COMMITTING' | 'STRATEGY_REQUIRED' | 'ERROR';
@@ -33,6 +32,60 @@ export type EntityTrait =
   | { type: 'VERTEBRATE'; parameters: { diet?: 'carnivore'|'herbivore'|'omnivore' } }
   | { type: 'COLONY'; parameters: { estimatedCount?: number; stable?: boolean } };
 
+// --- NEW ENRICHMENT TYPES (Milestone 1, Task 1.1) ---
+export type EnrichmentSource = 'DIRECT_MATCH' | 'GENUS_FALLBACK' | 'NONE';
+
+export interface Taxonomy {
+  kingdom?: string;
+  phylum?: string;
+  class?: string;
+  order?: string;
+  family?: string;
+  genus?: string;
+  species?: string;
+}
+
+export interface TradeInfo {
+  tradeName?: string; // "Thai Constellation"
+  cultivar?: string;  // A specific cultivated variety
+  morph?: string;     // A specific color or pattern variant, e.g., "Flame"
+}
+
+export interface Distribution {
+  nativeRange?: string; // Text description
+  nativeRangeMapUrl?: string; // URL to a map image
+}
+
+export interface HabitatOutline {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface RawDataLake {
+  entityId: string;
+  scrapedAt: number;
+  sources: {
+    url: string;
+    content: string; // The raw HTML or text
+    status: 'success' | 'error';
+    error?: string;
+  }[];
+}
+
+export interface EnrichedData {
+  source: EnrichmentSource; // CRITICAL: Tracks how we got this data
+  taxonomy?: Taxonomy;
+  tradeInfo?: TradeInfo;
+  distribution?: Distribution;
+  description?: string; // From Wikipedia
+  careGuide?: string; // From Aquasabi/Flowgrow
+  imageUrl?: string; // From iNaturalist or other sources
+  inferredFrom?: string; // e.g., "Inferred from Ludwigia genus"
+}
+// --- END NEW ENRICHMENT TYPES ---
+
 export interface Entity {
   id: string;
   name: string;
@@ -59,6 +112,11 @@ export interface Entity {
     source: string;
   }[];
 
+  currentEchoUrl?: string; // New field for the latest Echo wireframe
+  echoHistory?: string[]; // New field for storing historical Echoes
+
+  enrichedData?: EnrichedData; // NEW: Structured enrichment data
+
   // Growth & Observation History
   observations?: Array<{
     timestamp: number;
@@ -80,6 +138,14 @@ export interface EntityGroup {
   id: string;
   name: string;
   description?: string;
+}
+
+export interface Habitat {
+  id: string;
+  name: string;
+  type: string; // e.g., 'aquarium', 'terrarium'
+  biomeTheme: BiomeTheme; // For visual styling
+  blueprintCoords?: HabitatOutline | null; // New field for Blueprint of Worlds
 }
 
 export interface PendingAction {

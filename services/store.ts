@@ -1,9 +1,8 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   AppEvent, Entity, DomainEvent, EntityGroup, PendingAction, EntityType, EventStatus, ChatMessage,
-  IdentifyResult, ResearchProgress, ResearchStage, ResearchEntityProgress, BiomeTheme, RackContainer
+  IdentifyResult, ResearchProgress, ResearchStage, ResearchEntityProgress, BiomeTheme, RackContainer, Habitat
 } from '../types';
 import { geminiService } from './geminiService';
 import { 
@@ -20,6 +19,8 @@ import { taxonomyService } from './taxonomy';
 import { calculateHabitatHealth, calculateParameterTrend } from './ecosystem';
 import { STORAGE_KEYS } from '../src/constants';
 import { safeStorage } from '../src/utils/storage';
+import { HabitatOutline } from './BlueprintService';
+import { echoEngineService } from './EchoEngine';
 
 class ConservatoryStore {
   private events: AppEvent[] = [];
@@ -462,6 +463,27 @@ class ConservatoryStore {
     return 'default';
   }
 
+  /**
+   * Assigns blueprint coordinates to a specific habitat.
+   * This is used by the BlueprintScreen to visually map habitats on the rack.
+   */
+  assignHabitatToBlueprint(habitatId: string, blueprintCoords: HabitatOutline) {
+    const habitatIndex = this.entities.findIndex(e => e.id === habitatId && e.type === EntityType.HABITAT);
+    if (habitatIndex === -1) {
+      logger.warn(`Attempted to assign blueprint to non-existent habitat: ${habitatId}`);
+      return;
+    }
+
+    const updatedHabitat = { ...this.entities[habitatIndex], blueprintCoords };
+    this.entities[habitatIndex] = updatedHabitat;
+    this.persistLocal();
+    this.notify();
+
+    // Optionally, persist to Firestore if needed for multi-device sync
+    // This is currently a local-only feature as per "just for me" ethos.
+  }
+
+
   resolveEntity<T extends { id: string; name: string; aliases?: string[] }>(
     userInput: string,
     candidates: T[]
@@ -832,17 +854,41 @@ class ConservatoryStore {
               
               const idx = this.entities.findIndex(e => e.id === entity.id);
               if (idx !== -1) {
-                this.entities[idx] = { ...this.entities[idx], observations: updatedObs, updated_at: timestamp };
+                // --- Evolving Echo Logic (Task 3.1) ---
+                let newEchoUrl = this.entities[idx].currentEchoUrl;
+                const oldEchoHistory = this.entities[idx].echoHistory || [];
+
+                if (newObs.type === 'growth' && newEchoUrl) {
+                  try {
+                    newEchoUrl = await echoEngineService.evolveEcho(newEchoUrl, `grew by ${newObs.value}${newObs.unit}`);
+                    oldEchoHistory.push(this.entities[idx].currentEchoUrl!);
+                  } catch (e) {
+                    logger.error({ err: e, entityId: entity.id }, "Failed to evolve Echo for growth observation");
+                  }
+                }
+                // --- End Evolving Echo Logic ---
+
+                this.entities[idx] = { 
+                  ...this.entities[idx], 
+                  observations: updatedObs, 
+                  updated_at: timestamp,
+                  currentEchoUrl: newEchoUrl,
+                  echoHistory: oldEchoHistory,
+                };
                 
                 if (!isTestMode) {
                   batch.update(doc(db, 'entities', entity.id), { 
                     observations: updatedObs, 
-                    updated_at: timestamp 
+                    updated_at: timestamp,
+                    currentEchoUrl: newEchoUrl,
+                    echoHistory: oldEchoHistory,
                   });
                 } else {
                   mockFirestore.updateDoc('entities', entity.id, { 
                     observations: updatedObs, 
-                    updated_at: timestamp 
+                    updated_at: timestamp,
+                    currentEchoUrl: newEchoUrl,
+                    echoHistory: oldEchoHistory,
                   });
                 }
               }
@@ -1533,6 +1579,7 @@ export function useConservatory() {
     // Feature Manifest backend
     getFeaturedSpecimen: useCallback(() => store.getFeaturedSpecimen(), []),
     getHabitatHealth: useCallback((habitatId: string) => store.getHabitatHealth(habitatId), []),
-    getEcosystemFacts: useCallback((limit?: number) => store.getEcosystemFacts(limit), [])
+    getEcosystemFacts: useCallback((limit?: number) => store.getEcosystemFacts(limit), []),
+    assignHabitatToBlueprint: useCallback((habitatId: string, outline: HabitatOutline) => store.assignHabitatToBlueprint(habitatId, outline), []),
   };
 }
