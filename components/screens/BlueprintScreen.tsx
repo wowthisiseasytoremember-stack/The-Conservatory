@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { blueprintService, HabitatOutline } from '../services/BlueprintService';
-import { useConservatory } from '../services/store';
-import { AssignHabitatModal } from '../components/AssignHabitatModal';
-import { BiomeTheme, Habitat, Entity, EntityType } from '../types';
+import { blueprintService } from '../services/BlueprintService';
+import { useConservatory } from '../../services/store';
+import { AssignHabitatModal } from '../AssignHabitatModal';
+import { BiomeTheme, Habitat, Entity, EntityType, HabitatOutline } from '../../types';
 import { motion } from 'framer-motion';
 
 const MOCK_RACK_IMAGE_URL = "https://picsum.photos/seed/rack/800/600";
@@ -13,7 +13,8 @@ export const BlueprintScreen: React.FC = () => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedOutlineForAssignment, setSelectedOutlineForAssignment] = useState<HabitatOutline | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const { habitats, addHabitat, updateHabitat, assignHabitatToBlueprint, getHabitatInhabitants } = useConservatory();
+  const { entities, assignHabitatToBlueprint, getHabitatInhabitants } = useConservatory();
+  const habitats = entities.filter(e => e.type === EntityType.HABITAT) as Habitat[];
 
   useEffect(() => {
     // On mount, automatically scan a mock rack image.
