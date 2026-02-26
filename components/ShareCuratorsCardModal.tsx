@@ -20,7 +20,7 @@ export const ShareCuratorsCardModal: React.FC<ShareCuratorsCardModalProps> = ({
         title: `My Digital Conservatory: ${entityName}`,
         text: `Check out my ${entityName} in The Conservatory!`, 
         url: imageUrl,
-        dialogTitle: 'Share your Curator's Card',
+        dialogTitle: "Share your Curator's Card",
       });
     } catch (error) {
       console.error("Error sharing card:", error);

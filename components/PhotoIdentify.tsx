@@ -62,10 +62,9 @@ export const PhotoIdentify: React.FC<PhotoIdentifyProps> = ({ onConfirmRack }) =
       console.error(e);
       // Show error toast with retry option
       const { toastManager } = await import('./Toast');
-      const { isRetryableError } = await import('../utils/retry');
       
       const errorMessage = `Photo identification failed: ${e.message || 'Unknown error'}.`;
-      const canRetry = isRetryableError(e);
+      const canRetry = e.message?.includes('timeout') || e.message?.includes('network');
       
       toastManager.error(
         errorMessage,

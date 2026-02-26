@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { blueprintService } from '../services/BlueprintService';
+import { blueprintService } from '../../services/BlueprintService';
 import { useConservatory } from '../../services/store';
 import { AssignHabitatModal } from '../AssignHabitatModal';
 import { BiomeTheme, Habitat, Entity, EntityType, HabitatOutline } from '../../types';
