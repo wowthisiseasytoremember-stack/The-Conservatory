@@ -97,4 +97,4 @@ export {
 };
 
 export { ref, uploadString, getDownloadURL };
-export type { FieldValue, User };
+export type { FieldValue, User as FirebaseUser };

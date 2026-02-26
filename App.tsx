@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useConservatory } from './services/store';
+import { useConservatoryStore } from './services/store/useConservatoryStore';
+import { useEntities, useEvents, useUpdateEntity } from './services/store/queryHooks';
 import { VoiceButton } from './components/VoiceButton';
 import { EventFeed } from './components/EventFeed';
 import { EntityList } from './components/EntityList';
@@ -21,24 +21,30 @@ import { SpeciesPlacard } from './components/screens/SpeciesPlacard';
 import { ParameterDetail } from './components/screens/ParameterDetail';
 import { SettingsScreen } from './components/screens/SettingsScreen';
 import { BlueprintScreen } from './components/screens/BlueprintScreen';
+import { PlaygroundScreen } from './components/screens/PlaygroundScreen';
 import { Entity, RackContainer, IdentifyResult, BiomeTheme } from './types';
 import { ConnectionStatus } from './services/connectionService';
 
 const App: React.FC = () => {
   const location = useLocation();
-  const { 
-    events, entities, groups, pendingAction, user, liveTranscript,
-    activeHabitatId, researchProgress, activeBiomeTheme,
-    processVoiceInput, commitPendingAction, discardPending, 
-    updateSlot, updateEntity, addGroup, testConnection, login, logout,
-    createActionFromVision, createActionsFromRack, setActiveHabitat, deepResearchAll, resetResearchProgress,
-    clearDatabase
-  } = useConservatory();
+  const { data: entities = [] } = useEntities();
+  const { data: events = [] } = useEvents();
+  const updateEntityMutation = useUpdateEntity();
   
+  const { 
+    pendingAction, liveTranscript,
+    activeHabitatId, researchProgress,
+    processVoiceInput, commitAction, setPendingAction, setActiveHabitatId
+  } = useConservatoryStore();
+  
+  // Local UI State
+  const [user, setUser] = useState<any>({ uid: 'dev-user' }); // Simple dev auth for now
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('unknown');
   const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: 'success' | 'error' | 'info' | 'loading'; duration?: number }>>([]);
+
+  const activeBiomeTheme: BiomeTheme = 'default';
 
   useEffect(() => {
     // Global Error Hardening
@@ -55,25 +61,18 @@ const App: React.FC = () => {
     window.addEventListener('unhandledrejection', handleRejection);
     
     // @ts-ignore
-    window.processVoiceInput = processVoiceInput;
+    window.processVoiceInput = (text: string) => processVoiceInput(text, entities);
     // @ts-ignore
     window.__openEntityDetail = (entityId: string) => {
       const entity = entities.find(e => e.id === entityId);
       if (entity) setEditingEntity(entity);
     };
     
-    const checkDb = async () => {
-      const result = await testConnection();
-      setConnectionStatus(result.code || 'unknown');
-    };
-    checkDb();
-    const interval = setInterval(checkDb, 30000);
     return () => {
       window.removeEventListener('error', handleError);
       window.removeEventListener('unhandledrejection', handleRejection);
-      clearInterval(interval);
     };
-  }, [testConnection, user, processVoiceInput, entities]);
+  }, [entities, processVoiceInput]);
 
   // Subscribe to toast manager
   useEffect(() => {
@@ -82,41 +81,26 @@ const App: React.FC = () => {
   }, []);
 
   const handlePhotoConfirm = (result: IdentifyResult) => {
-    createActionFromVision(result);
+    // Vision logic to be moved to Zustand
   };
 
-  const handleRackConfirm = (containers: RackContainer[]) => {
-    // Hardening: Use direct store method instead of risky voice template looping
-    if (containers.length > 0) {
-      // @ts-ignore
-      if (typeof createActionsFromRack === 'function') {
-        // @ts-ignore
-        createActionsFromRack(containers);
-      }
-    }
-  };
-
-  // Subscription to toast manager moved up or handled by store
-
-  // Get route title for header
   const getRouteTitle = () => {
     if (location.pathname === '/home') return 'Home';
     if (location.pathname.startsWith('/habitat/')) return 'Habitat';
     if (location.pathname.startsWith('/species/')) return 'Species';
-    if (location.pathname.startsWith('/parameter/')) return 'Parameter';
     if (location.pathname === '/settings') return 'Settings';
     return 'The Conservatory';
   };
 
   if (!user) {
-    return <LoginView onLogin={login} />;
+    return <LoginView onLogin={() => setUser({ uid: 'dev-user' })} />;
   }
 
   return (
     <MainLayout
       connectionStatus={connectionStatus}
       onOpenSettings={() => setIsSettingsOpen(true)}
-      onLogout={logout}
+      onLogout={() => setUser(null)}
       biomeTheme={activeBiomeTheme}
       liveTranscript={liveTranscript}
       routeTitle={getRouteTitle()}
@@ -126,19 +110,19 @@ const App: React.FC = () => {
       voiceButtonComponent={
         <VoiceButton 
            onActive={() => {}} 
-           onResult={processVoiceInput} 
+           onResult={(text) => processVoiceInput(text, entities)} 
         />
       }
     >
-      {/* <DevTools /> */}
-
       {/* Confirmation UI */}
       {pendingAction && (
         <ConfirmationCard 
           action={pendingAction} 
-          onCommit={commitPendingAction}
-          onDiscard={discardPending}
-          onUpdate={updateSlot}
+          onCommit={() => commitAction(pendingAction, entities)}
+          onDiscard={() => setPendingAction(null)}
+          onUpdate={(path, val) => {
+            // Pending action update logic
+          }}
         />
       )}
 
@@ -151,7 +135,8 @@ const App: React.FC = () => {
         <Route path="/parameter/:habitatId/:metric" element={<ParameterDetail />} />
         <Route path="/settings" element={<SettingsScreen />} />
         <Route path="/blueprint" element={<BlueprintScreen />} />
-        {/* Legacy routes for backward compatibility */}
+        <Route path="/playground" element={<PlaygroundScreen />} />
+        
         <Route path="/feed" element={
           <EventFeed 
             events={events} 
@@ -162,9 +147,9 @@ const App: React.FC = () => {
         <Route path="/entities" element={
           <EntityList 
             entities={entities} 
-            groups={groups}
+            groups={[]}
             activeHabitatId={activeHabitatId}
-            onSetActiveHabitat={setActiveHabitat}
+            onSetActiveHabitat={setActiveHabitatId}
             onEditEntity={setEditingEntity} 
           />
         } />
@@ -174,20 +159,21 @@ const App: React.FC = () => {
       {editingEntity && (
         <EntityDetailModal 
           entity={editingEntity}
-          groups={groups}
+          groups={[]}
           onClose={() => setEditingEntity(null)}
           onUpdate={(updates) => {
-            updateEntity(editingEntity.id, updates);
+            updateEntityMutation.mutate({ id: editingEntity.id, updates });
             setEditingEntity({ ...editingEntity, ...updates });
           }}
-          onAddGroup={addGroup}
+          onAddGroup={async (name) => ({ id: 'new', name })}
         />
       )}
+
       {/* Deep Research Loader Overlay */}
       {(researchProgress.isActive || (researchProgress.completedEntities > 0 && researchProgress.discoveries.length > 0)) && (
         <DeepResearchLoader
           progress={researchProgress}
-          onDismiss={resetResearchProgress}
+          onDismiss={() => {}}
         />
       )}
 

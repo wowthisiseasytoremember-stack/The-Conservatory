@@ -235,11 +235,14 @@ export const geminiService = {
   /**
    * Synthesize enrichment data from a raw dossier (gemini-pro-latest)
    */
-  async synthesizeEnrichmentData(dossier: any): Promise<any> {
+  async synthesizeEnrichmentData(dossier: any, researchContext?: string): Promise<any> {
+    const contents = `Synthesize this raw data into a structured digital placard: ${JSON.stringify(dossier)}
+                     ${researchContext ? `\n\nDEEP RESEARCH CONTEXT:\n${researchContext}` : ''}`;
+    
     const response = await withTimeout(callProxy({
       model: "gemini-pro-latest",
       operation: 'synthesize_enrichment',
-      contents: `Synthesize this raw data into a structured digital placard: ${JSON.stringify(dossier)}`,
+      contents,
       systemInstruction: "You are the Principal Curator of The Conservatory. Read the raw scraped data and extract structured info. If direct match not found, use genus fallback.",
       generationConfig: {
         responseMimeType: "application/json",
@@ -248,6 +251,40 @@ export const geminiService = {
     }));
     const data = JSON.parse(response.text || '{}');
     return EnrichedDataSchema.parse(data);
+  },
+
+  /**
+   * Story Synthesis: Turn deep research into a museum-grade narrative (Living Placard)
+   */
+  async curateLivingPlacard(entity: Entity, researchSummary: string): Promise<{ narrative: string; biologicalStory: string; discovery: string }> {
+    const response = await withTimeout(callProxy({
+      model: "gemini-pro-latest",
+      operation: 'curate_living_placard',
+      contents: `Entity: ${entity.name}. Research Summary: ${researchSummary}`,
+      systemInstruction: `
+        You are a Master Storyteller and Biological Curator. 
+        Take the provided research and craft a "Living Placard" narrative.
+        
+        1. narrative: A 2-3 sentence evocative description for a museum exhibit.
+        2. biologicalStory: A deeper, fascinating story about the species' evolution or role in the ecosystem.
+        3. discovery: One singular "Magic Moment" fact that would wow a visitor.
+        
+        Style: Sophisticated, authoritative, but accessible. Avoid generic AI fluff.
+      `,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            narrative: { type: Type.STRING },
+            biologicalStory: { type: Type.STRING },
+            discovery: { type: Type.STRING }
+          },
+          required: ["narrative", "biologicalStory", "discovery"]
+        }
+      }
+    }));
+    return JSON.parse(response.text || '{}');
   },
 
   /**

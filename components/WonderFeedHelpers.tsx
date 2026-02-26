@@ -103,6 +103,13 @@ export function enrichEvent(
       enrichedText += ` _Did you know? ${discoveryFact}._`;
     }
 
+    // NEW: Check for habitat synergies
+    const habitatInhabitants = entities.filter(e => e.habitat_id === payload.targetHabitatId);
+    const synergies = habitatInhabitants.filter(e => e.overflow?.discovery?.synergyNote);
+    if (synergies.length > 1) {
+      enrichedText += ` ✨ This habitat is reaching biological harmony.`;
+    }
+
     return {
       event,
       enrichedText,
@@ -117,6 +124,16 @@ export function enrichEvent(
     const habitatId = payload.targetHabitatId;
     const params = payload.observationParams as Record<string, any>;
     const habitatName = payload.targetHabitatName || 'your habitat';
+
+    // Check for growth milestone
+    if (params.growth_cm !== undefined) {
+       return {
+         event,
+         enrichedText: `🌱 Growth milestone! ${params.growth_cm}cm logged for inhabitants in ${habitatName}. The cycle of life continues.`,
+         emoji: '🌱',
+         visualStyle: 'celebratory'
+       };
+    }
 
     // Check for pH trend
     if (params.pH !== undefined) {

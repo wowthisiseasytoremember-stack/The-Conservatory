@@ -1,6 +1,7 @@
-
+import { Button } from './ui/button';
 import React, { useState } from 'react';
-import { geminiService } from '../../services/geminiService';
+import { geminiService } from '../services/geminiService';
+import { logger } from '../services/logger';
 
 interface DiscoveryHighlightProps {
     speciesName: string;
@@ -33,7 +34,7 @@ export const DiscoveryHighlight: React.FC<DiscoveryHighlightProps> = ({
                 const result = await geminiService.getBiologicalDiscovery(speciesName);
                 setData(result);
             } catch (err) {
-                console.error("Discovery failed:", err);
+                logger.error({ err }, "Discovery failed");
             } finally {
                 setLoading(false);
             }
@@ -60,7 +61,7 @@ export const DiscoveryHighlight: React.FC<DiscoveryHighlightProps> = ({
                         <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
                             Discovery Insight {label ? `• ${label}` : ''}
                         </span>
-                        <button onClick={() => setIsOpen(false)} className="text-slate-500 hover:text-white text-xs">✕</button>
+                        <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="text-slate-500 hover:text-white text-xs">✕</Button>
                     </div>
 
                     {loading ? (

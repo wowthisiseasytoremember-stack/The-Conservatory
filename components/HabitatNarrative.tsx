@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
-import { geminiService } from '../../services/geminiService';
+import { geminiService } from '../services/geminiService';
+import { logger } from '../services/logger';
 import { DiscoveryHighlight } from './DiscoveryHighlight';
 
 interface HabitatNarrativeProps {
@@ -37,7 +37,7 @@ export const HabitatNarrative: React.FC<HabitatNarrativeProps> = ({ habitatId, s
                 }
             } catch (err: any) {
                 if (err.name !== 'AbortError') {
-                    console.error("Failed to generate ecosystem narrative:", err);
+                    logger.error({ err }, "Failed to generate ecosystem narrative");
                 }
             } finally {
                 if (!controller.signal.aborted) {
@@ -54,10 +54,10 @@ export const HabitatNarrative: React.FC<HabitatNarrativeProps> = ({ habitatId, s
     const renderWithBreadcrumbs = (text: string) => {
         if (!text) return null;
         
-        let parts: (string | JSX.Element)[] = [text];
+        let parts: (string | React.ReactNode)[] = [text];
 
         inhabitants.forEach(organism => {
-            const newParts: (string | JSX.Element)[] = [];
+            const newParts: (string | React.ReactNode)[] = [];
             const name = organism.name;
             const regex = new RegExp(`(${name})`, 'gi');
 

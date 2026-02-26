@@ -1,110 +1,82 @@
 
 import React, { useState, useEffect } from 'react';
-import { Entity, EntityGroup } from '../types';
-import { X, Tag, Plus, Trash2, FolderOpen, Globe2, CheckCircle2, AlertTriangle, Loader2, TrendingUp, Sparkles } from 'lucide-react';
+import { Entity, EntityGroup, EntityType } from '../types';
+import { 
+  X, Tag, Plus, Trash2, FolderOpen, Globe2, CheckCircle2, 
+  AlertTriangle, Loader2, TrendingUp, Sparkles, Info, 
+  Leaf, Sun, Droplets, Thermometer, FlaskConical, Lightbulb, 
+  ChevronRight, Scissors, Globe
+} from 'lucide-react';
 import { GrowthChart } from './GrowthChart';
 import { Z_INDEX, ECOSYSTEM_THRESHOLDS } from '../src/constants';
 import { artifactGeneratorService } from '../services/ArtifactGenerator';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ShareCuratorsCardModal } from './ShareCuratorsCardModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Separator } from './ui/separator';
 
 interface EntityDetailModalProps {
   entity: Entity;
   groups: EntityGroup[];
   onClose: () => void;
   onUpdate: (updates: Partial<Entity>) => void;
-  // Adjusted to be async to match the store's implementation
   onAddGroup: (name: string) => Promise<EntityGroup>;
 }
 
-interface GbifData {
-  scientificName: string;
-  kingdom: string;
-  phylum?: string;
-  class?: string;
-  order?: string;
-  family: string;
-  genus?: string;
-  matchType: string;
-  status: string;
+/* ────────────────── Shared mini-components (Placard Style) ────────────────── */
+
+interface StatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  accentColor?: string;
 }
 
-const TaxonomyTree = ({ taxonomy }: { taxonomy?: any }) => {
-  if (!taxonomy) return null;
-  const levels = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'];
-  return (
-    <div className="bg-slate-800/30 border border-slate-700/50 rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Globe2 className="w-4 h-4 text-emerald-400" />
-        <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-400">Taxonomy</h3>
-      </div>
-      <div className="space-y-1">
-        {levels.map(level => taxonomy[level] && (
-          <div key={level} className="flex justify-between text-xs">
-            <span className="text-slate-500 capitalize">{level}</span>
-            <span className="text-slate-200 font-mono">{taxonomy[level]}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+const StatCard: React.FC<StatCardProps> = ({ icon, label, value, accentColor = "emerald" }) => {
+  const colorClasses: Record<string, string> = {
+    emerald: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
+    blue: "bg-blue-500/10 border-blue-500/30 text-blue-400",
+    amber: "bg-amber-500/10 border-amber-500/30 text-amber-400",
+    purple: "bg-purple-500/10 border-purple-500/30 text-purple-400",
+    orange: "bg-orange-500/10 border-orange-500/30 text-orange-400",
+    gold: "bg-gold/10 border-gold/30 text-gold",
+  };
 
-const TradeInfoSection = ({ tradeInfo }: { tradeInfo?: any }) => {
-  if (!tradeInfo || (!tradeInfo.tradeName && !tradeInfo.cultivar && !tradeInfo.morph)) return null;
   return (
-    <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Tag className="w-4 h-4 text-purple-400" />
-        <h3 className="text-xs font-bold uppercase tracking-widest text-purple-400">Trade Information</h3>
+    <div className={`rounded-xl p-3 border ${colorClasses[accentColor] || colorClasses.emerald} space-y-1`}>
+      <div className="flex items-center gap-1.5 opacity-70">
+        {icon}
+        <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
       </div>
-      <div className="space-y-2">
-        {tradeInfo.tradeName && (
-          <div className="text-sm"><span className="text-slate-500 text-xs uppercase block">Trade Name</span>{tradeInfo.tradeName}</div>
-        )}
-        {tradeInfo.cultivar && (
-          <div className="text-sm"><span className="text-slate-500 text-xs uppercase block">Cultivar</span>{tradeInfo.cultivar}</div>
-        )}
-        {tradeInfo.morph && (
-          <div className="text-sm"><span className="text-slate-500 text-xs uppercase block">Morph/Variant</span>{tradeInfo.morph}</div>
-        )}
-      </div>
+      <p className="text-sm font-semibold truncate">{value}</p>
     </div>
   );
-};
+}
 
-const CareGuideSection = ({ careGuide }: { careGuide?: string }) => {
-  if (!careGuide) return null;
+function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="w-4 h-4 text-blue-400" />
-        <h3 className="text-xs font-bold uppercase tracking-widest text-blue-400">Care Guide</h3>
-      </div>
-      <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{careGuide}</p>
+    <div className="flex items-start gap-2 py-1 border-b border-slate-800/30 last:border-0">
+      <span className="text-slate-500 shrink-0 w-24 text-[10px] uppercase tracking-wider pt-0.5">{label}</span>
+      <span className="text-slate-300 text-sm">{value}</span>
     </div>
   );
-};
+}
 
 export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ 
   entity, groups, onClose, onUpdate, onAddGroup 
 }) => {
-  const [newAlias, setNewAlias] = useState('');
-  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
-  const [newGroupName, setNewGroupName] = useState('');
+  const [activeTab, setActiveTab] = useState<'vitality' | 'research' | 'management'>('vitality');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [cardImageUrlToShare, setCardImageUrlToShare] = useState('');
   
   // GBIF State
-  const [gbifData, setGbifData] = useState<GbifData | null>(null);
+  const [gbifData, setGbifData] = useState<any | null>(null);
   const [loadingGbif, setLoadingGbif] = useState(false);
 
   // Observation logging state
-  const [obsLabel, setObsLabel] = useState('growth');
-  const [obsValue, setObsValue] = useState('');
-  const [obsUnit, setObsUnit] = useState('cm');
-
-  // Chart selection state
   const [activeMetric, setActiveMetric] = useState<string | null>(null);
 
   const handleCreateCard = async () => {
@@ -114,13 +86,12 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
       setIsShareModalOpen(true);
     } catch (error) {
       console.error(error);
-      import('../components/Toast').then(({ toastManager }) => {
+      import('./Toast').then(({ toastManager }) => {
         toastManager.error("Failed to generate Curator's Card.");
       });
     }
   };
 
-  // Load GBIF Data on Mount with AbortController
   useEffect(() => {
     const controller = new AbortController();
     const fetchGbif = async () => {
@@ -130,30 +101,15 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
         const res = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(query)}`, {
           signal: controller.signal
         });
-        
-        if (!res.ok) throw new Error(`GBIF error: ${res.status}`);
         const data = await res.json();
-        
         if (data.matchType !== 'NONE') {
-          setGbifData({
-            scientificName: data.scientificName,
-            kingdom: data.kingdom,
-            phylum: data.phylum,
-            class: data.class,
-            order: data.order,
-            family: data.family,
-            genus: data.genus,
-            matchType: data.matchType,
-            status: data.status
-          });
+          setGbifData(data);
           if (!entity.scientificName && data.scientificName) {
             onUpdate({ scientificName: data.scientificName });
           }
         }
       } catch (e: any) {
-        if (e.name !== 'AbortError') {
-          console.error("GBIF Error", e);
-        }
+        if (e.name !== 'AbortError') console.error("GBIF Error", e);
       } finally {
         setLoadingGbif(false);
       }
@@ -162,72 +118,15 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
     if (entity.type === 'ORGANISM' || entity.type === 'PLANT') {
       fetchGbif();
     }
-    
     return () => controller.abort();
   }, [entity.id]);
 
-  const addAlias = () => {
-    if (newAlias.trim() && !entity.aliases.includes(newAlias.trim())) {
-      onUpdate({ aliases: [...entity.aliases, newAlias.trim()] });
-      setNewAlias('');
-    }
-  };
-
-  const removeAlias = (alias: string) => {
-    onUpdate({ aliases: entity.aliases.filter(a => a !== alias) });
-  };
-
-  const setGroup = (groupId: string | undefined) => {
-    onUpdate({ group_id: groupId });
-  };
-
-  const handleCreateGroup = async () => {
-    if (newGroupName.trim()) {
-      // Use await since the prop is now async
-      const g = await onAddGroup(newGroupName.trim());
-      setGroup(g.id);
-      setNewGroupName('');
-      setIsCreatingGroup(false);
-    }
-  };
-
-  const logObservation = () => {
-    let numVal = parseFloat(obsValue);
-    if (isNaN(numVal)) return;
-
-    // WIN #5: Input Sanitization (Input Wild-West)
-    if (obsLabel.toLowerCase() === 'ph') {
-      numVal = Math.max(0, Math.min(14, numVal));
-    } else if (obsLabel.toLowerCase() === 'temp' || obsLabel.toLowerCase() === 'temperature') {
-      numVal = Math.max(-20, Math.min(60, numVal)); // Reasonable bounds
-    } else if (obsLabel.toLowerCase() === 'growth' || obsLabel.toLowerCase() === 'quantity') {
-      numVal = Math.max(0, numVal);
-    }
-
-    const existing = entity.observations || [];
-    const newObs = {
-      timestamp: Date.now(),
-      type: obsLabel as 'growth' | 'parameter' | 'note',
-      label: obsLabel,
-      value: numVal,
-      unit: obsUnit || undefined,
-    };
-    onUpdate({ observations: [...existing, newObs] });
-    setObsValue('');
-  };
-
   const observations = entity.observations || [];
-  
-  // Group observations by label for the metric selector
   const metrics = Array.from(new Set(observations.map(o => o.label)));
   
-  // Default to first metric or 'growth' if none active
   useEffect(() => {
-    if (!activeMetric && metrics.length > 0) {
-      setActiveMetric(metrics[0]);
-    } else if (!activeMetric && !metrics.length) {
-      setActiveMetric('growth');
-    }
+    if (!activeMetric && metrics.length > 0) setActiveMetric(metrics[0]);
+    else if (!activeMetric && !metrics.length) setActiveMetric('growth');
   }, [metrics, activeMetric]);
 
   const chartData = observations
@@ -239,435 +138,280 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
       unit: o.unit,
     }));
 
-  const renderTraitGauges = () => {
-    return (
-      <div className="flex flex-wrap gap-2">
-        {entity.traits.map((trait, i) => {
-          const params: any = (trait as any).parameters || {};
-          return (
-            <React.Fragment key={i}>
-              {/* Aquatic Params */}
-              {trait.type === 'AQUATIC' && (
-                <>
-                  {params.pH && (
-                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg px-2 py-1 flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                      <span className="text-[10px] font-bold text-blue-400">pH {params.pH}</span>
-                    </div>
-                  )}
-                  {params.temp && (
-                    <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg px-2 py-1 flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-                      <span className="text-[10px] font-bold text-orange-400">{params.temp}°</span>
-                    </div>
-                  )}
-                  {params.salinity && (
-                    <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg px-2 py-1">
-                      <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-tighter">{params.salinity}</span>
-                    </div>
-                  )}
-                </>
-              )}
-              {/* Photosynthetic / Plant Params */}
-              {trait.type === 'PHOTOSYNTHETIC' && (
-                <>
-                  {params.difficulty && (
-                    <div className={`border rounded-lg px-2 py-1 flex items-center gap-1.5 ${
-                      params.difficulty === 'easy' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
-                      params.difficulty === 'hard' || params.difficulty === 'very_hard' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-                      'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                    }`}>
-                      <span className="text-[10px] font-bold uppercase tracking-tight">{params.difficulty}</span>
-                    </div>
-                  )}
-                  {params.lightReq && (
-                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-2 py-1">
-                      <span className="text-[10px] font-bold text-yellow-500 uppercase">Light: {params.lightReq}</span>
-                    </div>
-                  )}
-                </>
-              )}
-              {/* Invertebrate Params */}
-              {trait.type === 'INVERTEBRATE' && (
-                <>
-                  {params.molting && (
-                    <div className="bg-fuchsia-500/10 border border-fuchsia-500/30 rounded-lg px-2 py-1 animate-pulse">
-                      <span className="text-[10px] font-bold text-fuchsia-400 uppercase">Molting Mode</span>
-                    </div>
-                  )}
-                </>
-              )}
-              {/* Terrestrial Params */}
-              {trait.type === 'TERRESTRIAL' && (
-                <>
-                  {params.humidity && (
-                    <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-lg px-2 py-1 flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                      <span className="text-[10px] font-bold text-indigo-400">{params.humidity}% RH</span>
-                    </div>
-                  )}
-                </>
-              )}
-            </React.Fragment>
-          );
-        })}
-      </div>
-    );
-  };
-
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.MODAL_BACKDROP }}>
-      <div className="bg-slate-900 w-full max-w-md border border-slate-800 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in duration-200 flex flex-col max-h-[85vh]">
-        
-        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-black/20">
-          <div>
-            <h2 className="text-xl font-serif font-bold text-white">{entity.name}</h2>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-emerald-500 font-mono uppercase tracking-wider">{entity.type}</p>
-              {entity.quantity && (
-                 <span className="text-xs bg-slate-800 px-2 rounded-full text-slate-300">x{entity.quantity}</span>
-              )}
-            </div>
-            {entity.delightfulSummary && (
-              <p className="text-sm text-slate-400 mt-2 leading-relaxed">{entity.delightfulSummary}</p>
-            )}
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full text-slate-400">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl bg-slate-950 border-slate-800 text-slate-200 max-h-[90vh] overflow-y-auto no-scrollbar p-0 overflow-hidden shadow-2xl">
+        {/* Gold top accent */}
+        <div className="h-1.5 w-full bg-linear-to-r from-gold-muted via-gold to-gold-muted z-20" />
 
-        {/* Visual Echo (Task 3.3) */}
-        {entity.currentEchoUrl && (
-          <div className="flex-shrink-0 bg-black/30 p-4 flex items-center justify-center border-b border-slate-800">
-            <motion.img
-              key={entity.currentEchoUrl} // Key is crucial for re-animation on URL change
-              src={entity.currentEchoUrl}
-              alt={`Stylized echo of ${entity.name}`}
-              className="w-32 h-32 object-contain filter drop-shadow-lg opacity-80"
-              initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              transition={{ type: "spring", stiffness: 100, damping: 10 }}
-            />
-          </div>
-        )}
-
-        {/* Curator's Card Button */}
-        <div className="p-2 text-center">
-          <button 
-            onClick={handleCreateCard}
-            className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Create Curator's Card
-          </button>
-        </div>
-
-        {/* Taxonomy Ribbon (B2) */}
-        {gbifData && (entity.type === 'ORGANISM' || entity.type === 'PLANT') && (
-          <div className="bg-black/40 px-6 py-2 border-b border-slate-800/50 overflow-x-auto no-scrollbar whitespace-nowrap">
-            <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] font-medium text-slate-500">
-              <span className="text-emerald-500/70">Kingdom</span> {gbifData.kingdom}
-              {gbifData.phylum && <><span className="text-slate-700 mx-1">·</span> <span className="text-emerald-500/70">Phylum</span> {gbifData.phylum}</>}
-              {gbifData.family && <><span className="text-slate-700 mx-1">·</span> <span className="text-emerald-500/70">Family</span> {gbifData.family}</>}
-            </div>
-          </div>
-        )}
-
-        <div className="p-6 space-y-8 overflow-y-auto no-scrollbar flex-1">
-          
-          {/* NEW: Enrichment Pipeline Data (Task 2.2) */}
-          {entity.enrichedData && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {entity.enrichedData.source === 'GENUS_FALLBACK' && (
-                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-                  <p className="text-[10px] text-amber-200/70 italic">
-                    Precise match not found. Data inferred from the <span className="font-bold text-amber-400">{entity.enrichedData.inferredFrom}</span> genus.
-                  </p>
-                </div>
-              )}
-              
-              <TaxonomyTree taxonomy={entity.enrichedData.taxonomy} />
-              <TradeInfoSection tradeInfo={entity.enrichedData.tradeInfo} />
-              <CareGuideSection careGuide={entity.enrichedData.careGuide} />
-
-              {entity.enrichedData.description && (
-                <section className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-emerald-400" />
-                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Curator's Description</h3>
-                  </div>
-                  <p className="text-sm text-slate-300 leading-relaxed">{entity.enrichedData.description}</p>
-                </section>
-              )}
-            </div>
-          )}
-
-          {/* GBIF Scientific Context Card (Fallback/Legacy) */}
-          {!entity.enrichedData && (entity.type === 'ORGANISM' || entity.type === 'PLANT') && (
-            <div className="bg-slate-800/30 border border-slate-700/50 rounded-xl p-4 relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-2 opacity-10">
-                 <Globe2 className="w-24 h-24" />
-               </div>
-               
-               <div className="flex items-center gap-2 mb-3">
-                 <Globe2 className="w-4 h-4 text-emerald-400" />
-                 <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-400">Scientific Context</h3>
-               </div>
-
-               {loadingGbif ? (
-                 <div className="flex items-center gap-2 text-slate-500 text-sm">
-                   <Loader2 className="w-4 h-4 animate-spin" /> Verifying with GBIF...
-                 </div>
-               ) : gbifData ? (
-                 <div className="space-y-2 relative z-10">
-                   <div className="flex justify-between items-start">
-                      <div>
-                        <div className="text-lg font-serif italic text-white">{gbifData.scientificName}</div>
-                        <div className="text-xs text-slate-400">Family: {gbifData.family} • Kingdom: {gbifData.kingdom}</div>
-                      </div>
-                      {gbifData.matchType === 'EXACT' && (
-                        <div className="bg-emerald-500/20 text-emerald-400 p-1.5 rounded-full" title="Exact Scientific Match">
-                          <CheckCircle2 className="w-5 h-5" />
-                        </div>
-                      )}
-                      {gbifData.matchType === 'FUZZY' && (
-                        <div className="bg-amber-500/20 text-amber-400 p-1.5 rounded-full" title="Fuzzy Match (Approximate)">
-                          <AlertTriangle className="w-5 h-5" />
-                        </div>
-                      )}
-                   </div>
-                   <div className="text-[10px] text-slate-600 pt-2 border-t border-slate-700/50">
-                     Source: Global Biodiversity Information Facility
-                   </div>
-                 </div>
-               ) : (
-                 <div className="text-sm text-slate-500 italic">No scientific match found in global database.</div>
-               )}
-
-               {/* Visual Gauges */}
-               <div className="mt-4 pt-4 border-t border-slate-700/50">
-                 {renderTraitGauges()}
-               </div>
-            </div>
-          )}
-
-          {entity.aweInspiringFacts && (
-            <section className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Awe-Inspiring Facts</h3>
-              </div>
-              <div className="space-y-3">
-                {entity.aweInspiringFacts.map((fact, index) => (
-                  <div key={index} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3">
-                    <p className="text-sm text-slate-300 italic">"{fact.fact}"</p>
-                    <p className="text-xs text-slate-500 text-right mt-2">- {fact.source}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Growth & Observations Section */}
-          {(entity.type === 'ORGANISM' || entity.type === 'PLANT' || entity.type === 'COLONY') && (
-            <section className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-emerald-400" />
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Vital Metrics</h3>
-                </div>
-                {metrics.length > 1 && (
-                  <div className="flex gap-1 overflow-x-auto no-scrollbar max-w-[200px]">
-                    {metrics.map(m => (
-                      <button
-                        key={m}
-                        onClick={() => setActiveMetric(m)}
-                        className={`text-[9px] px-2 py-0.5 rounded-full border transition-all whitespace-nowrap ${
-                          activeMetric === m 
-                            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' 
-                            : 'bg-slate-800 border-slate-700 text-slate-500'
-                        }`}
-                      >
-                        {m}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <GrowthChart 
-                data={chartData} 
-                title={activeMetric ? `${activeMetric} History` : 'No Data'} 
-                accentColor={activeMetric === 'temp' ? '#f59e0b' : activeMetric === 'pH' ? '#3b82f6' : '#10b981'}
-              />
-              
-              {/* Log Observation Mini-Form */}
-              <div className="p-4 bg-slate-800/30 border border-slate-700/50 rounded-2xl space-y-3">
-                <div className="flex items-center gap-2">
-                  <Plus className="w-3 h-3 text-emerald-400" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Log New Capture</span>
-                </div>
-                <div className="flex gap-2">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={obsLabel}
-                        onChange={(e) => setObsLabel(e.target.value)}
-                        placeholder="Label (pH, growth...)"
-                        className="flex-1 bg-black/40 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500/50"
-                      />
-                      <input
-                        type="text"
-                        value={obsUnit}
-                        onChange={(e) => setObsUnit(e.target.value)}
-                        placeholder="unit"
-                        className="w-16 bg-black/40 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500/50"
-                      />
-                    </div>
-                    <input
-                      type="number"
-                      value={obsValue}
-                      onChange={(e) => setObsValue(e.target.value)}
-                      placeholder="Numerical Value"
-                      className="w-full bg-black/40 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500/50"
-                      onKeyDown={(e) => e.key === 'Enter' && logObservation()}
-                    />
-                  </div>
-                  <button
-                    onClick={logObservation}
-                    className="aspect-square w-12 flex items-center justify-center bg-emerald-600 rounded-2xl text-white hover:bg-emerald-500 transition-colors"
-                  >
-                    <Plus className="w-6 h-6" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Observation Timeline (Vertical) */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-slate-400" />
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Timeline</h3>
-                </div>
-                <div className="relative pl-4 space-y-6 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
-                  {observations.slice().sort((a,b) => b.timestamp - a.timestamp).map((obs, idx) => (
-                    <div key={idx} className="relative">
-                      <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-slate-900 border-2 border-slate-700" />
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-xs font-bold text-white capitalize">{obs.label}</p>
-                          <p className="text-[10px] text-slate-500">{new Date(obs.timestamp).toLocaleString()}</p>
-                        </div>
-                        <div className="text-xs font-mono bg-slate-800 px-2 py-0.5 rounded text-slate-300">
-                          {obs.value}{obs.unit}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {observations.length === 0 && (
-                    <p className="text-xs text-slate-600 italic">No timeline events yet.</p>
+        <div className="gradient-placard">
+          <DialogHeader className="p-6 pb-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <DialogTitle className="text-3xl font-serif font-bold text-white mb-1 italic">
+                  {entity.name}
+                </DialogTitle>
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="text-[10px] border-emerald-500/30 text-emerald-400 bg-emerald-500/5">
+                    {entity.type as any}
+                  </Badge>
+                  {entity.scientificName && (
+                    <span className="text-xs text-slate-500 italic font-body">
+                      {entity.scientificName}
+                    </span>
+                  )}
+                  {entity.quantity && entity.quantity > 1 && (
+                    <span className="text-[10px] bg-slate-800/50 px-2 py-0.5 rounded-full text-slate-400">
+                      x{entity.quantity}
+                    </span>
                   )}
                 </div>
               </div>
-            </section>
-          )}
-
-          {/* Alias Section */}
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <Tag className="w-4 h-4 text-slate-400" />
-              <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Custom Aliases</h3>
             </div>
             
-            <div className="flex flex-wrap gap-2 mb-4">
-              {entity.aliases.map(a => (
-                <span key={a} className="bg-slate-800 text-slate-300 px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 border border-slate-700">
-                  {a}
-                  <button onClick={() => removeAlias(a)} className="hover:text-red-400">
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-              {entity.aliases.length === 0 && <p className="text-xs text-slate-600 italic">No aliases set.</p>}
-            </div>
+            {entity.delightfulSummary && (
+              <p className="text-sm text-slate-400 mt-4 leading-relaxed font-body">
+                {entity.delightfulSummary}
+              </p>
+            )}
+          </DialogHeader>
 
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                value={newAlias}
-                onChange={(e) => setNewAlias(e.target.value)}
-                placeholder="Add new alias..."
-                className="flex-1 bg-black/40 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
-                onKeyDown={(e) => e.key === 'Enter' && addAlias()}
-              />
-              <button 
-                onClick={addAlias}
-                className="p-2 bg-emerald-600 rounded-xl text-white hover:bg-emerald-500 transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-              </button>
-            </div>
-          </section>
-
-          {/* Group Section */}
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <FolderOpen className="w-4 h-4 text-cyan-500" />
-              <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Assign Group</h3>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2">
-              <button 
-                onClick={() => setGroup(undefined)}
-                className={`p-3 rounded-xl text-left text-sm flex justify-between items-center border transition-all ${
-                  !entity.group_id ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' : 'bg-slate-800/50 border-slate-800 text-slate-400'
+          {/* Navigation Tabs (Organism Atlas Style) */}
+          <div className="px-6 flex gap-1 border-b border-slate-800/50">
+            {(['vitality', 'research', 'management'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all relative ${
+                  activeTab === tab ? 'text-gold' : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
-                No Group
-                {!entity.group_id && <div className="w-2 h-2 rounded-full bg-cyan-500" />}
-              </button>
-              
-              {groups.map(g => (
-                <button 
-                  key={g.id}
-                  onClick={() => setGroup(g.id)}
-                  className={`p-3 rounded-xl text-left text-sm flex justify-between items-center border transition-all ${
-                    entity.group_id === g.id ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' : 'bg-slate-800/50 border-slate-800 text-slate-400'
-                  }`}
-                >
-                  {g.name}
-                  {entity.group_id === g.id && <div className="w-2 h-2 rounded-full bg-cyan-500" />}
-                </button>
-              ))}
-
-              {isCreatingGroup ? (
-                <div className="mt-4 space-y-2">
-                  <input 
-                    autoFocus
-                    type="text" 
-                    value={newGroupName}
-                    onChange={(e) => setNewGroupName(e.target.value)}
-                    placeholder="Group name (e.g. 'Basement')"
-                    className="w-full bg-black/40 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500/50"
+                {tab}
+                {activeTab === tab && (
+                  <motion.div 
+                    layoutId="activeTab" 
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold"
                   />
-                  <div className="flex gap-2">
-                    <button onClick={() => setIsCreatingGroup(false)} className="flex-1 py-2 text-xs text-slate-500">Cancel</button>
-                    <button onClick={handleCreateGroup} className="flex-1 py-2 bg-cyan-600 rounded-lg text-white text-xs font-bold">Create & Assign</button>
-                  </div>
-                </div>
-              ) : (
-                <button 
-                  onClick={() => setIsCreatingGroup(true)}
-                  className="mt-2 p-3 rounded-xl border border-dashed border-slate-700 text-slate-500 text-sm flex items-center justify-center gap-2 hover:border-slate-500 transition-colors"
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="p-6">
+            <AnimatePresence mode="wait">
+              {activeTab === 'vitality' && (
+                <motion.div 
+                  key="vitality"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6"
                 >
-                  <Plus className="w-4 h-4" /> Create New Group
-                </button>
+                  {/* Visual Echo / Card Action */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {entity.currentEchoUrl && (
+                      <Card className="bg-black/40 border-slate-800/50 overflow-hidden flex flex-col items-center justify-center p-4">
+                        <motion.img
+                          src={entity.currentEchoUrl}
+                          className="w-24 h-24 object-contain filter drop-shadow-2xl opacity-90"
+                          whileHover={{ scale: 1.1, rotate: 5 }}
+                        />
+                        <Button 
+                          onClick={handleCreateCard}
+                          variant="ghost" 
+                          size="sm"
+                          className="mt-3 text-[10px] text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                        >
+                          <Sparkles className="w-3 h-3 mr-2" />
+                          Curator's Card
+                        </Button>
+                      </Card>
+                    )}
+                    
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        {entity.traits.slice(0, 4).map((t, i) => {
+                          const p: any = t.parameters || {};
+                          if (t.type === 'AQUATIC') return <StatCard key={i} icon={<Droplets className="w-3 h-3"/>} label="pH" value={String(p.pH || 'N/A')} accentColor="blue" />;
+                          if (t.type === 'PHOTOSYNTHETIC') return <StatCard key={i} icon={<Sun className="w-3 h-3"/>} label="Light" value={p.lightReq || 'med'} accentColor="amber" />;
+                          return null;
+                        }).filter(Boolean)}
+                        {/* Fallback stats if traits are sparse */}
+                        {!entity.traits.length && (
+                          <>
+                            <StatCard icon={<TrendingUp className="w-3 h-3"/>} label="Health" value="Stable" accentColor="emerald" />
+                            <StatCard icon={<CheckCircle2 className="w-3 h-3"/>} label="Status" value="Verified" accentColor="gold" />
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Growth History (Conservatory Signature) */}
+                  <section className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Biological Vitality</h3>
+                      <div className="flex gap-1">
+                        {metrics.map(m => (
+                          <button
+                            key={m}
+                            onClick={() => setActiveMetric(m)}
+                            className={`text-[8px] px-2 py-0.5 rounded-full border transition-all ${
+                              activeMetric === m 
+                                ? 'bg-gold/20 border-gold/50 text-gold' 
+                                : 'bg-slate-900 border-slate-800 text-slate-500'
+                            }`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <Card className="bg-slate-900/50 border-slate-800/50 p-4">
+                      <GrowthChart 
+                        data={chartData} 
+                        title="" 
+                        accentColor={activeMetric === 'temp' ? '#f59e0b' : '#10b981'}
+                      />
+                    </Card>
+                  </section>
+                </motion.div>
               )}
-            </div>
-          </section>
+
+              {activeTab === 'research' && (
+                <motion.div 
+                  key="research"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6"
+                >
+                  {/* Taxonomy Ribbon (Organism Atlas Style) */}
+                  {gbifData && (
+                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Globe className="w-4 h-4 text-gold" />
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-gold">Taxonomy (GBIF)</h3>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                        <DetailRow label="Kingdom" value={gbifData.kingdom} />
+                        <DetailRow label="Family" value={gbifData.family} />
+                        <DetailRow label="Order" value={gbifData.order} />
+                        <DetailRow label="Class" value={gbifData.class} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Enrichment Data */}
+                  {entity.enrichedData ? (
+                    <div className="space-y-4">
+                      {entity.enrichedData.source === 'GENUS_FALLBACK' && (
+                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 flex items-start gap-3">
+                          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                          <p className="text-xs text-amber-200/70">
+                            Precise match not found. Data inferred from the <span className="font-bold text-amber-400">{entity.enrichedData.inferredFrom}</span> genus.
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4">
+                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-2 flex items-center gap-2">
+                          <Info className="w-3 h-3" /> Curator's Notes
+                        </h4>
+                        <p className="text-sm text-slate-300 leading-relaxed italic">
+                          {entity.enrichedData.description || "No detailed description synthesized yet."}
+                        </p>
+                      </div>
+
+                      {entity.enrichedData.careGuide && (
+                        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4">
+                          <h4 className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-2 flex items-center gap-2">
+                            <Leaf className="w-3 h-3" /> Care Protocol
+                          </h4>
+                          <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+                            {entity.enrichedData.careGuide}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="py-12 text-center space-y-4 bg-slate-900/30 rounded-2xl border border-dashed border-slate-800">
+                      <div className="flex justify-center"><Loader2 className="w-8 h-8 text-slate-700 animate-spin" /></div>
+                      <p className="text-xs text-slate-500 font-body">Synthetic enrichment pipeline standing by...</p>
+                    </div>
+                  )}
+
+                  {/* Fun Facts section from Organism Atlas */}
+                  {entity.overflow?.discovery?.mechanism && (
+                    <section className="bg-gold/5 border border-gold/20 rounded-xl p-4">
+                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-gold mb-3 flex items-center gap-2">
+                        <Lightbulb className="w-4 h-4" /> Biological Mechanism
+                      </h4>
+                      <p className="text-sm text-slate-300 leading-relaxed">
+                        {entity.overflow.discovery.mechanism}
+                      </p>
+                    </section>
+                  )}
+                </motion.div>
+              )}
+
+              {activeTab === 'management' && (
+                <motion.div 
+                  key="management"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <section className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Tag className="w-4 h-4 text-slate-500" />
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Custom Aliases</h3>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {entity.aliases.map(a => (
+                          <span key={a} className="bg-slate-900 text-slate-300 px-2 py-1 rounded-md text-[10px] flex items-center gap-1 border border-slate-800">
+                            {a}
+                            <button onClick={() => onUpdate({ aliases: entity.aliases.filter(alias => alias !== a) })} className="hover:text-red-400"><X className="w-3 h-3" /></button>
+                          </span>
+                        ))}
+                        {entity.aliases.length === 0 && <p className="text-xs text-slate-600 italic">No aliases defined.</p>}
+                      </div>
+                    </section>
+
+                    <section className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <FolderOpen className="w-4 h-4 text-cyan-500/70" />
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Ecosystem Assignment</h3>
+                      </div>
+                      <select 
+                        value={entity.group_id || ''} 
+                        onChange={(e) => onUpdate({ group_id: e.target.value || undefined })}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:ring-1 focus:ring-gold/50"
+                      >
+                        <option value="">Ungrouped</option>
+                        {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                      </select>
+                    </section>
+                  </div>
+
+                  <Separator className="bg-slate-800/50" />
+
+                  <div className="flex justify-between items-center pt-4">
+                    <div className="text-[10px] text-slate-600 font-mono">
+                      UID: {entity.id.substring(0, 8)}...
+                    </div>
+                    <Button variant="ghost" className="text-red-500/50 hover:text-red-500 hover:bg-red-500/10 text-[10px] uppercase font-bold tracking-widest">
+                      <Trash2 className="w-3 h-3 mr-2" /> De-Accession
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
-      </div>
+      </DialogContent>
 
       <ShareCuratorsCardModal
         isOpen={isShareModalOpen}
@@ -675,6 +419,6 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
         imageUrl={cardImageUrlToShare}
         entityName={entity.name}
       />
-    </div>
+    </Dialog>
   );
 };

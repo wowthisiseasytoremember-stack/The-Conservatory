@@ -2,8 +2,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Entity, EntityType, EntityGroup } from '../types';
-import { Waves, Flower2, Bug, Package, ChevronRight, Settings2, Search, Sparkles } from 'lucide-react';
+import { Waves, Flower2, Bug, Package, ChevronRight, Settings2, Search, Sparkles, Loader2 } from 'lucide-react';
 import { useConservatory } from '../services/store';
+import { motion } from 'framer-motion';
 
 interface EntityListProps {
   entities: Entity[];
@@ -34,8 +35,10 @@ export const EntityList: React.FC<EntityListProps> = ({
     const isHabitat = e.type === EntityType.HABITAT;
 
     return (
-      <button 
+      <motion.button 
         key={e.id} 
+        whileHover={{ y: -4, scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
         onClick={() => {
           if (isHabitat) {
             navigate(`/habitat/${e.id}`);
@@ -45,102 +48,118 @@ export const EntityList: React.FC<EntityListProps> = ({
         }}
         data-testid={isHabitat ? `habitat-card-${e.id}` : `entity-card-${e.id}`}
         className={`
-          border p-3 rounded-xl transition-all text-left relative group
+          border rounded-xl transition-all text-left relative group overflow-hidden
           ${isActive 
             ? 'bg-cyan-500/10 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.15)] ring-1 ring-cyan-500/50' 
-            : 'bg-slate-900/40 border-slate-800 hover:bg-slate-900'}
+            : 'gradient-placard border-slate-800 shadow-placard hover:shadow-gold'}
         `}
       >
-        <div className="flex justify-between items-start mb-2">
-          {getIcon(e.type)}
-          <div className="flex gap-1">
-            {isHabitat && isActive && (
-               <div className="flex gap-1 items-center">
-                 <div className="bg-cyan-500 text-[8px] font-bold text-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
-                   Active
+        {/* Gold top accent for enriched entities */}
+        {e.enrichment_status === 'complete' && (
+          <div className="h-0.5 w-full bg-linear-to-r from-gold-muted via-gold to-gold-muted" />
+        )}
+
+        <div className="p-3">
+          <div className="flex justify-between items-start mb-2">
+            {getIcon(e.type)}
+            <div className="flex gap-1">
+              {isHabitat && isActive && (
+                 <div className="flex gap-1 items-center">
+                   <div className="bg-cyan-500 text-[8px] font-bold text-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
+                     Active
+                   </div>
+                   {entities.some(ent => ent.habitat_id === e.id && ent.enrichment_status === 'queued') && (
+                     <button
+                       onClick={(evt) => {
+                         evt.stopPropagation();
+                         deepResearchHabitat(e.id);
+                       }}
+                       className="bg-emerald-600 hover:bg-emerald-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-0.5 shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+                       title="Research new residents"
+                       data-testid="research-habitat-btn"
+                     >
+                       <Search className="w-2 h-2" /> Research
+                     </button>
+                   )}
                  </div>
-                 {entities.some(ent => ent.habitat_id === e.id && ent.enrichment_status === 'queued') && (
-                   <button
-                     onClick={(evt) => {
-                       evt.stopPropagation();
-                       deepResearchHabitat(e.id);
-                     }}
-                     className="bg-emerald-600 hover:bg-emerald-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-0.5 shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
-                     title="Research new residents"
-                     data-testid="research-habitat-btn"
-                   >
-                     <Search className="w-2 h-2" /> Research
-                   </button>
-                 )}
-               </div>
-            )}
-            {e.quantity !== undefined && (
-              <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300 font-mono">
-                x{e.quantity}
-              </span>
-            )}
-            <Settings2 className="w-3 h-3 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+              )}
+              {e.quantity !== undefined && (
+                <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300 font-mono">
+                  x{e.quantity}
+                </span>
+              )}
+              <Settings2 className="w-3 h-3 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
           </div>
-        </div>
-        <h4 className="text-sm font-medium text-slate-200 truncate pr-4">{e.name}</h4>
-        <div className="flex items-center gap-1 mt-1">
-          <p className="text-[10px] text-slate-500 truncate flex-1">
-            {e.type === EntityType.HABITAT 
-              ? (entities.filter(ent => ent.habitat_id === e.id).length + " residents") 
-              : (entities.find(h => h.id === e.habitat_id)?.name || "Roaming")}
-          </p>
-          {e.aliases.length > 0 && (
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" title="Has custom aliases" />
+          
+          <h4 className={`text-sm font-medium truncate pr-4 ${e.enrichment_status === 'complete' ? 'font-serif italic text-white' : 'text-slate-200'}`}>
+            {e.name}
+          </h4>
+          
+          <div className="flex items-center gap-1 mt-1">
+            <p className="text-[10px] text-slate-500 truncate flex-1">
+              {e.type === EntityType.HABITAT 
+                ? (entities.filter(ent => ent.habitat_id === e.id).length + " residents") 
+                : (entities.find(h => h.id === e.habitat_id)?.name || "Roaming")}
+            </p>
+            {e.aliases.length > 0 && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" title="Has custom aliases" />
+            )}
+          </div>
+
+          {/* Enrichment Status Badge */}
+          {!isHabitat && e.enrichment_status && (
+            <div className="mt-2 flex items-center gap-1">
+              {e.enrichment_status === 'queued' && (
+                <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/30">
+                  📋 Queued
+                </span>
+              )}
+              {e.enrichment_status === 'pending' && (
+                <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/30 flex items-center gap-1">
+                  <Loader2 className="w-2 h-2 animate-spin" />
+                  Researching…
+                </span>
+              )}
+              {e.enrichment_status === 'complete' && (
+                <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                  ✓ Enriched
+                </span>
+              )}
+              {e.enrichment_status === 'failed' && (
+                <span className="text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded border border-red-500/30">
+                  ⚠ Failed
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Discovery Preview */}
+          {!isHabitat && e.enrichment_status === 'complete' && e.overflow?.discovery?.mechanism && (
+            <div className="mt-1.5 text-[10px] text-slate-400 italic line-clamp-2 leading-relaxed">
+              🧬 {e.overflow.discovery.mechanism.split('.')[0]}
+            </div>
+          )}
+
+          {/* Research Button for Non-Enriched Entities */}
+          {!isHabitat && e.enrichment_status !== 'complete' && e.enrichment_status !== 'pending' && (
+            <button
+              onClick={(evt) => {
+                evt.stopPropagation();
+                enrichEntity(e.id);
+              }}
+              className="mt-2 text-[9px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-2 py-1 rounded border border-emerald-500/30 transition-colors flex items-center gap-1 font-bold"
+              title="Research this species"
+            >
+              <Sparkles className="w-2.5 h-2.5" />
+              Research
+            </button>
           )}
         </div>
-        {/* Enrichment Status Badge */}
-        {!isHabitat && e.enrichment_status && (
-          <div className="mt-2 flex items-center gap-1">
-            {e.enrichment_status === 'queued' && (
-              <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/30">
-                📋 Queued
-              </span>
-            )}
-            {e.enrichment_status === 'pending' && (
-              <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/30 animate-pulse">
-                🔬 Enriching...
-              </span>
-            )}
-            {e.enrichment_status === 'complete' && (
-              <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30">
-                ✓ Enriched
-              </span>
-            )}
-            {e.enrichment_status === 'failed' && (
-              <span className="text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded border border-red-500/30">
-                ⚠ Failed
-              </span>
-            )}
-          </div>
-        )}
-        {/* Discovery Preview */}
-        {!isHabitat && e.enrichment_status === 'complete' && e.overflow?.discovery?.mechanism && (
-          <div className="mt-1.5 text-[10px] text-slate-400 italic line-clamp-2">
-            🧬 {e.overflow.discovery.mechanism.split('.')[0]}...
-          </div>
-        )}
-        {/* Research Button for Non-Enriched Entities */}
-        {!isHabitat && e.enrichment_status !== 'complete' && e.enrichment_status !== 'pending' && (
-          <button
-            onClick={(evt) => {
-              evt.stopPropagation();
-              enrichEntity(e.id);
-            }}
-            className="mt-2 text-[9px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-2 py-1 rounded border border-emerald-500/30 transition-colors flex items-center gap-1 font-bold"
-            title="Research this species"
-          >
-            <Sparkles className="w-2.5 h-2.5" />
-            Research
-          </button>
-        )}
-      </button>
+      </motion.button>
     );
   };
+
 
   // Count enrichment queue
   const queuedCount = entities.filter(e => 

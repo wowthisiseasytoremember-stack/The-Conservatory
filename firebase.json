@@ -29,6 +29,10 @@
         "function": "proxy"
       },
       {
+        "source": "/api/perplexity",
+        "function": "perplexityProxy"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

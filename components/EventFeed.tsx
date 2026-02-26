@@ -5,6 +5,8 @@ import { CheckCircle2, Clock, AlertCircle, Sparkles, Terminal, Activity, Droplet
 import { FeaturedSpecimenCard } from './FeaturedSpecimenCard';
 import { enrichEvent, EnrichedEvent } from './WonderFeedHelpers';
 
+import { Card, CardContent } from './ui/card';
+
 interface EventFeedProps {
   events: AppEvent[];
   entities?: Entity[];
@@ -74,20 +76,55 @@ export const EventFeed: React.FC<EventFeedProps> = ({ events, entities = [], onE
         // Use enriched rendering if available
         if (enriched) {
           return (
-            <div 
+            <Card 
               key={event.id} 
               className={`
-                rounded-xl p-4 transition-all hover:scale-[1.01] border
+                transition-all hover:scale-[1.01] border-none shadow-md overflow-hidden
                 ${enriched.visualStyle === 'celebratory' 
-                  ? 'bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/15' 
+                  ? 'bg-emerald-500/10 border-l-4 border-l-emerald-500' 
                   : enriched.visualStyle === 'magical'
-                  ? 'bg-purple-500/10 border-purple-500/30 hover:bg-purple-500/15'
+                  ? 'bg-purple-500/10 border-l-4 border-l-purple-500'
                   : enriched.visualStyle === 'clinical'
-                  ? 'bg-cyan-500/10 border-cyan-500/30 hover:bg-cyan-500/15'
-                  : 'bg-slate-900/50 border-slate-800 hover:bg-slate-900'
+                  ? 'bg-cyan-500/10 border-l-4 border-l-cyan-500'
+                  : 'bg-slate-900/50 border-l-4 border-l-slate-700'
                 }
               `}
             >
+              <CardContent className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-mono">
+                    {new Date(event.timestamp).toLocaleTimeString()}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {getStatusIcon(event.status)}
+                  </div>
+                </div>
+                
+                <p className="text-slate-200 text-sm leading-relaxed font-medium">
+                  {enriched.enrichedText}
+                </p>
+
+                {/* Trend indicator for clinical events */}
+                {enriched.trend && enriched.trend.direction !== 'stable' && (
+                  <div className="mt-2 text-xs text-slate-400 flex items-center gap-1">
+                    <span className={`${enriched.trend.direction === 'up' ? 'text-red-400' : 'text-blue-400'}`}>
+                      {enriched.trend.direction === 'up' ? '↑' : '↓'} {enriched.trend.delta.toFixed(1)}
+                    </span>
+                    <span className="text-slate-500">over {enriched.trend.period}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        }
+
+        // Fallback to default rendering for non-enriched events
+        return (
+          <Card 
+            key={event.id} 
+            className="bg-slate-900/50 border border-slate-800 transition-all hover:bg-slate-900"
+          >
+            <CardContent className="p-4">
               <div className="flex justify-between items-start mb-2">
                 <span className="text-[10px] text-slate-500 uppercase tracking-wider font-mono">
                   {new Date(event.timestamp).toLocaleTimeString()}
@@ -97,89 +134,58 @@ export const EventFeed: React.FC<EventFeedProps> = ({ events, entities = [], onE
                 </div>
               </div>
               
-              <p className="text-slate-200 text-sm leading-relaxed font-medium">
-                {enriched.enrichedText}
-              </p>
+              <p className="text-slate-200 text-sm mb-3 font-medium">"{event.raw_input}"</p>
 
-              {/* Trend indicator for clinical events */}
-              {enriched.trend && enriched.trend.direction !== 'stable' && (
-                <div className="mt-2 text-xs text-slate-400 flex items-center gap-1">
-                  <span className={`${enriched.trend.direction === 'up' ? 'text-red-400' : 'text-blue-400'}`}>
-                    {enriched.trend.direction === 'up' ? '↑' : '↓'} {enriched.trend.delta.toFixed(1)}
+            {/* Logic Anchor 3: Display Domain Event Payload */}
+            {event.domain_event && (
+              <div className="bg-black/30 rounded-lg p-3 border border-slate-800/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Terminal className="w-3 h-3 text-emerald-500" />
+                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">
+                    {event.domain_event.type}
                   </span>
-                  <span className="text-slate-500">over {enriched.trend.period}</span>
                 </div>
-              )}
-            </div>
-          );
-        }
-
-        // Fallback to default rendering for non-enriched events
-        return (
-          <div 
-            key={event.id} 
-            className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 transition-all hover:bg-slate-900"
-          >
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-mono">
-                {new Date(event.timestamp).toLocaleTimeString()}
-              </span>
-              <div className="flex items-center gap-2">
-                {getStatusIcon(event.status)}
-              </div>
-            </div>
-            
-            <p className="text-slate-200 text-sm mb-3 font-medium">"{event.raw_input}"</p>
-
-          {/* Logic Anchor 3: Display Domain Event Payload */}
-          {event.domain_event && (
-            <div className="bg-black/30 rounded-lg p-3 border border-slate-800/50">
-              <div className="flex items-center gap-2 mb-2">
-                <Terminal className="w-3 h-3 text-emerald-500" />
-                <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">
-                  {event.domain_event.type}
-                </span>
-              </div>
-              
-              <div className="space-y-1">
-                {event.domain_event.payload.targetHabitatName && (
-                  <div className="text-xs text-slate-400 flex justify-between">
-                    <span>Habitat</span>
-                    <span className="text-slate-200">{event.domain_event.payload.targetHabitatName}</span>
-                  </div>
-                )}
                 
-                {/* Organisms List */}
-                {event.domain_event.payload.candidates && event.domain_event.payload.candidates.length > 0 && (
-                  <div className="text-xs text-slate-400 mt-2">
-                     <span className="block mb-1 text-[10px] uppercase">Accessioned:</span>
-                     {event.domain_event.payload.candidates.map((c: any, i: number) => (
-                       <div key={i} className="flex justify-between pl-2 border-l border-emerald-500/30">
-                          <span className="text-slate-300">{c.commonName}</span>
-                          {c.quantity && <span className="text-emerald-500 font-mono">x{c.quantity}</span>}
-                       </div>
-                     ))}
-                  </div>
-                )}
+                <div className="space-y-1">
+                  {event.domain_event.payload.targetHabitatName && (
+                    <div className="text-xs text-slate-400 flex justify-between">
+                      <span>Habitat</span>
+                      <span className="text-slate-200">{event.domain_event.payload.targetHabitatName}</span>
+                    </div>
+                  )}
+                  
+                  {/* Organisms List */}
+                  {event.domain_event.payload.candidates && event.domain_event.payload.candidates.length > 0 && (
+                    <div className="text-xs text-slate-400 mt-2">
+                       <span className="block mb-1 text-[10px] uppercase">Accessioned:</span>
+                       {event.domain_event.payload.candidates.map((c: any, i: number) => (
+                         <div key={i} className="flex justify-between pl-2 border-l border-emerald-500/30">
+                            <span className="text-slate-300">{c.commonName}</span>
+                            {c.quantity && <span className="text-emerald-500 font-mono">x{c.quantity}</span>}
+                         </div>
+                       ))}
+                    </div>
+                  )}
 
-                {/* Observation Metrics */}
-                {event.domain_event.payload.observationParams && renderMetrics(event.domain_event.payload.observationParams)}
+                  {/* Observation Metrics */}
+                  {event.domain_event.payload.observationParams && renderMetrics(event.domain_event.payload.observationParams)}
 
-                 {event.domain_event.payload.observationNotes && (
-                  <div className="text-xs text-slate-500 italic border-l-2 border-slate-700 pl-2 mt-2">
-                    "{event.domain_event.payload.observationNotes}"
-                  </div>
-                )}
+                   {event.domain_event.payload.observationNotes && (
+                    <div className="text-xs text-slate-500 italic border-l-2 border-slate-700 pl-2 mt-2">
+                      "{event.domain_event.payload.observationNotes}"
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {event.error_message && (
-            <div className="mt-2 text-[10px] text-red-400 font-mono bg-red-900/10 p-2 rounded">
-              Error: {event.error_message}
-            </div>
-          )}
-        </div>
+            {event.error_message && (
+              <div className="mt-2 text-[10px] text-red-400 font-mono bg-red-900/10 p-2 rounded">
+                Error: {event.error_message}
+              </div>
+            )}
+          </CardContent>
+        </Card>
         );
       })}
     </div>

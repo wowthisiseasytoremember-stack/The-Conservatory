@@ -2,54 +2,35 @@ import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   AppEvent, Entity, DomainEvent, EntityGroup, PendingAction, EntityType, EventStatus, ChatMessage,
-  IdentifyResult, ResearchProgress, ResearchStage, ResearchEntityProgress, BiomeTheme, RackContainer, Habitat
-} from '../types';
-import { geminiService } from './geminiService';
+  IdentifyResult, ResearchProgress, ResearchStage, ResearchEntityProgress, BiomeTheme, RackContainer, Habitat, User, HabitatOutline
+} from '../../types';
+import { geminiService } from '../geminiService';
 import { 
   db, auth, collection, addDoc, doc, getDoc, getDocs, setDoc, serverTimestamp, 
   onSnapshot, query, orderBy, limit, signInWithPopup, signOut, 
-  onAuthStateChanged, googleProvider, User, writeBatch
-} from './firebase';
+  onAuthStateChanged, googleProvider, FirebaseUser, writeBatch
+} from '../firebase';
 
-import { connectionService, ConnectionStatus } from './connectionService';
-import { mockFirestore } from './MockFirestoreService';
-import { logger, logEnrichment, logFirestore, logAICall } from './logger';
-import { imageService } from './imageService';
-import { taxonomyService } from './taxonomy';
-import { calculateHabitatHealth, calculateParameterTrend } from './ecosystem';
-import { STORAGE_KEYS } from '../src/constants';
-import { safeStorage } from '../src/utils/storage';
-import { HabitatOutline } from './BlueprintService';
-import { echoEngineService } from './EchoEngine';
+import { connectionService, ConnectionStatus } from '../connectionService';
+import { mockFirestore } from '../MockFirestoreService';
+import { logger, logEnrichment, logFirestore, logAICall } from '../logger';
+import { imageService } from '../imageService';
+import { taxonomyService } from '../taxonomy';
+import { calculateHabitatHealth, calculateParameterTrend } from '../ecosystem';
+import { STORAGE_KEYS } from '../../src/constants';
+import { safeStorage } from '../../src/utils/storage';
+import { echoEngineService } from '../EchoEngine';
+
+import { IConservatoryState, ConservatoryState } from './storeState';
 
 class ConservatoryStore {
-  private events: AppEvent[] = [];
-  private entities: Entity[] = [];
-  private groups: EntityGroup[] = [];
-  private messages: ChatMessage[] = [];
-  private pendingAction: PendingAction | null = null;
-  private user: User | null = null;
-  private liveTranscript: string = '';
+  private state: IConservatoryState;
   private listeners: (() => void)[] = [];
   private unsubscribes: (() => void)[] = [];
 
-  private activeHabitatId: string | null = null;
-  private _isTestMode: boolean = false;
-
-  // Deep Research Pipeline State
-  private _researchProgress: ResearchProgress = {
-    isActive: false,
-    totalEntities: 0,
-    completedEntities: 0,
-    currentEntityIndex: -1,
-    currentEntity: null,
-    currentStage: null,
-    entityResults: [],
-    discoveries: []
-  };
-
   constructor() {
-    this.loadLocal();
+    this.state = new ConservatoryState();
+    this.state.loadLocal(); // Load local state via the state object
     this.initAuth();
     
     // @ts-ignore
@@ -58,9 +39,9 @@ class ConservatoryStore {
       window.setTestUser = (user: User, useRealBackend = false) => {
         logger.debug({ testMode: true, useRealBackend }, "Setting test user");
         // Prevent Firebase auth from overwriting test user
-        this._isTestMode = true;
+        this.state.isTestMode = true;
         this.clearSync();
-        this.user = user;
+        this.state.user = user;
         // Mark test mode to skip Firestore writes ONLY if not using real backend
         (window as any).__TEST_MODE__ = !useRealBackend;
         this.notify();
@@ -79,8 +60,8 @@ class ConservatoryStore {
   private initAuth() {
     onAuthStateChanged(auth, (user) => {
       // In test mode, never let Firebase auth override the test user
-      if (this._isTestMode) return;
-      this.user = user;
+      if (this.state.isTestMode) return;
+      this.state.user = user;
       if (user) {
         this.initFirestoreSync();
       } else {
@@ -133,93 +114,38 @@ class ConservatoryStore {
     await batch.commit();
     logger.info("Database cleared");
     
-    this.events = [];
-    this.entities = [];
-    this.groups = [];
-    this.persistLocal();
+    this.state.events = [];
+    this.state.entities = [];
+    this.state.groups = [];
+    this.state.persistLocal();
   }
 
-  private loadLocal() {
-    try {
-      this.events = safeStorage.getItem(STORAGE_KEYS.EVENTS, []);
-      this.entities = safeStorage.getItem(STORAGE_KEYS.ENTITIES, []);
-      this.groups = safeStorage.getItem(STORAGE_KEYS.GROUPS, []);
-      this.messages = safeStorage.getItem(STORAGE_KEYS.MESSAGES, []);
-      this.activeHabitatId = localStorage.getItem(STORAGE_KEYS.HABITAT_ID);
-      this.notify();
-    } catch (e) {
-      logger.error(e, 'Store: Failed to load local data');
-    }
-  }
-
-  private persistLocal() {
-    try {
-      safeStorage.setItem(STORAGE_KEYS.EVENTS, this.events);
-      safeStorage.setItem(STORAGE_KEYS.ENTITIES, this.entities);
-      safeStorage.setItem(STORAGE_KEYS.GROUPS, this.groups);
-      safeStorage.setItem(STORAGE_KEYS.MESSAGES, this.messages);
-      this.notify();
-    } catch (e) {
-      logger.error(e, 'Store: Failed to persist local data');
-    }
-  }
+  // Removed loadLocal() as it's now in ConservatoryState
+  // Removed persistLocal() as it's now in ConservatoryState
 
   private initFirestoreSync() {
     this.clearSync();
 
     try {
-      // 1. Sync Events
-      const qEvents = query(collection(db, 'events'), orderBy('timestamp', 'desc'), limit(100));
-      const unsubEvents = onSnapshot(qEvents, (snapshot) => {
-        const cloudEvents: AppEvent[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          const ts = data.timestamp?.toMillis ? data.timestamp.toMillis() : Date.now();
-          cloudEvents.push({
-            id: doc.id,
-            timestamp: ts,
-            raw_input: data.metadata?.originalTranscript || 'Manual Entry',
-            status: EventStatus.PARSED,
-            domain_event: {
-              eventId: doc.id,
-              type: data.type,
-              timestamp: new Date(ts).toISOString(),
-              payload: data.payload,
-              metadata: data.metadata
-            }
-          });
-        });
-        
-        const localPending = this.events.filter(e => e.status === EventStatus.PENDING || e.status === EventStatus.ERROR);
-        this.events = [...localPending, ...cloudEvents];
-        this.persistLocal();
+      const { entityRepo } = require('./repositories/EntityRepository');
+      const { eventRepo } = require('./repositories/EventRepository');
+
+      const unsubEvents = eventRepo.subscribeToEvents((cloudEvents: AppEvent[]) => {
+        const localPending = this.state.events.filter(e => e.status === EventStatus.PENDING || e.status === EventStatus.ERROR);
+        this.state.events = [...localPending, ...cloudEvents];
+        this.state.persistLocal();
+        this.notify();
       });
 
-      // 2. Sync Entities
-      const qEntities = query(collection(db, 'entities'), orderBy('updated_at', 'desc'));
-      const unsubEntities = onSnapshot(qEntities, (snapshot) => {
-        const cloudEntities: Entity[] = [];
-        snapshot.forEach((doc) => {
-          cloudEntities.push({ id: doc.id, ...doc.data() } as Entity);
-        });
-        this.entities = cloudEntities;
-        this.persistLocal();
+      const unsubEntities = entityRepo.subscribe((cloudEntities: Entity[]) => {
+        this.state.entities = cloudEntities;
+        this.state.persistLocal();
+        this.notify();
       });
 
-      // 3. Sync Groups
-      const qGroups = query(collection(db, 'groups'), orderBy('name', 'asc'));
-      const unsubGroups = onSnapshot(qGroups, (snapshot) => {
-        const cloudGroups: EntityGroup[] = [];
-        snapshot.forEach((doc) => {
-          cloudGroups.push({ id: doc.id, ...doc.data() } as EntityGroup);
-        });
-        this.groups = cloudGroups;
-        this.persistLocal();
-      });
-
-      this.unsubscribes.push(unsubEvents, unsubEntities, unsubGroups);
+      this.unsubscribes.push(unsubEvents, unsubEntities);
     } catch (e) {
-        logFirestore('error', "Failed to init Firestore sync", { error: e });
+        logFirestore('error', "Failed to init repository sync", { error: e });
     }
   }
 
@@ -234,34 +160,34 @@ class ConservatoryStore {
     };
   }
 
-  getEvents() { return [...this.events]; }
-  getActiveHabitatId() { return this.activeHabitatId; }
+  getEvents() { return [...this.state.events]; }
+  getActiveHabitatId() { return this.state.activeHabitatId; }
 
   setActiveHabitat(id: string | null) {
-    this.activeHabitatId = id;
+    this.state.activeHabitatId = id;
     if (id) localStorage.setItem(STORAGE_KEYS.HABITAT_ID, id);
     else localStorage.removeItem(STORAGE_KEYS.HABITAT_ID);
-    this.persistLocal();
+    this.state.persistLocal();
   }
 
-  getEntities() { return this.entities; }
-  getGroups() { return [...this.groups]; }
-  getMessages() { return [...this.messages]; }
-  getPendingAction() { return this.pendingAction ? { ...this.pendingAction } : null; }
-  getLiveTranscript() { return this.liveTranscript; }
+  getEntities() { return this.state.entities; }
+  getGroups() { return [...this.state.groups]; }
+  getMessages() { return [...this.state.messages]; }
+  getPendingAction() { return this.state.pendingAction ? { ...this.state.pendingAction } : null; }
+  getLiveTranscript() { return this.state.liveTranscript; }
 
   setLiveTranscript(text: string) {
-    this.liveTranscript = text;
+    this.state.liveTranscript = text;
     this.notify();
   }
 
-  getUser() { return this.user; }
+  getUser() { return this.state.user; }
 
   /**
    * Get all inhabitants (organisms, plants, colonies) in a habitat
    */
   getHabitatInhabitants(habitatId: string): Entity[] {
-    return this.entities.filter(e => 
+    return this.state.entities.filter(e => 
       e.habitat_id === habitatId && 
       (e.type === EntityType.ORGANISM || e.type === EntityType.PLANT || e.type === EntityType.COLONY)
     );
@@ -271,22 +197,22 @@ class ConservatoryStore {
    * Get the habitat that an entity belongs to
    */
   getEntityHabitat(entityId: string): Entity | null {
-    const entity = this.entities.find(e => e.id === entityId);
+    const entity = this.state.entities.find(e => e.id === entityId);
     if (!entity || !entity.habitat_id) return null;
-    return this.entities.find(e => e.id === entity.habitat_id && e.type === EntityType.HABITAT) || null;
+    return this.state.entities.find(e => e.id === entity.habitat_id && e.type === EntityType.HABITAT) || null;
   }
 
   /**
    * Get all entities related to a given entity (tankmates, habitat, etc.)
    */
   getRelatedEntities(entityId: string): { habitat: Entity | null; tankmates: Entity[] } {
-    const entity = this.entities.find(e => e.id === entityId);
+    const entity = this.state.entities.find(e => e.id === entityId);
     if (!entity || !entity.habitat_id) {
       return { habitat: null, tankmates: [] };
     }
     
-    const habitat = this.entities.find(e => e.id === entity.habitat_id && e.type === EntityType.HABITAT) || null;
-    const tankmates = this.entities.filter(e => 
+    const habitat = this.state.entities.find(e => e.id === entity.habitat_id && e.type === EntityType.HABITAT) || null;
+    const tankmates = this.state.entities.filter(e => 
       e.habitat_id === entity.habitat_id && 
       e.id !== entityId &&
       (e.type === EntityType.ORGANISM || e.type === EntityType.PLANT || e.type === EntityType.COLONY)
@@ -299,7 +225,7 @@ class ConservatoryStore {
    * Calculate growth rate from observations
    */
   calculateGrowthRate(entityId: string, metric: string = 'growth'): { rate: number; trend: 'increasing' | 'decreasing' | 'stable'; dataPoints: number } | null {
-    const entity = this.entities.find(e => e.id === entityId);
+    const entity = this.state.entities.find(e => e.id === entityId);
     if (!entity || !entity.observations || entity.observations.length < 2) return null;
 
     const relevantObs = entity.observations
@@ -331,7 +257,7 @@ class ConservatoryStore {
    * Get growth timeline for an entity
    */
   getGrowthTimeline(entityId: string, metric: string = 'growth'): Array<{ timestamp: number; value: number; label: string; unit?: string }> {
-    const entity = this.entities.find(e => e.id === entityId);
+    const entity = this.state.entities.find(e => e.id === entityId);
     if (!entity || !entity.observations) return [];
 
     return entity.observations
@@ -366,7 +292,7 @@ class ConservatoryStore {
    * Uses date-based rotation for daily featured entity
    */
   getFeaturedSpecimen(): Entity | null {
-    const eligible = this.entities.filter(e => 
+    const eligible = this.state.entities.filter(e => 
       e.type !== EntityType.HABITAT && 
       e.enrichment_status === 'complete' &&
       (e.overflow?.discovery?.mechanism || e.overflow?.images?.[0])
@@ -387,7 +313,7 @@ class ConservatoryStore {
    * Based on: parameter stability, biodiversity, observation recency
    */
   getHabitatHealth(habitatId: string) {
-    const habitat = this.entities.find(e => e.id === habitatId && e.type === EntityType.HABITAT);
+    const habitat = this.state.entities.find(e => e.id === habitatId && e.type === EntityType.HABITAT);
     if (!habitat) return { score: 0, factors: { stability: 0, biodiversity: 0, recency: 0 }, details: [] };
 
     const inhabitants = this.getHabitatInhabitants(habitatId);
@@ -399,7 +325,7 @@ class ConservatoryStore {
    * Extracts interesting facts from enriched entities
    */
   getEcosystemFacts(limit: number = 5): string[] {
-    const enriched = this.entities.filter(e => 
+    const enriched = this.state.entities.filter(e => 
       e.enrichment_status === 'complete' && 
       e.overflow?.discovery?.mechanism
     );
@@ -417,7 +343,7 @@ class ConservatoryStore {
    * Generates a holistic snapshot of a habitat and its inhabitants
    */
   async generateHabitatSnapshot(habitatId: string) {
-    const habitat = this.entities.find(e => e.id === habitatId && e.type === EntityType.HABITAT);
+    const habitat = this.state.entities.find(e => e.id === habitatId && e.type === EntityType.HABITAT);
     if (!habitat) return null;
 
     const inhabitants = this.getHabitatInhabitants(habitatId);
@@ -448,8 +374,8 @@ class ConservatoryStore {
   }
 
   public get activeBiomeTheme(): BiomeTheme {
-    if (!this.activeHabitatId) return 'default';
-    const habitat = this.entities.find(e => e.id === this.activeHabitatId);
+    if (!this.state.activeHabitatId) return 'default';
+    const habitat = this.state.entities.find(e => e.id === this.state.activeHabitatId);
     if (!habitat) return 'default';
 
     const type = (habitat as any).details?.type?.toLowerCase() || '';
@@ -468,15 +394,15 @@ class ConservatoryStore {
    * This is used by the BlueprintScreen to visually map habitats on the rack.
    */
   assignHabitatToBlueprint(habitatId: string, blueprintCoords: HabitatOutline) {
-    const habitatIndex = this.entities.findIndex(e => e.id === habitatId && e.type === EntityType.HABITAT);
+    const habitatIndex = this.state.entities.findIndex(e => e.id === habitatId && e.type === EntityType.HABITAT);
     if (habitatIndex === -1) {
       logger.warn(`Attempted to assign blueprint to non-existent habitat: ${habitatId}`);
       return;
     }
 
-    const updatedHabitat = { ...this.entities[habitatIndex], blueprintCoords };
-    this.entities[habitatIndex] = updatedHabitat;
-    this.persistLocal();
+    const updatedHabitat = { ...this.state.entities[habitatIndex], blueprintCoords };
+    this.state.entities[habitatIndex] = updatedHabitat;
+    this.state.persistLocal();
     this.notify();
 
     // Optionally, persist to Firestore if needed for multi-device sync
@@ -509,8 +435,8 @@ class ConservatoryStore {
   }
 
   updateSlot(path: string, value: any) {
-    if (!this.pendingAction) return;
-    const newPending = JSON.parse(JSON.stringify(this.pendingAction)); 
+    if (!this.state.pendingAction) return;
+    const newPending = JSON.parse(JSON.stringify(this.state.pendingAction)); 
     const parts = path.split('.');
     let current: any = newPending;
     for (let i = 0; i < parts.length - 1; i++) {
@@ -518,24 +444,24 @@ class ConservatoryStore {
       current = current[parts[i]];
     }
     current[parts[parts.length - 1]] = value;
-    this.pendingAction = newPending;
-    this.persistLocal();
+    this.state.pendingAction = newPending;
+    this.state.persistLocal();
   }
 
   async processVoiceInput(text: string) {
     // Conversational Loop: If we are waiting for strategy confirmation
-    if (this.pendingAction?.status === 'STRATEGY_REQUIRED' && this.pendingAction.intentStrategy) {
+    if (this.state.pendingAction?.status === 'STRATEGY_REQUIRED' && this.state.pendingAction.intentStrategy) {
       const lowerText = text.toLowerCase().trim();
       const isYes = ['yes', 'correct', 'yeah', 'yep', 'do it', 'sure'].some(w => lowerText.includes(w));
       const isNo = ['no', 'nope', 'incorrect', 'wrong', 'wait'].some(w => lowerText.includes(w));
 
-      if (isYes && this.pendingAction.intentStrategy.suggestedCommand) {
-        const cmd = this.pendingAction.intentStrategy.suggestedCommand;
-        this.pendingAction = null; // Clear strategy and re-process as the suggested command
+      if (isYes && this.state.pendingAction.intentStrategy.suggestedCommand) {
+        const cmd = this.state.pendingAction.intentStrategy.suggestedCommand;
+        this.state.pendingAction = null; // Clear strategy and re-process as the suggested command
         return this.processVoiceInput(cmd);
       } else if (isNo) {
-        this.pendingAction = {
-          ...this.pendingAction,
+        this.state.pendingAction = {
+          ...this.state.pendingAction,
           status: 'ANALYZING',
           aiReasoning: "Understood. Please tell me more specifically what you'd like to do."
         };
@@ -544,7 +470,7 @@ class ConservatoryStore {
       }
     }
 
-    this.pendingAction = {
+    this.state.pendingAction = {
       status: 'ANALYZING',
       transcript: text,
       intent: null,
@@ -556,7 +482,7 @@ class ConservatoryStore {
 
 // processVoiceInput log removed
     try {
-      const currentEntities = [...this.entities]; 
+      const currentEntities = [...this.state.entities]; 
       
       // Test Hook for Stability
       const result = (window as any).mockGeminiParse 
@@ -573,7 +499,7 @@ class ConservatoryStore {
               entities: currentEntities.map(e => ({ name: e.name, type: e.type })) 
             });
         
-        this.pendingAction = {
+        this.state.pendingAction = {
           status: 'STRATEGY_REQUIRED',
           transcript: text,
           intent: result.intent,
@@ -581,7 +507,7 @@ class ConservatoryStore {
           aiReasoning: result.aiReasoning || "Input is complex or ambiguous.",
           candidates: []
         };
-        this.persistLocal();
+        this.state.persistLocal();
         return;
       }
 
@@ -591,7 +517,7 @@ class ConservatoryStore {
       
       const isBulk = ['all tanks', 'every tank', 'all habitats', 'every habitat'].some(phrase => text.toLowerCase().includes(phrase));
 
-      this.pendingAction = {
+      this.state.pendingAction = {
         status: 'CONFIRMING',
         transcript: text,
         intent: result.intent,
@@ -606,17 +532,17 @@ class ConservatoryStore {
         isBulk
       };
       
-      this.persistLocal();
+      this.state.persistLocal();
     } catch (e: any) {
       logAICall('error', "AI payload validation/parsing error", { error: e });
-      this.pendingAction = {
+      this.state.pendingAction = {
         status: 'ERROR',
         transcript: text,
         intent: null,
         aiReasoning: `Data Integrity Error: ${e.message}. The AI sent an unexpected response format.`,
         candidates: []
       };
-      this.persistLocal();
+      this.state.persistLocal();
     }
   }
 
@@ -633,321 +559,32 @@ class ConservatoryStore {
   }
 
   async commitPendingAction() {
-    if (!this.pendingAction) {
-      console.warn('[STORE] commitPendingAction: No pending action');
+    if (!this.state.pendingAction) {
+      logger.warn("CommitPendingAction: No pending action");
       return;
     }
     
-// Committing log removed
-    this.pendingAction.status = 'COMMITTING';
+    this.state.pendingAction.status = 'COMMITTING';
     this.notify();
 
-    const intent = this.pendingAction.intent || 'LOG_OBSERVATION';
-    const eventType = intent === 'ACCESSION_ENTITY' ? 'ENTITY_ACCESSIONED' : 
-                      intent === 'MODIFY_HABITAT' ? 'MODIFY_HABITAT' : 'OBSERVATION_LOGGED';
-
-    const safePayload = JSON.parse(JSON.stringify(this.pendingAction));
-    delete safePayload.status;
-    delete safePayload.isAmbiguous;
-
-    const tempId = uuidv4();
-    const domainEvent: DomainEvent = {
-      eventId: tempId,
-      type: eventType,
-      timestamp: new Date().toISOString(),
-      payload: safePayload,
-      metadata: {
-        source: 'voice',
-        originalTranscript: this.pendingAction.transcript,
-        enrichmentStatus: 'pending'
-      }
-    };
-
-    const appEvent: AppEvent = {
-      id: tempId,
-      timestamp: Date.now(),
-      raw_input: this.pendingAction.transcript,
-      status: EventStatus.PENDING, 
-      domain_event: domainEvent
-    };
-
-    this.events.unshift(appEvent);
-    this.pendingAction = null;
-    this.persistLocal();
-
-    const isTestMode = (window as any).__TEST_MODE__;
-    const batch = writeBatch(db);
-
     try {
-      let uploadedImageUrl: string | undefined;
-      if (safePayload.imageBase64) {
-        try {
-          // Always try upload if image is present (mocks will handle it in test)
-          uploadedImageUrl = await imageService.uploadImage(safePayload.imageBase64, 'observations');
-          safePayload.photoUrl = uploadedImageUrl; // Attach to payload too
-        } catch (e) {
-          logger.error({ err: e }, "Image upload failed, continuing without photo");
-        }
-      }
-
-      if (!isTestMode) {
-        const eventRef = doc(collection(db, 'events'));
-        batch.set(eventRef, this.cleanDataObject({
-          type: eventType,
-          timestamp: serverTimestamp(),
-          payload: safePayload,
-          metadata: domainEvent.metadata
-        }));
-      } else {
-        mockFirestore.addDoc('events', this.cleanDataObject({
-          type: eventType,
-          timestamp: Date.now(),
-          payload: safePayload,
-          metadata: domainEvent.metadata
-        }));
-      }
-
-      const newEntityIds: string[] = [];
-
-      if (intent === 'MODIFY_HABITAT') {
-        const habitatName = safePayload.habitatParams?.name || `New Habitat`;
-        const normalizedName = habitatName.toLowerCase().trim();
-        const existing = this.entities.find(e => 
-          e.type === EntityType.HABITAT && 
-          e.name.toLowerCase().trim() === normalizedName
-        );
-
-        if (!existing) {
-          const id = uuidv4();
-          const { name: _n, type: _t, ...otherHabitatParams } = safePayload.habitatParams || {};
-          const habitatData: any = this.cleanDataObject({
-            name: habitatName,
-            type: EntityType.HABITAT,
-            aliases: [],
-            traits: [{ type: 'AQUATIC', parameters: { salinity: safePayload.habitatParams?.type === 'Saltwater' ? 'marine' : 'fresh' } }],
-            confidence: 1,
-            enrichment_status: 'queued',
-            created_at: Date.now(),
-            updated_at: Date.now(),
-            overflow: {
-              ...otherHabitatParams,
-              illustration: uploadedImageUrl // Use photo as temporary illustration
-            }
-          });
-          
-          // Optimistic Update
-          this.entities.push({ id, ...habitatData });
-          if (!isTestMode) {
-            batch.set(doc(db, 'entities', id), habitatData);
-          } else {
-            mockFirestore.setDoc('entities', id, habitatData);
-          }
-        }
-      } else if (intent === 'ACCESSION_ENTITY') {
-        const targetHabitatId = safePayload.targetHabitatId || 
-          this.entities.find(e => e.type === EntityType.HABITAT && e.name.toLowerCase().trim() === (safePayload.targetHabitatName || '').toLowerCase().trim())?.id;
-
-        for (const cand of safePayload.candidates || []) {
-          const normalizedName = cand.commonName.toLowerCase().trim();
-          const existing = this.entities.find(e => 
-            e.habitat_id === targetHabitatId &&
-            e.name.toLowerCase().trim() === normalizedName
-          );
-
-          if (existing) {
-            // Hardening: Instead of skipping, update quantity
-            const updatedQuantity = (existing.quantity || 1) + (cand.quantity || 1);
-            this.updateEntity(existing.id, { quantity: updatedQuantity });
-            continue;
-          }
-
-          const id = uuidv4();
-          newEntityIds.push(id);
-          let type = EntityType.ORGANISM;
-          if (cand.traits?.some((t: any) => t.type === 'PHOTOSYNTHETIC')) type = EntityType.PLANT;
-          if (cand.traits?.some((t: any) => t.type === 'COLONY')) type = EntityType.COLONY;
-
-          const { commonName, scientificName, quantity, traits, ...otherCandidateProps } = cand;
-          let entityData: any = this.cleanDataObject({
-            name: cand.commonName,
-            scientificName: cand.scientificName, 
-            habitat_id: targetHabitatId,
-            traits: cand.traits || [],
-            type,
-            quantity: cand.quantity || 1,
-            confidence: 0.9,
-            aliases: [],
-            enrichment_status: 'queued',
-            created_at: Date.now(),
-            updated_at: Date.now(),
-            overflow: {
-              ...otherCandidateProps,
-              images: uploadedImageUrl ? [uploadedImageUrl] : []
-            }
-          });
-
-          // Win #8: Taxonomy Normalization
-          try {
-            entityData = await taxonomyService.autoEnrich(entityData);
-          } catch (e) {
-            logger.warn({ err: e }, "Auto-enrichment failed, falling back to queue");
-          }
-
-          // Optimistic Update
-          this.entities.push({ id, ...entityData });
-          if (!isTestMode) {
-            batch.set(doc(db, 'entities', id), entityData);
-          } else {
-            mockFirestore.setDoc('entities', id, entityData);
-          }
-        }
-      } else if (intent === 'LOG_OBSERVATION') {
-        // Win #8: Bulk Support
-        const targets: string[] = [];
-        if (safePayload.isBulk) {
-          targets.push(...this.entities.filter(e => e.type === EntityType.HABITAT).map(e => e.id));
-        } else {
-          const targetId = safePayload.targetHabitatId || 
-            this.entities.find(e => e.type === EntityType.HABITAT && e.name.toLowerCase().trim() === (safePayload.targetHabitatName || '').toLowerCase().trim())?.id;
-          if (targetId) targets.push(targetId);
-        }
-        
-        if (targets.length > 0 && safePayload.observationParams) {
-          for (const targetHabitatId of targets) {
-            // Get all organisms in this habitat
-            const habitatEntities = this.entities.filter(e => 
-              e.habitat_id === targetHabitatId && 
-              (e.type === EntityType.ORGANISM || e.type === EntityType.PLANT || e.type === EntityType.COLONY)
-            );
-            
-            // Create observation entries for each parameter
-            const timestamp = Date.now();
-            const observations: Array<{ timestamp: number; type: 'growth' | 'parameter' | 'note'; label: string; value: number; unit?: string }> = [];
-            
-            Object.entries(safePayload.observationParams).forEach(([key, value]) => {
-              if (typeof value === 'number') {
-                observations.push({
-                  timestamp,
-                  type: key === 'growth_cm' ? 'growth' : 'parameter',
-                  label: key,
-                  value,
-                  unit: key === 'temp' ? '°F' : key === 'pH' ? '' : key === 'growth_cm' ? 'cm' : undefined
-                });
-              }
-            });
-            
-            // If observationNotes exists, add as a note observation
-            if (safePayload.observationNotes) {
-              observations.push({
-                timestamp,
-                type: 'note',
-                label: 'note',
-                value: 0, // Notes don't have numeric values
-                unit: undefined
-              });
-            }
-            
-            // Append observations to each entity in the habitat
-            for (const entity of habitatEntities) {
-              const existingObs = entity.observations || [];
-              const updatedObs = [...existingObs, ...observations];
-              
-              const idx = this.entities.findIndex(e => e.id === entity.id);
-              if (idx !== -1) {
-                // --- Evolving Echo Logic (Task 3.1) ---
-                let newEchoUrl = this.entities[idx].currentEchoUrl;
-                const oldEchoHistory = this.entities[idx].echoHistory || [];
-
-                const growthObs = observations.find(o => o.type === 'growth');
-                if (growthObs && newEchoUrl) {
-                  try {
-                    newEchoUrl = await echoEngineService.evolveEcho(newEchoUrl, `${growthObs.label}: ${growthObs.value}${growthObs.unit}`);
-                    oldEchoHistory.push(this.entities[idx].currentEchoUrl!);
-                  } catch (e) {
-                    logger.error({ err: e, entityId: entity.id }, "Failed to evolve Echo for growth observation");
-                  }
-                }
-                // --- End Evolving Echo Logic ---
-
-                this.entities[idx] = { 
-                  ...this.entities[idx], 
-                  observations: updatedObs, 
-                  updated_at: timestamp,
-                  currentEchoUrl: newEchoUrl,
-                  echoHistory: oldEchoHistory,
-                };
-                
-                if (!isTestMode) {
-                  batch.update(doc(db, 'entities', entity.id), { 
-                    observations: updatedObs, 
-                    updated_at: timestamp,
-                    currentEchoUrl: newEchoUrl,
-                    echoHistory: oldEchoHistory,
-                  });
-                } else {
-                  mockFirestore.updateDoc('entities', entity.id, { 
-                    observations: updatedObs, 
-                    updated_at: timestamp,
-                    currentEchoUrl: newEchoUrl,
-                    echoHistory: oldEchoHistory,
-                  });
-                }
-              }
-            }
-
-            // Win #9: Habitat-Level Aggregation
-            // Also update the habitat entity itself with these observations
-            const habitatIdx = this.entities.findIndex(e => e.id === targetHabitatId);
-            if (habitatIdx !== -1) {
-              const hExistingObs = this.entities[habitatIdx].observations || [];
-              const hUpdatedObs = [...hExistingObs, ...observations];
-              this.entities[habitatIdx] = { ...this.entities[habitatIdx], observations: hUpdatedObs, updated_at: timestamp };
-              
-              if (!isTestMode) {
-                batch.update(doc(db, 'entities', targetHabitatId), { 
-                  observations: hUpdatedObs, 
-                  updated_at: timestamp 
-                });
-                
-                // Also write to sub-collection for easier querying
-                const obsColRef = collection(db, 'entities', targetHabitatId, 'habitat_observations');
-                observations.forEach(o => {
-                  const oRef = doc(obsColRef);
-                  batch.set(oRef, { ...o, timestamp: serverTimestamp() });
-                });
-              } else {
-                mockFirestore.updateDoc('entities', targetHabitatId, { 
-                  observations: hUpdatedObs, 
-                  updated_at: timestamp 
-                });
-              }
-            }
-          }
-        }
-      }
-
-
-      if (!isTestMode) {
-        await batch.commit();
-      }
-      this.persistLocal();
-
+      const { actionCommittalUseCase } = await import('./useCases/ActionCommittalUseCase');
+      await actionCommittalUseCase.execute(this.state.pendingAction, this.state.entities);
+      
+      this.state.pendingAction = null;
+      this.state.persistLocal();
       this.notify();
     } catch (e: any) {
-      console.error('[STORE] Commit error:', e);
-      logFirestore('error', "Persistence failed", { error: e });
-      const idx = this.events.findIndex(e => e.id === tempId);
-      if (idx !== -1) {
-        this.events[idx].status = EventStatus.ERROR;
-        this.events[idx].error_message = e.message;
-        this.persistLocal();
-      }
+      logger.error({ err: e }, "[STORE] Action committal failed");
+      this.state.pendingAction.status = 'ERROR';
+      this.state.pendingAction.aiReasoning = `Submission failed: ${e.message}`;
+      this.notify();
     }
   }
 
   discardPending() {
-    this.pendingAction = null;
-    this.persistLocal();
+    this.state.pendingAction = null;
+    this.state.persistLocal();
   }
 
   async updateEntity(id: string, updates: Partial<Entity>) {
@@ -956,10 +593,10 @@ class ConservatoryStore {
       if ((window as any).__TEST_MODE__) {
          logger.debug("Test mode: skipping Firestore update");
          // Apply update locally for consistency in test
-         const idx = this.entities.findIndex(e => e.id === id);
+         const idx = this.state.entities.findIndex(e => e.id === id);
          if (idx !== -1) {
-            this.entities[idx] = { ...this.entities[idx], ...updates, updated_at: Date.now() };
-            this.persistLocal();
+            this.state.entities[idx] = { ...this.state.entities[idx], ...updates, updated_at: Date.now() };
+            this.state.persistLocal();
          }
          return;
       }
@@ -968,10 +605,10 @@ class ConservatoryStore {
       await setDoc(entityRef, { ...updates, updated_at: Date.now() }, { merge: true });
     } catch (e) {
       logFirestore('error', "Failed to update entity in Firestore", { documentId: id, error: e });
-      const idx = this.entities.findIndex(e => e.id === id);
+      const idx = this.state.entities.findIndex(e => e.id === id);
       if (idx !== -1) {
-        this.entities[idx] = { ...this.entities[idx], ...updates, updated_at: Date.now() };
-        this.persistLocal();
+        this.state.entities[idx] = { ...this.state.entities[idx], ...updates, updated_at: Date.now() };
+        this.state.persistLocal();
       }
     }
   }
@@ -983,8 +620,8 @@ class ConservatoryStore {
       await setDoc(doc(db, 'groups', id), group);
     } catch (e) {
       logFirestore('error', "Failed to add group to Firestore", { error: e });
-      this.groups.push(group);
-      this.persistLocal();
+      this.state.groups.push(group);
+      this.state.persistLocal();
     }
     return group;
   }
@@ -1003,7 +640,7 @@ class ConservatoryStore {
       ? [{ type: 'PHOTOSYNTHETIC' as const, parameters: {} }]
       : [{ type: 'INVERTEBRATE' as const, parameters: {} }]);
 
-    this.pendingAction = {
+    this.state.pendingAction = {
       status: 'CONFIRMING',
       transcript: `[Photo ID] ${candidateName}`,
       intent: 'ACCESSION_ENTITY',
@@ -1023,15 +660,15 @@ class ConservatoryStore {
 
     // If we have a library match, we can skip future enrichment for this candidate
     if (canonicalMatch) {
-      this.pendingAction.candidates[0] = {
-        ...this.pendingAction.candidates[0],
+      this.state.pendingAction.candidates[0] = {
+        ...this.state.pendingAction.candidates[0],
         ...canonicalMatch.enrichmentData.details,
         ...canonicalMatch.enrichmentData.overflow,
         enrichment_status: 'complete'
       } as any;
     }
 
-    this.persistLocal();
+    this.state.persistLocal();
   }
 
   /**
@@ -1056,7 +693,7 @@ class ConservatoryStore {
         traits: []
       }));
 
-      this.pendingAction = {
+      this.state.pendingAction = {
         status: 'CONFIRMING',
         transcript: `[Rack Scan] ${habitatName}`,
         intent: 'MODIFY_HABITAT',
@@ -1067,7 +704,7 @@ class ConservatoryStore {
       };
       
       this.notify();
-      this.persistLocal();
+      this.state.persistLocal();
     }
   }
 
@@ -1076,11 +713,11 @@ class ConservatoryStore {
   // -------------------------------------------------------------------
 
   getResearchProgress(): ResearchProgress {
-    return this._researchProgress;
+    return this.state.researchProgress;
   }
 
   resetResearchProgress() {
-    this._researchProgress = {
+    this.state.researchProgress = {
       isActive: false,
       totalEntities: 0,
       completedEntities: 0,
@@ -1094,22 +731,22 @@ class ConservatoryStore {
   }
 
   private setResearchProgress(update: Partial<ResearchProgress>) {
-    this._researchProgress = { ...this._researchProgress, ...update };
+    this.state.researchProgress = { ...this.state.researchProgress, ...update };
     this.notify();
   }
 
   /**
    * Enrich a single entity using the new Scrape-Then-Synthesize pipeline.
    */
-  async enrichEntity(entityId: string) {
-    const entity = this.entities.find(e => e.id === entityId);
+  async enrichEntity(entityId: string, onStage?: (stage: ResearchStage['name']) => void): Promise<string> {
+    const entity = this.state.entities.find(e => e.id === entityId);
     if (!entity) return;
 
     this.updateEntity(entityId, { enrichment_status: 'pending' });
     logEnrichment('info', `Starting enrichment for ${entity.name}`, { entityId, entityName: entity.name });
 
     try {
-        const { enrichmentService } = await import('./enrichmentService');
+        const { enrichmentService } = await import('../enrichmentService');
         const enrichedData = await enrichmentService.enrichEntity(entity);
         
         // Commit all enrichment data
@@ -1121,7 +758,7 @@ class ConservatoryStore {
         logEnrichment('info', `Enrichment complete for ${entity.name}`, { entityId, entityName: entity.name });
         
         // Show success toast with discovery preview
-        const { toastManager } = await import('../components/Toast');
+        const { toastManager } = await import('../../components/Toast');
         const discoveryPreview = enrichedData.description?.split('.')[0];
         const message = discoveryPreview 
           ? `🧬 ${entity.name}: ${discoveryPreview}...`
@@ -1137,13 +774,13 @@ class ConservatoryStore {
           }
         });
         
-        return enrichedData;
+        return enrichedData.description?.split('.')[0] || "Successfully enriched.";
 
     } catch (e: any) {
         logEnrichment('error', `Enrichment failed for ${entity.name}`, { entityId, entityName: entity.name, error: e });
         this.updateEntity(entityId, { enrichment_status: 'failed' });
         
-        const { toastManager } = await import('../components/Toast');
+        const { toastManager } = await import('../../components/Toast');
         toastManager.error(
           `Enrichment failed for ${entity.name}: ${e.message || 'Unknown error'}`,
           8000
@@ -1160,7 +797,7 @@ class ConservatoryStore {
   async deepResearch(entityIds: string[]) {
     // Filter to only entities that need research
     const toResearch = entityIds.filter(id => {
-      const e = this.entities.find(ent => ent.id === id);
+      const e = this.state.entities.find(ent => ent.id === id);
       return e && (e.enrichment_status === 'queued' || e.enrichment_status === 'none' || e.enrichment_status === 'failed');
     });
 
@@ -1188,7 +825,7 @@ class ConservatoryStore {
 
     for (let i = 0; i < toResearch.length; i++) {
       const entityId = toResearch[i];
-      const entity = this.entities.find(e => e.id === entityId);
+      const entity = this.state.entities.find(e => e.id === entityId);
       if (!entity) continue;
 
       // Create stage tracker for this entity
@@ -1201,13 +838,13 @@ class ConservatoryStore {
       this.setResearchProgress({
         currentEntityIndex: i,
         currentEntity: { id: entityId, name: entity.name },
-        entityResults: [...this._researchProgress.entityResults, entityProgress]
+        entityResults: [...this.state.researchProgress.entityResults, entityProgress]
       });
 
       try {
         const discoverySnippet = await this.enrichEntity(entityId, (stage) => {
           // Update the current entity's stage status
-          const results = [...this._researchProgress.entityResults];
+          const results = [...this.state.researchProgress.entityResults];
           const current = results[results.length - 1];
           if (current) {
             current.stages = current.stages.map(s => {
@@ -1223,7 +860,7 @@ class ConservatoryStore {
         });
 
         // Mark all stages complete for this entity
-        const results = [...this._researchProgress.entityResults];
+        const results = [...this.state.researchProgress.entityResults];
         const current = results[results.length - 1];
         if (current) {
           current.stages = current.stages.map(s =>
@@ -1237,22 +874,22 @@ class ConservatoryStore {
         // Accumulate discovery
         if (discoverySnippet) {
           this.setResearchProgress({
-            completedEntities: this._researchProgress.completedEntities + 1,
+            completedEntities: this.state.researchProgress.completedEntities + 1,
             entityResults: results,
             discoveries: [
-              ...this._researchProgress.discoveries,
+              ...this.state.researchProgress.discoveries,
               { entityId, entityName: entity.name, mechanism: discoverySnippet }
             ]
           });
         } else {
           this.setResearchProgress({
-            completedEntities: this._researchProgress.completedEntities + 1,
+            completedEntities: this.state.researchProgress.completedEntities + 1,
             entityResults: results
           });
         }
       } catch (e) {
         // Mark stages as error for this entity
-        const results = [...this._researchProgress.entityResults];
+        const results = [...this.state.researchProgress.entityResults];
         const current = results[results.length - 1];
         if (current) {
           current.stages = current.stages.map(s =>
@@ -1262,7 +899,7 @@ class ConservatoryStore {
           );
         }
         this.setResearchProgress({
-          completedEntities: this._researchProgress.completedEntities + 1,
+          completedEntities: this.state.researchProgress.completedEntities + 1,
           entityResults: results
         });
         logger.error({ entityId, error: e }, "Research entity failed");
@@ -1278,8 +915,8 @@ class ConservatoryStore {
     };
     this.setResearchProgress(finalState);
     logger.info({ 
-      discoveryCount: this._researchProgress.discoveries.length,
-      successCount: this._researchProgress.completedEntities 
+      discoveryCount: this.state.researchProgress.discoveries.length,
+      successCount: this.state.researchProgress.completedEntities 
     }, "Deep research batch process complete");
   }
 
@@ -1287,7 +924,7 @@ class ConservatoryStore {
    * Convenience: Deep Research all queued entities in a specific habitat.
    */
   async deepResearchHabitat(habitatId: string) {
-    const targets = this.entities
+    const targets = this.state.entities
       .filter(e => e.habitat_id === habitatId && e.type !== EntityType.HABITAT)
       .filter(e => e.enrichment_status === 'queued' || e.enrichment_status === 'none' || e.enrichment_status === 'failed')
       .map(e => e.id);
@@ -1298,7 +935,7 @@ class ConservatoryStore {
    * Convenience: Deep Research all queued entities globally.
    */
   async deepResearchAll() {
-    const targets = this.entities
+    const targets = this.state.entities
       .filter(e => e.type !== EntityType.HABITAT)
       .filter(e => e.enrichment_status === 'queued' || e.enrichment_status === 'none' || e.enrichment_status === 'failed')
       .map(e => e.id);
@@ -1312,11 +949,11 @@ class ConservatoryStore {
       text,
       timestamp: Date.now()
     };
-    this.messages.push(userMsg);
+    this.state.messages.push(userMsg);
     this.notify();
 
     try {
-      const history = this.messages.slice(-8);
+      const history = this.state.messages.slice(-8);
       const response = (window as any).mockGeminiChat 
         ? await (window as any).mockGeminiChat(text, history, options)
         : await geminiService.chat(text, history, options);
@@ -1329,22 +966,22 @@ class ConservatoryStore {
         isThinking: options.thinking,
         groundingLinks: response.links
       };
-      this.messages.push(aiMsg);
-      this.persistLocal();
+      this.state.messages.push(aiMsg);
+      this.state.persistLocal();
     } catch (e: any) {
-      this.messages.push({
+      this.state.messages.push({
         id: uuidv4(),
         role: 'model',
         text: `Consultant Error: ${e.message}`,
         timestamp: Date.now()
       });
-      this.persistLocal();
+      this.state.persistLocal();
     }
   }
 
   clearMessages() {
-    this.messages = [];
-    this.persistLocal();
+    this.state.messages = [];
+    this.state.persistLocal();
   }
 
   // -------------------------------------------------------------------
@@ -1357,7 +994,7 @@ class ConservatoryStore {
    */
   async deleteAccount() {
     try {
-      if (!this.user) throw new Error("No user signed in");
+      if (!this.state.user) throw new Error("No user signed in");
       
       // 1. Clear Data
       await this.clearDatabase();
@@ -1369,7 +1006,7 @@ class ConservatoryStore {
       }
       
       this.logout();
-      logger.info({ userId: this.user.uid }, "User account deleted successfully");
+      logger.info({ userId: this.state.user.uid }, "User account deleted successfully");
       return true;
     } catch (e: any) {
       logger.error({ error: e, code: e.code }, "Failed to delete account");
@@ -1381,7 +1018,7 @@ class ConservatoryStore {
   }
 
   async testConnection(): Promise<{ success: boolean; error?: string; code?: ConnectionStatus }> {
-    return connectionService.testConnection(this.user);
+    return connectionService.testConnection(this.state.user as any);
   }
 }
 

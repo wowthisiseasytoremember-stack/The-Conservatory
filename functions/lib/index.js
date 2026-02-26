@@ -32,12 +32,16 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.proxy = void 0;
+exports.perplexityProxy = exports.proxy = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const logger = __importStar(require("firebase-functions/logger"));
 const generative_ai_1 = require("@google/generative-ai");
-// Use Gen 2 functions for better performance/concurrency
+const axios_1 = __importDefault(require("axios"));
+// Gemini Proxy
 exports.proxy = (0, https_1.onRequest)({ cors: true, secrets: ["GEMINI_API_KEY"] }, async (req, res) => {
     if (req.method === 'OPTIONS') {
         res.status(200).send();
@@ -48,7 +52,6 @@ exports.proxy = (0, https_1.onRequest)({ cors: true, secrets: ["GEMINI_API_KEY"]
         return;
     }
     const { model, contents, config, systemInstruction } = req.body;
-    // Access environment variable securely
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
         logger.error("GEMINI_API_KEY missing");
@@ -66,16 +69,45 @@ exports.proxy = (0, https_1.onRequest)({ cors: true, secrets: ["GEMINI_API_KEY"]
             generationConfig: config
         });
         const response = await result.response;
-        const text = response.text();
-        const candidates = response.candidates;
         res.status(200).json({
-            text,
-            candidates
+            text: response.text(),
+            candidates: response.candidates || []
         });
     }
     catch (error) {
         logger.error("AI Proxy Error", error);
         res.status(500).json({ error: error.message || 'Internal Server Error' });
+    }
+});
+// Perplexity Proxy
+exports.perplexityProxy = (0, https_1.onRequest)({ cors: true, secrets: ["PERPLEXITY_API_KEY"] }, async (req, res) => {
+    var _a, _b, _c;
+    if (req.method === 'OPTIONS') {
+        res.status(200).send();
+        return;
+    }
+    if (req.method !== 'POST') {
+        res.status(405).json({ error: 'Method Not Allowed' });
+        return;
+    }
+    const apiKey = process.env.PERPLEXITY_API_KEY;
+    if (!apiKey) {
+        logger.error("PERPLEXITY_API_KEY missing");
+        res.status(500).json({ error: 'Server misconfiguration' });
+        return;
+    }
+    try {
+        const response = await axios_1.default.post('https://api.perplexity.ai/chat/completions', req.body, {
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        res.status(200).json(response.data);
+    }
+    catch (error) {
+        logger.error("Perplexity Proxy Error", ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || error.message);
+        res.status(((_b = error.response) === null || _b === void 0 ? void 0 : _b.status) || 500).json(((_c = error.response) === null || _c === void 0 ? void 0 : _c.data) || { error: 'Internal Server Error' });
     }
 });
 //# sourceMappingURL=index.js.map
