@@ -1098,10 +1098,9 @@ class ConservatoryStore {
   }
 
   /**
-   * Enrich a single entity with stage callbacks for progress tracking.
-   * Can be called standalone (single entity) or by deepResearch (batch).
+   * Enrich a single entity using the new Scrape-Then-Synthesize pipeline.
    */
-  async enrichEntity(entityId: string, onStage?: (stage: ResearchStage['name']) => void) {
+  async enrichEntity(entityId: string) {
     const entity = this.entities.find(e => e.id === entityId);
     if (!entity) return;
 
@@ -1110,132 +1109,19 @@ class ConservatoryStore {
 
     try {
         const { enrichmentService } = await import('./enrichmentService');
-        const { speciesLibrary } = await import('./speciesLibrary');
-        const searchQuery = entity.scientificName || entity.name;
+        const enrichedData = await enrichmentService.enrichEntity(entity);
         
-        // Check species library cache first (quick win!)
-        const cached = await speciesLibrary.get(searchQuery, entity.overflow?.morphVariant);
-        if (cached) {
-          logEnrichment('info', `Using cached data for ${searchQuery}`, { entityId, entityName: entity.name, stage: 'cache_hit' });
-          this.updateEntity(entityId, {
-            details: cached.enrichmentData.details || entity.details,
-            overflow: { ...(entity.overflow || {}), ...(cached.enrichmentData.overflow || {}) },
-            enrichment_status: 'complete'
-          });
-          
-          // Show instant enrichment toast
-          const { toastManager } = await import('../components/Toast');
-          const discoveryPreview = cached.enrichmentData.overflow?.discovery?.mechanism?.split('.')[0];
-          const message = discoveryPreview 
-            ? `✨ ${entity.name} enriched instantly: ${discoveryPreview}...`
-            : `✨ ${entity.name} enriched instantly from library`;
-          
-          toastManager.success(message, 4000, {
-            action: {
-              label: 'View Details',
-              onClick: () => {
-                // Trigger entity detail modal (will be handled by App.tsx)
-                (window as any).__openEntityDetail?.(entityId);
-              }
-            }
-          });
-          
-          return cached.enrichmentData.overflow?.discovery?.mechanism?.split('.')[0] + '.';
-        }
-        
-        // Not in cache - proceed with full enrichment
-        const mergedDetails: any = { ...entity.details };
-        const currentOverflow = { ...(entity.overflow || {}) };
-
-        // Stage 1: Local Library (fastest — check first)
-        onStage?.('library');
-        let libraryHit = false;
-        if (entity.type === EntityType.PLANT) {
-          const scraperData = await enrichmentService.scrapeAquasabi(searchQuery);
-          if (scraperData) {
-            libraryHit = true;
-            mergedDetails.description = scraperData.description || mergedDetails.description;
-            mergedDetails.notes = scraperData.tips || mergedDetails.notes;
-            mergedDetails.origin = scraperData.origin || mergedDetails.origin;
-            if (scraperData.images?.length) {
-              currentOverflow.referenceImages = scraperData.images;
-            }
-          }
-        }
-
-        // Stage 2: GBIF Taxonomy
-        onStage?.('gbif');
-        const gbif = await enrichmentService.searchGBIF(searchQuery);
-        if (gbif) {
-          mergedDetails.origin = mergedDetails.origin || gbif.origin;
-          if (gbif.taxonomy) {
-            currentOverflow.taxonomy = gbif.taxonomy;
-            if (!entity.scientificName && gbif.scientificName) {
-              this.updateEntity(entityId, { scientificName: gbif.scientificName });
-            }
-          }
-        }
-
-        // Stage 3: Wikipedia
-        onStage?.('wikipedia');
-        const wiki = await enrichmentService.searchWikipedia(searchQuery);
-        if (wiki?.description) {
-          mergedDetails.description = mergedDetails.description || wiki.description;
-        }
-
-        // Stage 4: iNaturalist
-        onStage?.('inaturalist');
-        const inat = await enrichmentService.searchiNaturalist(searchQuery);
-        if (inat) {
-          if (inat.commonName && !entity.aliases?.includes(inat.commonName)) {
-            this.updateEntity(entityId, {
-              aliases: [...(entity.aliases || []), inat.commonName]
-            });
-          }
-          if (inat.images?.length && !currentOverflow.referenceImages?.length) {
-            currentOverflow.referenceImages = inat.images;
-          }
-        }
-
-        // Stage 5: AI Discovery (biological secrets)
-        onStage?.('discovery');
-        let discoverySnippet: string | undefined;
-        try {
-          const discovery = await geminiService.getBiologicalDiscovery(entity.name);
-          if (discovery) {
-            currentOverflow.discovery = discovery;
-            discoverySnippet = discovery.mechanism?.split('.')[0] + '.';
-          }
-        } catch (e) {
-          logEnrichment('warn', `Discovery generation failed for ${entity.name}`, { entityId, entityName: entity.name, error: e });
-          // Non-fatal — continue with enrichment
-        }
-
         // Commit all enrichment data
         this.updateEntity(entityId, {
-          details: mergedDetails,
-          overflow: currentOverflow,
+          enrichedData,
           enrichment_status: 'complete'
-        });
-        
-        // Save to species library for future use
-        await speciesLibrary.save({
-          id: searchQuery.toLowerCase() + (entity.overflow?.morphVariant ? `:${entity.overflow.morphVariant}` : ''),
-          commonName: entity.name,
-          scientificName: entity.scientificName,
-          morphVariant: entity.overflow?.morphVariant,
-          enrichmentData: {
-            details: mergedDetails,
-            overflow: currentOverflow
-          },
-          enrichedAt: new Date()
         });
         
         logEnrichment('info', `Enrichment complete for ${entity.name}`, { entityId, entityName: entity.name });
         
-        // Show success toast with discovery preview and "View Details" button
+        // Show success toast with discovery preview
         const { toastManager } = await import('../components/Toast');
-        const discoveryPreview = discoverySnippet || currentOverflow.discovery?.mechanism?.split('.')[0];
+        const discoveryPreview = enrichedData.description?.split('.')[0];
         const message = discoveryPreview 
           ? `🧬 ${entity.name}: ${discoveryPreview}...`
           : `Enriched ${entity.name}`;
@@ -1250,13 +1136,12 @@ class ConservatoryStore {
           }
         });
         
-        return discoverySnippet;
+        return enrichedData;
 
     } catch (e: any) {
         logEnrichment('error', `Enrichment failed for ${entity.name}`, { entityId, entityName: entity.name, error: e });
         this.updateEntity(entityId, { enrichment_status: 'failed' });
         
-        // Show error toast with retry option
         const { toastManager } = await import('../components/Toast');
         toastManager.error(
           `Enrichment failed for ${entity.name}: ${e.message || 'Unknown error'}`,

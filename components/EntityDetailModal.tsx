@@ -29,6 +29,63 @@ interface GbifData {
   status: string;
 }
 
+const TaxonomyTree = ({ taxonomy }: { taxonomy?: any }) => {
+  if (!taxonomy) return null;
+  const levels = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'];
+  return (
+    <div className="bg-slate-800/30 border border-slate-700/50 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Globe2 className="w-4 h-4 text-emerald-400" />
+        <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-400">Taxonomy</h3>
+      </div>
+      <div className="space-y-1">
+        {levels.map(level => taxonomy[level] && (
+          <div key={level} className="flex justify-between text-xs">
+            <span className="text-slate-500 capitalize">{level}</span>
+            <span className="text-slate-200 font-mono">{taxonomy[level]}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const TradeInfoSection = ({ tradeInfo }: { tradeInfo?: any }) => {
+  if (!tradeInfo || (!tradeInfo.tradeName && !tradeInfo.cultivar && !tradeInfo.morph)) return null;
+  return (
+    <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Tag className="w-4 h-4 text-purple-400" />
+        <h3 className="text-xs font-bold uppercase tracking-widest text-purple-400">Trade Information</h3>
+      </div>
+      <div className="space-y-2">
+        {tradeInfo.tradeName && (
+          <div className="text-sm"><span className="text-slate-500 text-xs uppercase block">Trade Name</span>{tradeInfo.tradeName}</div>
+        )}
+        {tradeInfo.cultivar && (
+          <div className="text-sm"><span className="text-slate-500 text-xs uppercase block">Cultivar</span>{tradeInfo.cultivar}</div>
+        )}
+        {tradeInfo.morph && (
+          <div className="text-sm"><span className="text-slate-500 text-xs uppercase block">Morph/Variant</span>{tradeInfo.morph}</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const CareGuideSection = ({ careGuide }: { careGuide?: string }) => {
+  if (!careGuide) return null;
+  return (
+    <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Sparkles className="w-4 h-4 text-blue-400" />
+        <h3 className="text-xs font-bold uppercase tracking-widest text-blue-400">Care Guide</h3>
+      </div>
+      <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{careGuide}</p>
+    </div>
+  );
+};
+
 export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({ 
   entity, groups, onClose, onUpdate, onAddGroup 
 }) => {
@@ -316,8 +373,36 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
 
         <div className="p-6 space-y-8 overflow-y-auto no-scrollbar flex-1">
           
-          {/* GBIF Scientific Context Card */}
-          {(entity.type === 'ORGANISM' || entity.type === 'PLANT') && (
+          {/* NEW: Enrichment Pipeline Data (Task 2.2) */}
+          {entity.enrichedData && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {entity.enrichedData.source === 'GENUS_FALLBACK' && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+                  <p className="text-[10px] text-amber-200/70 italic">
+                    Precise match not found. Data inferred from the <span className="font-bold text-amber-400">{entity.enrichedData.inferredFrom}</span> genus.
+                  </p>
+                </div>
+              )}
+              
+              <TaxonomyTree taxonomy={entity.enrichedData.taxonomy} />
+              <TradeInfoSection tradeInfo={entity.enrichedData.tradeInfo} />
+              <CareGuideSection careGuide={entity.enrichedData.careGuide} />
+
+              {entity.enrichedData.description && (
+                <section className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-emerald-400" />
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Curator's Description</h3>
+                  </div>
+                  <p className="text-sm text-slate-300 leading-relaxed">{entity.enrichedData.description}</p>
+                </section>
+              )}
+            </div>
+          )}
+
+          {/* GBIF Scientific Context Card (Fallback/Legacy) */}
+          {!entity.enrichedData && (entity.type === 'ORGANISM' || entity.type === 'PLANT') && (
             <div className="bg-slate-800/30 border border-slate-700/50 rounded-xl p-4 relative overflow-hidden">
                <div className="absolute top-0 right-0 p-2 opacity-10">
                  <Globe2 className="w-24 h-24" />
