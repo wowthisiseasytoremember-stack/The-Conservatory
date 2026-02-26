@@ -76,10 +76,14 @@ export const SettingsScreen: React.FC = () => {
                 if (window.confirm("CRITICAL WARNING: This will permanently DELETE your account and ALL data. This cannot be undone.")) {
                   const { store } = require('../../services/store');
                   store.deleteAccount().then(() => {
-                    alert("Account deleted.");
+                    import('../../components/Toast').then(({ toastManager }) => {
+                      toastManager.success("Account deleted.");
+                    });
                     navigate('/');
                   }).catch((e: any) => {
-                    alert(e.message);
+                    import('../../components/Toast').then(({ toastManager }) => {
+                      toastManager.error(e.message);
+                    });
                   });
                 }
               }}

@@ -24,7 +24,9 @@ export const ShareCuratorsCardModal: React.FC<ShareCuratorsCardModalProps> = ({
       });
     } catch (error) {
       console.error("Error sharing card:", error);
-      alert("Failed to share card. Make sure you're on a supported device.");
+      import('../components/Toast').then(({ toastManager }) => {
+        toastManager.error("Failed to share card. Make sure you're on a supported device.");
+      });
     }
   };
 

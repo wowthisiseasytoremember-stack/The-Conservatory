@@ -114,7 +114,9 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
       setIsShareModalOpen(true);
     } catch (error) {
       console.error(error);
-      alert("Failed to generate Curator's Card.");
+      import('../components/Toast').then(({ toastManager }) => {
+        toastManager.error("Failed to generate Curator's Card.");
+      });
     }
   };
 

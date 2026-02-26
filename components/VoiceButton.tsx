@@ -18,7 +18,9 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onResult, onTranscript
   const startRecording = useCallback(() => {
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Speech recognition not supported in this browser.");
+      import('../components/Toast').then(({ toastManager }) => {
+        toastManager.error("Speech recognition not supported in this browser.");
+      });
       return;
     }
 
