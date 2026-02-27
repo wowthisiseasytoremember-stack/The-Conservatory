@@ -38,7 +38,7 @@ const App: React.FC = () => {
   } = useConservatoryStore();
   
   // Local UI State
-  const [user, setUser] = useState<any>({ uid: 'dev-user' }); // Simple dev auth for now
+  const [user, setUser] = useState<any>(null); // Initialized as null, will be set by Firebase Auth
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('unknown');

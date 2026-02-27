@@ -20,6 +20,8 @@ import { calculateHabitatHealth, calculateParameterTrend } from '../ecosystem';
 import { STORAGE_KEYS } from '../../src/constants';
 import { safeStorage } from '../../src/utils/storage';
 import { echoEngineService } from '../EchoEngine';
+import { entityRepo } from './repositories/EntityRepository';
+import { eventRepo } from './repositories/EventRepository';
 
 import { IConservatoryState, ConservatoryState } from './storeState';
 
@@ -127,8 +129,6 @@ class ConservatoryStore {
     this.clearSync();
 
     try {
-      const { entityRepo } = require('./repositories/EntityRepository');
-      const { eventRepo } = require('./repositories/EventRepository');
 
       const unsubEvents = eventRepo.subscribeToEvents((cloudEvents: AppEvent[]) => {
         const localPending = this.state.events.filter(e => e.status === EventStatus.PENDING || e.status === EventStatus.ERROR);
