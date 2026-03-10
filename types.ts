@@ -46,43 +46,21 @@ export interface Taxonomy {
 }
 
 export interface TradeInfo {
-  tradeName?: string; // "Thai Constellation"
-  cultivar?: string;  // A specific cultivated variety
-  morph?: string;     // A specific color or pattern variant, e.g., "Flame"
-}
-
-export interface Distribution {
-  nativeRange?: string; // Text description
-  nativeRangeMapUrl?: string; // URL to a map image
-}
-
-export interface HabitatOutline {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface RawDataLake {
-  entityId: string;
-  scrapedAt: number;
-  sources: {
-    url: string;
-    content: string; // The raw HTML or text
-    status: 'success' | 'error';
-    error?: string;
-  }[];
+  tradeName?: string;
+  cultivar?: string;
+  morph?: string;
+  originRegion?: string;
 }
 
 export interface EnrichedData {
-  source: EnrichmentSource; // CRITICAL: Tracks how we got this data
+  source: EnrichmentSource;
   taxonomy?: Taxonomy;
   tradeInfo?: TradeInfo;
-  distribution?: Distribution;
-  description?: string; // From Wikipedia
-  careGuide?: string; // From Aquasabi/Flowgrow
-  imageUrl?: string; // From iNaturalist or other sources
-  inferredFrom?: string; // e.g., "Inferred from Ludwigia genus"
+  description?: string; // Museum-style prose
+  careGuide?: string; // Detailed care narrative
+  funFacts?: string[];
+  confidence: number;
+  enrichedAt?: string;
 }
 // --- END NEW ENRICHMENT TYPES ---
 

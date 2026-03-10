@@ -29,6 +29,10 @@
         "function": "proxy"
       },
       {
+        "source": "/api/enrich",
+        "function": "enrichEntity"
+      },
+      {
         "source": "/api/perplexity",
         "function": "perplexityProxy"
       },

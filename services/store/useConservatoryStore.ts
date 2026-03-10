@@ -119,8 +119,19 @@ export const useConservatoryStore = create<ConservatoryState>((set, get) => ({
       
       if (!entity) throw new Error("Entity not found for enrichment");
 
-      const { enrichmentService } = await import('../enrichmentService');
-      const enrichedData = await enrichmentService.enrichEntity(entity);
+      logger.info({ entityName: entity.name }, "Triggering Deep Research Scraper");
+
+      const response = await fetch('/api/enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entityName: entity.scientificName || entity.name })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Enrichment service failed: ${response.statusText}`);
+      }
+
+      const { enrichedData } = await response.json();
       
       await updateDoc(entityRef, {
         enrichedData,
@@ -132,7 +143,7 @@ export const useConservatoryStore = create<ConservatoryState>((set, get) => ({
 
       // Show Success Toast
       const { toastManager } = await import('../../components/Toast');
-      const preview = enrichedData.description?.split('.')[0];
+      const preview = enrichedData.description?.split('.')[0] || "Dossier synthesized.";
       toastManager.success(`🧬 Enriched ${entity.name}: ${preview}...`, 8000);
 
       return enrichedData;

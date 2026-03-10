@@ -1,19 +1,14 @@
-
-import React from 'react';
 import { motion } from 'framer-motion';
-import { Microscope, Sparkles, BookOpen, Waves, Flower2 } from 'lucide-react';
+import { Microscope, Sparkles, BookOpen } from 'lucide-react';
 
 export const HeroSection = () => {
   return (
-    <section className="relative overflow-hidden py-24 px-6 mb-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl">
-      {/* Decorative aquatic pattern overlay */}
-      <div className="absolute inset-0 opacity-[0.03]" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 10c0 22.091-17.909 40-40 40S-30 67.909-30 50 10 10 50 10z' fill='%2310b981' fill-opacity='1'/%3E%3C/svg%3E")`,
-        backgroundSize: '100px 100px',
+    <section className="relative overflow-hidden gradient-hero py-24 px-6 rounded-3xl mb-12">
+      {/* Decorative botanical pattern overlay */}
+      <div className="absolute inset-0 opacity-[0.04]" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5c0 13.807-11.193 25-25 25S-20 43.807-20 30 30 5 30 5z' fill='%23fff' fill-opacity='1'/%3E%3C/svg%3E")`,
+        backgroundSize: '60px 60px',
       }} />
-
-      {/* Gold top accent */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-gold-muted via-gold to-gold-muted z-20" />
 
       <div className="relative max-w-4xl mx-auto text-center">
         <motion.div
@@ -22,41 +17,41 @@ export const HeroSection = () => {
           transition={{ duration: 0.8, ease: 'easeOut' }}
           className="space-y-6"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-[10px] font-bold uppercase tracking-[0.2em]">
-            <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-            AI-Powered Curator Pipeline
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/5 text-primary-foreground/80 text-sm font-body">
+            <Sparkles className="w-3.5 h-3.5" />
+            AI-Powered Research & Stewardship
           </div>
 
-          <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1] tracking-tight">
-            The Living
+          <h1 className="font-display text-5xl md:text-6xl lg:text-7xl font-bold text-primary-foreground leading-[1.1] tracking-tight">
+            The Digital
             <br />
             <span className="italic text-gold">Conservatory</span>
           </h1>
 
-          <p className="text-lg md:text-xl text-slate-400 font-body max-w-2xl mx-auto leading-relaxed">
-            An intelligent research engine that cross-references authoritative sources, 
-            synthesizes biological truth, and curates your digital ecosystem with museum-grade placards.
+          <p className="text-lg md:text-xl text-primary-foreground/75 font-body max-w-2xl mx-auto leading-relaxed">
+            A high-fidelity archive for aquatic enthusiasts. 
+            Curate your collection, document biological wonders, and bridge the gap to the ancestral wild.
           </p>
 
-          <div className="flex flex-wrap justify-center gap-8 pt-4 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+          <div className="flex flex-wrap justify-center gap-8 pt-4 text-primary-foreground/60 text-sm font-body">
             <div className="flex items-center gap-2">
-              <Microscope className="w-4 h-4 text-gold" />
-              Multi-Source Synthesis
+              <Microscope className="w-4 h-4" />
+              Cultivar Synthesis
             </div>
             <div className="flex items-center gap-2">
-              <Waves className="w-4 h-4 text-cyan-400" />
-              Aquatic Specialization
+              <Sparkles className="w-4 h-4" />
+              Living Placards
             </div>
             <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-emerald-400" />
-              Living Field Journal
+              <BookOpen className="w-4 h-4" />
+              Stewardship Journal
             </div>
           </div>
         </motion.div>
       </div>
 
       {/* Bottom fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-slate-950/50 to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background/20 to-transparent" />
     </section>
   );
 };

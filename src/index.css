@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700&display=swap');
 @import "tailwindcss";
 
 @plugin "tailwindcss-animate";
@@ -5,150 +6,133 @@
 @custom-variant dark (&:is(.dark *));
 
 @layer base {
+  :root {
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body: 'Source Sans 3', system-ui, sans-serif;
+
+    /* Museum ivory palette (Organism Atlas default) */
+    --background: 40 30% 96%;
+    --foreground: 150 25% 12%;
+
+    --card: 40 25% 93%;
+    --card-foreground: 150 25% 12%;
+
+    --popover: 40 30% 96%;
+    --popover-foreground: 150 25% 12%;
+
+    /* Deep botanical green */
+    --primary: 152 45% 22%;
+    --primary-foreground: 40 30% 96%;
+
+    /* Warm parchment */
+    --secondary: 38 28% 88%;
+    --secondary-foreground: 150 25% 15%;
+
+    --muted: 38 20% 90%;
+    --muted-foreground: 150 10% 42%;
+
+    /* Aged gold accent */
+    --accent: 38 65% 52%;
+    --accent-foreground: 150 25% 10%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 40 30% 96%;
+
+    --border: 38 18% 82%;
+    --input: 38 18% 82%;
+    --ring: 152 45% 22%;
+
+    --radius: 0.5rem;
+
+    /* Custom tokens */
+    --surface-specimen: 40 22% 90%;
+    --gold: 38 65% 52%;
+    --gold-muted: 38 40% 72%;
+    --botanical: 152 45% 22%;
+    --botanical-light: 152 30% 35%;
+    --botanical-subtle: 152 20% 85%;
+    --earth: 25 30% 30%;
+    --earth-light: 25 20% 55%;
+    --ivory: 40 30% 96%;
+  }
+
+  .dark {
+    /* Deep Slate/Botanical Dark Mode */
+    --background: 150 25% 7%;
+    --foreground: 40 25% 90%;
+
+    --card: 150 20% 10%;
+    --card-foreground: 40 25% 90%;
+
+    --popover: 150 20% 10%;
+    --popover-foreground: 40 25% 90%;
+
+    --primary: 152 40% 40%;
+    --primary-foreground: 40 30% 96%;
+
+    --secondary: 150 15% 15%;
+    --secondary-foreground: 40 25% 85%;
+
+    --muted: 150 12% 18%;
+    --muted-foreground: 40 15% 55%;
+
+    --accent: 38 55% 50%;
+    --accent-foreground: 150 25% 10%;
+
+    --destructive: 0 62% 35%;
+    --destructive-foreground: 40 30% 96%;
+
+    --border: 150 12% 18%;
+    --input: 150 12% 18%;
+    --ring: 152 40% 40%;
+
+    --surface-specimen: 150 15% 12%;
+    --gold: 38 55% 50%;
+    --gold-muted: 38 30% 40%;
+    --botanical: 152 40% 40%;
+    --botanical-light: 152 30% 50%;
+    --botanical-subtle: 152 15% 18%;
+    --earth: 25 20% 50%;
+    --earth-light: 25 15% 35%;
+    --ivory: 40 20% 12%;
+  }
+
   body {
-    @apply bg-[#0c120c] text-[#e2e8f0] font-sans;
+    @apply bg-background text-foreground font-body;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
   }
 }
 
-.font-serif {
-  font-family: 'Playfair Display', serif;
-}
-
-/* Hide scrollbar for Chrome, Safari and Opera */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-/* Hide scrollbar for IE, Edge and Firefox */
-.no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-}
-
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-
-  /* Organism Atlas - Museum Gold Tokens */
-  --color-gold: oklch(0.7 0.15 80);
-  --color-gold-muted: oklch(0.6 0.1 80);
-  --color-botanical: oklch(0.3 0.1 160);
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Source Sans 3', system-ui, sans-serif;
   
-  /* Placard Shadow */
+  --color-gold: hsl(var(--gold));
+  --color-gold-muted: hsl(var(--gold-muted));
+  --color-botanical: hsl(var(--botanical));
+  --color-botanical-light: hsl(var(--botanical-light));
+  --color-botanical-subtle: hsl(var(--botanical-subtle));
+  --color-earth: hsl(var(--earth));
+  --color-earth-light: hsl(var(--earth-light));
+  --color-ivory: hsl(var(--ivory));
+  --color-specimen: hsl(var(--surface-specimen));
+  
   --shadow-placard: 0 1px 3px rgba(0,0,0,0.05), 0 8px 24px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,215,0,0.1);
   --shadow-gold: 0 0 20px rgba(255,215,0,0.15);
 }
 
-:root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.147 0.004 49.25);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.147 0.004 49.25);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.147 0.004 49.25);
-  --primary: oklch(0.216 0.006 56.043);
-  --primary-foreground: oklch(0.985 0.001 106.423);
-  --secondary: oklch(0.97 0.001 106.424);
-  --secondary-foreground: oklch(0.216 0.006 56.043);
-  --muted: oklch(0.97 0.001 106.424);
-  --muted-foreground: oklch(0.553 0.013 58.071);
-  --accent: oklch(0.97 0.001 106.424);
-  --accent-foreground: oklch(0.216 0.006 56.043);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.923 0.003 48.717);
-  --input: oklch(0.923 0.003 48.717);
-  --ring: oklch(0.709 0.01 56.259);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0.001 106.423);
-  --sidebar-foreground: oklch(0.147 0.004 49.25);
-  --sidebar-primary: oklch(0.216 0.006 56.043);
-  --sidebar-primary-foreground: oklch(0.985 0.001 106.423);
-  --sidebar-accent: oklch(0.97 0.001 106.424);
-  --sidebar-accent-foreground: oklch(0.216 0.006 56.043);
-  --sidebar-border: oklch(0.923 0.003 48.717);
-  --sidebar-ring: oklch(0.709 0.01 56.259);
-}
+/* Hide scrollbar */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-.dark {
-  --background: oklch(0.147 0.004 49.25);
-  --foreground: oklch(0.985 0.001 106.423);
-  --card: oklch(0.216 0.006 56.043);
-  --card-foreground: oklch(0.985 0.001 106.423);
-  --popover: oklch(0.216 0.006 56.043);
-  --popover-foreground: oklch(0.985 0.001 106.423);
-  --primary: oklch(0.923 0.003 48.717);
-  --primary-foreground: oklch(0.216 0.006 56.043);
-  --secondary: oklch(0.268 0.007 34.298);
-  --secondary-foreground: oklch(0.985 0.001 106.423);
-  --muted: oklch(0.268 0.007 34.298);
-  --muted-foreground: oklch(0.709 0.01 56.259);
-  --accent: oklch(0.268 0.007 34.298);
-  --accent-foreground: oklch(0.985 0.001 106.423);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.553 0.013 58.071);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.216 0.006 56.043);
-  --sidebar-foreground: oklch(0.985 0.001 106.423);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0.001 106.423);
-  --sidebar-accent: oklch(0.268 0.007 34.298);
-  --sidebar-accent-foreground: oklch(0.985 0.001 106.423);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.553 0.013 58.071);
-}
-
-/* Custom Placard Utility */
+/* Custom Atlas Utilities */
 .gradient-placard {
-  background: linear-gradient(
-    180deg,
-    var(--color-card) 0%,
-    var(--color-background) 100%
-  );
+  background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--surface-specimen)) 100%);
 }
 
+.gradient-hero {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--botanical-light)) 50%, hsl(var(--earth)) 100%);
+}
