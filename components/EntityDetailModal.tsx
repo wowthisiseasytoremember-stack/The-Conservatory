@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Entity, EntityGroup } from '../types';
 import { 
   X, Tag, Trash2, FolderOpen, AlertTriangle, Loader2, 
-  Sparkles, Info, Leaf, Sun, Droplets, Lightbulb, Globe,
+  Sparkles, Leaf, Sun, Droplets, Lightbulb, 
   Search, BookOpen, HeartPulse
 } from 'lucide-react';
 import { GrowthChart } from './GrowthChart';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShareCuratorsCardModal } from './ShareCuratorsCardModal';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Dialog, DialogContent } from './ui/dialog';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { useConservatoryStore } from '../services/store/useConservatoryStore';
 import { artifactGeneratorService } from '../services/ArtifactGenerator';
+import { SpecimenPlate } from './SpecimenPlate';
 
 interface EntityDetailModalProps {
   entity: Entity;
@@ -102,34 +103,33 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
         <div className="h-1.5 w-full bg-gradient-to-r from-gold-muted via-gold to-gold-muted z-20" />
 
         <div className="gradient-placard min-h-full">
-          {/* Hero Header */}
-          <div className="relative h-48 md:h-64 overflow-hidden">
-            {entity.currentEchoUrl ? (
-              <img src={entity.currentEchoUrl} className="w-full h-full object-cover opacity-60 grayscale-[0.2]" alt={entity.name} />
-            ) : (
-              <div className="w-full h-full bg-botanical/10 flex items-center justify-center">
-                 <Leaf className="w-16 h-16 text-botanical/20" />
-              </div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
-            
-            <div className="absolute bottom-6 left-6 right-6">
-               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                  <h1 className="text-4xl md:text-5xl font-display font-bold italic text-foreground leading-none mb-2">
-                    {entity.scientificName || entity.name}
-                  </h1>
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="text-[10px] border-gold/30 text-gold bg-gold/5 uppercase tracking-widest">
-                      {entity.type}
-                    </Badge>
-                    {entity.scientificName && entity.name !== entity.scientificName && (
-                      <span className="text-sm text-muted-foreground font-body italic">
-                        {entity.name}
-                      </span>
-                    )}
-                  </div>
-               </motion.div>
-            </div>
+          {/* Hero Header - Field Journal Style */}
+          <div className="p-6 pb-0">
+            <SpecimenPlate 
+              src={entity.currentEchoUrl || "https://images.unsplash.com/photo-1516550135131-fe3dcb0bedc7?auto=format&fit=crop&q=80&w=800"} 
+              scientificName={entity.scientificName || entity.name}
+              catalogId={entity.id}
+              className="w-full max-w-sm mx-auto transform rotate-1 shadow-2xl"
+              caption={entity.delightfulSummary}
+            />
+          </div>
+
+          <div className="px-6 pt-8 pb-4 text-center">
+             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <h1 className="text-4xl md:text-5xl font-display font-bold italic text-foreground leading-none mb-2">
+                  {entity.scientificName || entity.name}
+                </h1>
+                <div className="flex items-center justify-center gap-3">
+                  <Badge variant="outline" className="text-[10px] border-gold/30 text-gold bg-gold/5 uppercase tracking-widest px-3">
+                    {entity.type}
+                  </Badge>
+                  {entity.scientificName && entity.name !== entity.scientificName && (
+                    <span className="text-sm text-muted-foreground font-body italic opacity-60">
+                      Commonly: {entity.name}
+                    </span>
+                  )}
+                </div>
+             </motion.div>
           </div>
 
           {/* Navigation */}
@@ -168,19 +168,19 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
                   )}
 
                   {/* Main Prose */}
-                  <div className="space-y-6">
+                  <div className="space-y-6 text-center">
                     <section className="space-y-2">
-                      <div className="flex items-center gap-2 text-gold">
+                      <div className="flex items-center justify-center gap-2 text-gold">
                         <BookOpen className="w-4 h-4" />
                         <h3 className="text-[10px] font-bold uppercase tracking-widest">Specimen Narrative</h3>
                       </div>
-                      <p className="text-base md:text-lg text-foreground/90 font-body leading-relaxed italic">
+                      <p className="text-base md:text-lg text-foreground/90 font-body leading-relaxed italic max-w-lg mx-auto">
                         {enriched?.description || entity.delightfulSummary || "Synthesizing botanical history..."}
                       </p>
                     </section>
 
                     {enriched?.careGuide && (
-                      <section className="bg-botanical/5 border border-botanical/20 rounded-2xl p-5 space-y-3">
+                      <section className="bg-botanical/5 border border-botanical/20 rounded-2xl p-5 space-y-3 text-left">
                         <div className="flex items-center gap-2 text-botanical">
                           <Leaf className="w-4 h-4" />
                           <h3 className="text-[10px] font-bold uppercase tracking-widest">Biological Context</h3>
@@ -250,7 +250,7 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
                           return null;
                       }).filter(Boolean)}
                       <StatCard icon={<HeartPulse className="w-3 h-3"/>} label="Metabolism" value="Stable" accentColor="emerald" />
-                      <StatCard icon={<Globe className="w-3 h-3"/>} label="Origin" value={enriched?.tradeInfo?.originRegion || "Unknown"} accentColor="gold" />
+                      <StatCard icon={<Globe className="w-4 h-4"/>} label="Origin" value={enriched?.tradeInfo?.originRegion || "Unknown"} accentColor="gold" />
                    </div>
 
                    {/* Growth Chart */}
@@ -363,6 +363,7 @@ export const EntityDetailModal: React.FC<EntityDetailModalProps> = ({
     </Dialog>
   );
 };
+
 function TrendingUp(props: any) {
   return (
     <svg
@@ -379,6 +380,27 @@ function TrendingUp(props: any) {
     >
       <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
       <polyline points="17 6 23 6 23 12" />
+    </svg>
+  )
+}
+
+function Globe(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+      <path d="M2 12h20" />
     </svg>
   )
 }

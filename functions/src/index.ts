@@ -19,8 +19,7 @@ async function scrapePage(url: string, source: string): Promise<{
       timeout: 15000,
     });
     
-    let html = resp.data;
-    if (typeof html !== 'string') html = JSON.stringify(html);
+    const html = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
 
     // Strip HTML tags for a rough plain-text extraction
     const text = html
@@ -83,7 +82,7 @@ Return ONLY valid JSON matching this schema:
 
 // ─── Firebase Functions ───────────────────────────────────────────────────
 
-export const enrichEntity = onRequest({ cors: true, secrets: ["GEMINI_API_KEY"] }, async (req, res) => {
+export const enrichEntity = onRequest({ cors: true, secrets: ["GEMINI_API_KEY"] }, async (req: any, res: any) => {
   if (req.method === 'OPTIONS') {
     res.status(200).send();
     return;
@@ -134,7 +133,7 @@ export const enrichEntity = onRequest({ cors: true, secrets: ["GEMINI_API_KEY"] 
     ]);
 
     const enrichedData = JSON.parse(result.response.text());
-    enrichedData.enrichedAt = new Date().toISOString();
+    (enrichedData as any).enrichedAt = new Date().toISOString();
 
     res.status(200).json({ enrichedData, rawDataLake: { entityName, pages: scrapeResults } });
   } catch (error: any) {
@@ -143,8 +142,8 @@ export const enrichEntity = onRequest({ cors: true, secrets: ["GEMINI_API_KEY"] 
   }
 });
 
-// Gemini Proxy (Existing)
-export const proxy = onRequest({ cors: true, secrets: ["GEMINI_API_KEY"] }, async (req, res) => {
+// Gemini Proxy
+export const proxy = onRequest({ cors: true, secrets: ["GEMINI_API_KEY"] }, async (req: any, res: any) => {
   if (req.method === 'OPTIONS') {
     res.status(200).send();
     return;
@@ -187,8 +186,8 @@ export const proxy = onRequest({ cors: true, secrets: ["GEMINI_API_KEY"] }, asyn
   }
 });
 
-// Perplexity Proxy (Existing)
-export const perplexityProxy = onRequest({ cors: true, secrets: ["PERPLEXITY_API_KEY"] }, async (req, res) => {
+// Perplexity Proxy
+export const perplexityProxy = onRequest({ cors: true, secrets: ["PERPLEXITY_API_KEY"] }, async (req: any, res: any) => {
   if (req.method === 'OPTIONS') {
     res.status(200).send();
     return;
