@@ -45,14 +45,19 @@ try {
 
 // 2. Project-specific credentials
 const firebaseConfig = {
-  apiKey: localConfig?.apiKey || getEnv('VITE_FIREBASE_API_KEY') || "AIzaSyDf7A1EK0AlQckJjkLbI93Lu1EvWIH-Rws",
-  authDomain: localConfig?.authDomain || getEnv('VITE_FIREBASE_AUTH_DOMAIN') || "the-conservatory-d858b.firebaseapp.com",
-  projectId: localConfig?.projectId || getEnv('VITE_FIREBASE_PROJECT_ID') || "the-conservatory-d858b",
-  storageBucket: localConfig?.storageBucket || getEnv('VITE_FIREBASE_STORAGE_BUCKET') || "the-conservatory-d858b.firebasestorage.app",
-  messagingSenderId: localConfig?.messagingSenderId || getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID') || "814637797090",
-  appId: localConfig?.appId || getEnv('VITE_FIREBASE_APP_ID') || "1:814637797090:web:feb2cda6730397ca9f18bb",
-  measurementId: localConfig?.measurementId || getEnv('VITE_FIREBASE_MEASUREMENT_ID') || "G-1JKV6H7WDL"
+  apiKey: localConfig?.apiKey || getEnv('VITE_FIREBASE_API_KEY'),
+  authDomain: localConfig?.authDomain || getEnv('VITE_FIREBASE_AUTH_DOMAIN'),
+  projectId: localConfig?.projectId || getEnv('VITE_FIREBASE_PROJECT_ID'),
+  storageBucket: localConfig?.storageBucket || getEnv('VITE_FIREBASE_STORAGE_BUCKET'),
+  messagingSenderId: localConfig?.messagingSenderId || getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
+  appId: localConfig?.appId || getEnv('VITE_FIREBASE_APP_ID'),
+  measurementId: localConfig?.measurementId || getEnv('VITE_FIREBASE_MEASUREMENT_ID')
 };
+
+// Validate required config
+if (!firebaseConfig.apiKey && !import.meta.env.DEV) {
+  console.error("CRITICAL: Firebase API Key missing. Ensure VITE_FIREBASE_API_KEY is set in .env");
+}
 
 console.log("Using Firebase Config:", firebaseConfig);
 
@@ -97,4 +102,4 @@ export {
 };
 
 export { ref, uploadString, getDownloadURL };
-export type { FieldValue, User };
+export type { FieldValue, User as FirebaseUser };

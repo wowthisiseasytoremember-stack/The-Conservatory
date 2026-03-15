@@ -134,3 +134,38 @@ export const BiologicalDiscoverySchema = z.object({
   evolutionaryAdvantage: z.string(),
   synergyNote: z.string()
 });
+
+/**
+ * Enrichment Types & Schemas
+ */
+export const TaxonomySchema = z.object({
+  kingdom: z.string().optional(),
+  phylum: z.string().optional(),
+  class: z.string().optional(),
+  order: z.string().optional(),
+  family: z.string().optional(),
+  genus: z.string().optional(),
+  species: z.string().optional(),
+});
+
+export const TradeInfoSchema = z.object({
+  tradeName: z.string().optional(),
+  cultivar: z.string().optional(),
+  morph: z.string().optional(),
+});
+
+export const DistributionSchema = z.object({
+  nativeRange: z.string().optional(),
+  nativeRangeMapUrl: z.string().optional(),
+});
+
+export const EnrichedDataSchema = z.object({
+  source: z.enum(['DIRECT_MATCH', 'GENUS_FALLBACK', 'NONE']),
+  taxonomy: TaxonomySchema.optional(),
+  tradeInfo: TradeInfoSchema.optional(),
+  distribution: DistributionSchema.optional(),
+  description: z.string().optional(),
+  careGuide: z.string().optional(),
+  imageUrl: z.string().optional(),
+  inferredFrom: z.string().optional(),
+});

@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Entity, EntityType } from '../types';
 import { Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface FeaturedSpecimenCardProps {
   entities: Entity[];
@@ -65,7 +66,9 @@ export const FeaturedSpecimenCard: React.FC<FeaturedSpecimenCardProps> = ({
                          null;
 
   return (
-    <button
+    <motion.button
+      whileHover={{ y: -4, scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
       onClick={() => {
         if (onEntityClick) {
           onEntityClick(featuredEntity);
@@ -73,49 +76,46 @@ export const FeaturedSpecimenCard: React.FC<FeaturedSpecimenCardProps> = ({
           navigate(`/species/${featuredEntity.id}`);
         }
       }}
-      className="w-full relative rounded-2xl overflow-hidden group cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] mb-6"
+      className="w-full relative rounded-2xl overflow-hidden group cursor-pointer transition-all shadow-placard hover:shadow-gold mb-6"
       style={{
         aspectRatio: '16/9',
         minHeight: '200px'
       }}
     >
+      {/* Gold top accent */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-gold-muted via-gold to-gold-muted z-20" />
+
       {/* Hero Image */}
       {heroImage ? (
         <img
           src={heroImage}
           alt={featuredEntity.name}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-emerald-900/40 via-slate-900/60 to-slate-800/80" />
       )}
 
       {/* Dark Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/30" />
-
-      {/* Emerald Accent Glow */}
-      <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-           style={{
-             boxShadow: 'inset 0 0 60px rgba(16, 185, 129, 0.1)'
-           }}
-      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent z-10" />
 
       {/* Content */}
       <div className="absolute inset-0 flex flex-col justify-end p-6 z-10">
         {/* Discovery Badge */}
         {discoveryText && (
           <div className="mb-3 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
-            <span className="text-xs text-emerald-400/90 font-semibold uppercase tracking-wider">
-              Discovery
+            <Sparkles className="w-4 h-4 text-gold animate-pulse" />
+            <span className="text-[10px] text-gold font-bold uppercase tracking-[0.2em]">
+              Daily Discovery
             </span>
           </div>
         )}
 
         {/* Common Name - Serif Typography */}
-        <h2 className="text-3xl font-serif font-bold text-white mb-1 drop-shadow-lg">
+        <h2 className="text-3xl font-serif font-bold text-white mb-1 drop-shadow-lg italic">
           {featuredEntity.name}
         </h2>
+
 
         {/* Scientific Name - Italic */}
         {scientificName && (
@@ -140,6 +140,6 @@ export const FeaturedSpecimenCard: React.FC<FeaturedSpecimenCardProps> = ({
 
       {/* Subtle border glow on hover */}
       <div className="absolute inset-0 border-2 border-emerald-500/0 group-hover:border-emerald-500/30 rounded-2xl transition-all duration-300" />
-    </button>
+    </motion.button>
   );
 };

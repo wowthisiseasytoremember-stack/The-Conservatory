@@ -1,21 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700&display=swap');
+
 @import "tailwindcss";
 
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Source Sans 3', system-ui, sans-serif;
+
+  --color-background: hsl(40 30% 96%);
+  --color-foreground: hsl(150 25% 12%);
+
+  --color-card: hsl(40 25% 93%);
+  --color-card-foreground: hsl(150 25% 12%);
+
+  --color-popover: hsl(40 30% 96%);
+  --color-popover-foreground: hsl(150 25% 12%);
+
+  --color-primary: hsl(152 45% 22%);
+  --color-primary-foreground: hsl(40 30% 96%);
+
+  --color-secondary: hsl(38 28% 88%);
+  --color-secondary-foreground: hsl(150 25% 15%);
+
+  --color-muted: hsl(38 20% 90%);
+  --color-muted-foreground: hsl(150 10% 42%);
+
+  --color-accent: hsl(38 65% 52%);
+  --color-accent-foreground: hsl(150 25% 10%);
+
+  --color-destructive: hsl(0 72% 51%);
+  --color-destructive-foreground: hsl(40 30% 96%);
+
+  --color-border: hsl(38 18% 82%);
+  --color-input: hsl(38 18% 82%);
+  --color-ring: hsl(152 45% 22%);
+
+  --radius-lg: 0.5rem;
+  --radius-md: calc(0.5rem - 2px);
+  --radius-sm: calc(0.5rem - 4px);
+
+  --color-gold: hsl(38 65% 52%);
+  --color-gold-muted: hsl(38 40% 72%);
+  --color-botanical: hsl(152 45% 22%);
+  --color-botanical-light: hsl(152 30% 35%);
+  --color-botanical-subtle: hsl(152 20% 85%);
+  --color-earth: hsl(25 30% 30%);
+  --color-earth-light: hsl(25 20% 55%);
+  --color-ivory: hsl(40 30% 96%);
+}
+
 @layer base {
+  * {
+    @apply border-border;
+  }
+
   body {
-    @apply bg-[#0c120c] text-[#e2e8f0] font-sans;
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
   }
 }
 
-.font-serif {
-  font-family: 'Playfair Display', serif;
-}
+@layer utilities {
+  .gradient-placard {
+    background: linear-gradient(
+      180deg,
+      hsl(40 25% 93%) 0%,
+      hsl(40 22% 90%) 100%
+    );
+  }
 
-/* Hide scrollbar for Chrome, Safari and Opera */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-/* Hide scrollbar for IE, Edge and Firefox */
-.no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  .gradient-hero {
+    background: linear-gradient(
+      135deg,
+      hsl(152 45% 22%) 0%,
+      hsl(152 30% 35%) 50%,
+      hsl(25 30% 30%) 100%
+    );
+  }
+
+  .shadow-placard {
+    box-shadow: 
+      0 1px 3px rgba(0, 0, 0, 0.05),
+      0 8px 24px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 215, 0, 0.1);
+  }
 }

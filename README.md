@@ -1,31 +1,66 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# The Digital Conservatory (Unified)
 
-# Run and deploy your AI Studio app
+A high-fidelity digital archive and research tool for aquatic curators. This project merges the "Soul" of **Organism Atlas** (UI/UX, Research Synthesis) with the "Muscle" of **The Conservatory** (Firebase, Capacitor, Vision/Voice, Domain Logic) into a single, premium experience.
 
-This contains everything you need to run your app locally.
+## 🏛️ The Vision: "The Modern Museum"
+We do not manage "inventory"; we curate and protect **living artifacts**. The Conservatory transforms your home ecosystem into a documented "Digital Cabinet of Curiosities," connecting every specimen back to its ancestral origins in the wild.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1xG-F7VEkiylEB0D9HVLxQEhL4JXUqtLK
+---
 
-## Run Locally
+## ✨ Key Features
 
-**Prerequisites:** Node.js
+### 1. Living Placards (The Unveiling)
+When you add a specimen (like *Anubias nana 'Pinto'*), the app **unveils** a high-fidelity "Museum Placard." Using bold typography and editorial-style layouts, it tells the specific story of that cultivar's history, care, and origin.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 2. Deep Research Scraper (The Research Engine)
+Instead of generic AI guessing, our **Deep Research** engine scrapes authoritative sources (Wikipedia, Aquasabi, Flowgrow, Tropica) to synthesize a professional botanical/zoological dossier for every specimen.
 
-## Architecture
+### 3. Stewardship Journal (Enriched Observation)
+Log your observations via Voice or Photo. The AI enriches your journal entries with "Curator's Notes," providing scientific context and validating your progress as a steward of nature.
 
-- **Backend**: Standardized on Firebase Functions for AI proxying (Intent parsing, Vision). This replaces the legacy Vercel proxy for better integration with Firestore.
-- **Store**: Uses a centralized Zustand store with persistence to Firestore and LocalStorage.
-- **Testing**: Comprehensive E2E coverage with Playwright and unit testing with Vitest.
+### 4. Cross-Platform (Web & Mobile)
+Built with **React 19** and **Capacitor 8**, providing a fluid web experience and a native-feeling mobile app for iOS and Android.
 
-## Project Status
+---
 
-**Stable & Deployed**.
-See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for details on the testing strategy and deployed version.
-See [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md) for the roadmap.
+## 🛠️ Technical Stack
+
+- **Frontend**: React (Vite + TypeScript)
+- **Styling**: Tailwind CSS 4 (Museum Ivory & Botanical Green Palette)
+- **State**: Zustand (Modular Store) + TanStack Query
+- **Backend**: Firebase (Firestore, Auth, Storage, Cloud Functions)
+- **Native**: Capacitor 8
+- **AI**: Google Gemini 2.0 Flash (Synthesis & Intent Parsing)
+
+---
+
+## 🚀 Getting Started
+
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
+
+2. **Firebase Setup**:
+   Ensure you have a `.env.local` file with your Firebase credentials and `GEMINI_API_KEY`.
+
+3. **Run Development Server**:
+   ```bash
+   npm run dev
+   ```
+
+4. **Deploy Functions**:
+   ```bash
+   cd functions
+   npm run deploy
+   ```
+
+---
+
+## 📂 Documentation
+- `VISION_MANDATE.md`: The core philosophy and user experience principles.
+- `TECHNICAL_BLUEPRINT.md`: The architectural map of the unified system.
+- `docs/ARCHIVE/`: Legacy documentation and planning materials.
+
+---
+*Created for the serious curator. Protecting life, documenting wonder.*

@@ -137,7 +137,7 @@ describe('Master Workflow: Photo -> Accession -> Enrichment -> Observation -> He
           overflow: { ...e.overflow, discovery: { mechanism: 'Guanine crystals refract light.' } }
         });
       }
-      return 'Guanine crystals refract light.';
+      return 'Guanine crystals refract light.' as any;
     });
 
     await store.deepResearch([fish!.id]);

@@ -8,12 +8,52 @@ import {
   AdvisoryReportSchema, 
   IntentStrategySchema, 
   EcosystemNarrativeSchema, 
-  BiologicalDiscoverySchema 
+  BiologicalDiscoverySchema,
+  EnrichedDataSchema
 } from '../src/schemas.js';
 import { plantService } from './plantService.js';
 import { logger, logAICall, logCache } from './logger.js';
 import { trackCost, calculateCost } from './costTracker.js';
-import { LRUCache } from '../utils/LRUCache.js';
+import { LRUCache } from 'lru-cache';
+
+const ENRICHED_DATA_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    source: { type: Type.STRING, enum: ['DIRECT_MATCH', 'GENUS_FALLBACK', 'NONE'] },
+    taxonomy: {
+      type: Type.OBJECT,
+      properties: {
+        kingdom: { type: Type.STRING },
+        phylum: { type: Type.STRING },
+        class: { type: Type.STRING },
+        order: { type: Type.STRING },
+        family: { type: Type.STRING },
+        genus: { type: Type.STRING },
+        species: { type: Type.STRING }
+      }
+    },
+    tradeInfo: {
+      type: Type.OBJECT,
+      properties: {
+        tradeName: { type: Type.STRING },
+        cultivar: { type: Type.STRING },
+        morph: { type: Type.STRING }
+      }
+    },
+    distribution: {
+      type: Type.OBJECT,
+      properties: {
+        nativeRange: { type: Type.STRING },
+        nativeRangeMapUrl: { type: Type.STRING }
+      }
+    },
+    description: { type: Type.STRING },
+    careGuide: { type: Type.STRING },
+    imageUrl: { type: Type.STRING },
+    inferredFrom: { type: Type.STRING }
+  },
+  required: ["source"]
+};
 
 const withTimeout = <T>(promise: Promise<T>, ms: number = 45000): Promise<T> => {
   return Promise.race([
@@ -184,9 +224,64 @@ async function callProxy(config: {
 }
 
 // Intent parsing cache with LRU eviction (max 100 entries)
-const intentCache = new LRUCache<string, any>(100);
+const intentCache = new LRUCache<string, any>({ max: 100 });
 
 export const geminiService = {
+  /**
+   * Synthesize enrichment data from a raw dossier (gemini-pro-latest)
+   */
+  async synthesizeEnrichmentData(dossier: any, researchContext?: string): Promise<any> {
+    const contents = `Synthesize this raw data into a structured digital placard: ${JSON.stringify(dossier)}
+                     ${researchContext ? `\n\nDEEP RESEARCH CONTEXT:\n${researchContext}` : ''}`;
+    
+    const response = await withTimeout(callProxy({
+      model: "gemini-pro-latest",
+      operation: 'synthesize_enrichment',
+      contents,
+      systemInstruction: "You are the Principal Curator of The Conservatory. Read the raw scraped data and extract structured info. If direct match not found, use genus fallback.",
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: ENRICHED_DATA_SCHEMA,
+      }
+    }));
+    const data = JSON.parse(response.text || '{}');
+    return EnrichedDataSchema.parse(data);
+  },
+
+  /**
+   * Story Synthesis: Turn deep research into a museum-grade narrative (Living Placard)
+   */
+  async curateLivingPlacard(entity: Entity, researchSummary: string): Promise<{ narrative: string; biologicalStory: string; discovery: string }> {
+    const response = await withTimeout(callProxy({
+      model: "gemini-pro-latest",
+      operation: 'curate_living_placard',
+      contents: `Entity: ${entity.name}. Research Summary: ${researchSummary}`,
+      systemInstruction: `
+        You are a Master Storyteller and Biological Curator. 
+        Take the provided research and craft a "Living Placard" narrative.
+        
+        1. narrative: A 2-3 sentence evocative description for a museum exhibit.
+        2. biologicalStory: A deeper, fascinating story about the species' evolution or role in the ecosystem.
+        3. discovery: One singular "Magic Moment" fact that would wow a visitor.
+        
+        Style: Sophisticated, authoritative, but accessible. Avoid generic AI fluff.
+      `,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            narrative: { type: Type.STRING },
+            biologicalStory: { type: Type.STRING },
+            discovery: { type: Type.STRING }
+          },
+          required: ["narrative", "biologicalStory", "discovery"]
+        }
+      }
+    }));
+    return JSON.parse(response.text || '{}');
+  },
+
   /**
    * Fast parsing for voice commands (gemini-flash-lite-latest)
    */

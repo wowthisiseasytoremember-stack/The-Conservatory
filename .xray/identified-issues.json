@@ -1,0 +1,34 @@
+[
+  {
+    "id": "SEC-001",
+    "severity": "CRITICAL",
+    "file": "services/firebase.ts",
+    "issue": "Hardcoded Firebase API key",
+    "description": "The Firebase apiKey is hardcoded in the source code. This poses a security risk if the repository is shared or exposed.",
+    "impact": "Potential unauthorized access to Firebase services and data if the key is leaked."
+  },
+  {
+    "id": "SEC-002",
+    "severity": "HIGH",
+    "file": "firestore.rules",
+    "issue": "Permissive Firestore rules",
+    "description": "Rules allow any authenticated user to read and write all entities, events, and groups. No owner-level isolation is enforced.",
+    "impact": "Any authenticated user can view or modify data belonging to other users if they discover the IDs."
+  },
+  {
+    "id": "ARCH-001",
+    "severity": "MEDIUM",
+    "file": "services/store.ts",
+    "issue": "Monolithic Zustand store",
+    "description": "The store handles state, persistence, business logic, and API orchestration in a single 800+ line class.",
+    "impact": "Increased cognitive load for developers and potential for difficult-to-track side effects as the project grows."
+  },
+  {
+    "id": "TEST-001",
+    "severity": "LOW",
+    "file": "tests/",
+    "issue": "Flaky voice tests",
+    "description": "Automated voice processing tests are skipped in CI due to timing issues in Playwright.",
+    "impact": "Reduced confidence in the core voice-first feature without manual verification."
+  }
+]

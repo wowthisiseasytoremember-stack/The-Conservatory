@@ -1,0 +1,93 @@
+[
+  {
+    "priority": 1,
+    "action": "IMMEDIATE: Revoke GCP service account key (conservatory-admin-key.json) and both Gemini API keys in Google Cloud Console. Run git rm --cached conservatory-admin-key.json && git rm --cached .env && git commit -m 'security: stop tracking secrets'. These credentials are live and have been in the repository since at least the previous audit.",
+    "effort": "low",
+    "impact": "critical",
+    "issue_refs": ["ISSUE-001", "ISSUE-002", "ISSUE-003"]
+  },
+  {
+    "priority": 2,
+    "action": "Fix auth bypass in App.tsx: remove the hardcoded `const [user, setUser] = useState<any>({ uid: 'dev-user' })` on line 41. Replace with `useState<any>(null)` and add a useEffect that subscribes to `onAuthStateChanged(auth, setUser)`. Any deployed build is currently open to unauthenticated visitors.",
+    "effort": "low",
+    "impact": "critical",
+    "issue_refs": ["ISSUE-004"]
+  },
+  {
+    "priority": 3,
+    "action": "Fix the require() calls in rootStore.ts lines 131-132. Replace `require('./repositories/EntityRepository')` and `require('./repositories/EventRepository')` with `await import(...)`. Make `initFirestoreSync` async. This is a latent runtime crash in the Vite ESM build.",
+    "effort": "low",
+    "impact": "high",
+    "issue_refs": ["ISSUE-006"]
+  },
+  {
+    "priority": 4,
+    "action": "Resolve the dual-store split-brain: merge the richer `processVoiceInput` (with strategy/ambiguity handling) from rootStore into useConservatoryStore. Remove the Firestore subscription from rootStore.initFirestoreSync (queryHooks replaces it). Ensure App.tsx only imports from one state source. Update PlaygroundScreen to use a single store.",
+    "effort": "medium",
+    "impact": "critical",
+    "issue_refs": ["ISSUE-005"]
+  },
+  {
+    "priority": 5,
+    "action": "Remove hardcoded Firebase credential fallbacks from services/firebase.ts. Delete the `|| 'AIzaSy...'` patterns on lines 48-54. Add required-env-var validation that throws at module load. Delete the `console.log('Using Firebase Config:', firebaseConfig)` on line 57.",
+    "effort": "low",
+    "impact": "high",
+    "issue_refs": ["ISSUE-008", "ISSUE-022"]
+  },
+  {
+    "priority": 6,
+    "action": "Gate stub services behind feature flags: wrap BlueprintScreen auto-scan with `if (import.meta.env.VITE_ENABLE_BLUEPRINT)`. Remove console.log from EchoEngine.ts and BlueprintService.ts (replace with logger.debug). Add a 'Scan Rack' button instead of auto-scanning on mount.",
+    "effort": "low",
+    "impact": "medium",
+    "issue_refs": ["ISSUE-012", "ISSUE-023"]
+  },
+  {
+    "priority": 7,
+    "action": "Add vitest to CI: insert a unit-test job before the Android build job in .github/workflows/android_build.yml. Add `\"type-check\": \"tsc --noEmit\"` and `\"lint\": \"eslint .\"` to package.json scripts. Both would have caught issues introduced by this pull.",
+    "effort": "low",
+    "impact": "high",
+    "issue_refs": ["ISSUE-010", "ISSUE-018"]
+  },
+  {
+    "priority": 8,
+    "action": "Apply Firestore ownership rules: update firestore.rules to use `isOwner(resource.data)` on entities, events, and groups. Add `ownerId: auth.currentUser?.uid` to all batch.set() entity creation calls in ActionCommittalUseCase.ts and useConservatoryStore.ts.",
+    "effort": "low",
+    "impact": "high",
+    "issue_refs": ["ISSUE-009"]
+  },
+  {
+    "priority": 9,
+    "action": "Write unit tests for the new store architecture introduced by this pull: services/store/useConservatoryStore.test.ts (processVoiceInput flow, commitAction batch logic) and services/store/useCases/ActionCommittalUseCase.test.ts (ACCESSION_ENTITY vs MODIFY_HABITAT branches, image upload failure handling).",
+    "effort": "medium",
+    "impact": "high",
+    "issue_refs": ["ISSUE-011"]
+  },
+  {
+    "priority": 10,
+    "action": "Continue decomposing rootStore.ts: extract the deep research pipeline (lines 712-944) into a DeepResearchOrchestrator, chat methods into chatService.ts, and growth analytics into growthService.ts. Target bringing rootStore.ts below 400 lines.",
+    "effort": "medium",
+    "impact": "medium",
+    "issue_refs": ["ISSUE-007"]
+  },
+  {
+    "priority": 11,
+    "action": "Update CLAUDE.md: document the canonical state pattern (Zustand for UI + TanStack Query for server state), the store/ directory layout, new screens (Blueprint, Playground), the components/ui/ primitive library, and which services are stubs (EchoEngine, BlueprintService). Mark this as Phase 5 completion.",
+    "effort": "low",
+    "impact": "medium",
+    "issue_refs": ["ISSUE-024"]
+  },
+  {
+    "priority": 12,
+    "action": "Clean up dependency graph: move firebase-admin to functions/package.json only, remove orphaned axios/@types/axios from root devDependencies, standardize on one Gemini SDK (@google/genai in root, replace @google/generative-ai in functions).",
+    "effort": "low",
+    "impact": "medium",
+    "issue_refs": ["ISSUE-014", "ISSUE-015", "ISSUE-016"]
+  },
+  {
+    "priority": 13,
+    "action": "Remove binary artifacts: delete 'Claude Setup.exe' from the repository root, clear public/assets/debug/ of AI-generated images, and add *.exe and build_output/ to .gitignore.",
+    "effort": "low",
+    "impact": "low",
+    "issue_refs": ["ISSUE-019", "ISSUE-020", "ISSUE-021"]
+  }
+]

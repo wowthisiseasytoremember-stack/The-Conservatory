@@ -1,0 +1,241 @@
+[
+  {
+    "id": "ISSUE-001",
+    "severity": "P0",
+    "category": "Security — Committed Secret",
+    "status": "UNRESOLVED — persists from previous audit",
+    "description": "GCP service account private key (conservatory-admin-key.json) is still committed to the repository. The 82-file pull did not remove or rotate this credential. This file contains a full RSA private key for the conservatory-admin@the-conservatory-d858b.iam.gserviceaccount.com service account. Anyone with repo access has admin-level Firebase credentials.",
+    "affected_paths": ["conservatory-admin-key.json"],
+    "line": null
+  },
+  {
+    "id": "ISSUE-002",
+    "severity": "P0",
+    "category": "Security — Committed Secret",
+    "status": "UNRESOLVED — persists from previous audit",
+    "description": ".env file containing live GEMINI_API_KEY and VITE_FIREBASE_API_KEY is still tracked and committed. The file still exists in the working tree. .gitignore lists .env but the file was committed before the ignore rule was effective. The 82-file pull did not address this.",
+    "affected_paths": [".env"],
+    "line": null
+  },
+  {
+    "id": "ISSUE-003",
+    "severity": "P0",
+    "category": "Security — Hardcoded Secret",
+    "status": "UNRESOLVED — persists from previous audit",
+    "description": "A Gemini API key is still hardcoded inline in scripts/run_enrichment.ts at line 45. The key AIzaSyAO_E6wI_YhrD60b4Y0Y9zobg4FcXnN9L8 is committed in plain text in source code. This was not addressed in the 82-file pull.",
+    "affected_paths": ["scripts/run_enrichment.ts"],
+    "line": 45
+  },
+  {
+    "id": "ISSUE-004",
+    "severity": "P0",
+    "category": "Security — Authentication Bypassed in Production Code",
+    "status": "NEW — introduced by this pull",
+    "description": "App.tsx line 41 replaces real Firebase Authentication with a hardcoded dev user: const [user, setUser] = useState<any>({ uid: 'dev-user' }). The login guard on line 95 (if (!user)) is always false because user is initialized with a non-null value. Firebase Auth events in rootStore.ts are now bypassed — onAuthStateChanged is wired but its result is never reflected in App.tsx's user state. The LoginView is never rendered. This dev shortcut was committed to main, meaning any deployed build accepts any visitor as an authenticated user. Combined with the already-permissive Firestore rules, this creates open read/write access to the database.",
+    "affected_paths": ["App.tsx"],
+    "line": 41
+  },
+  {
+    "id": "ISSUE-005",
+    "severity": "P1",
+    "category": "Architecture — Dual Store / Split-Brain State",
+    "status": "NEW — introduced by this pull",
+    "description": "The pull introduced two parallel state systems that both manage overlapping concerns and are imported simultaneously. App.tsx imports useConservatoryStore (Zustand) for processVoiceInput, commitAction, pendingAction, researchProgress AND imports useConservatory (rootStore) via useEntities/useEvents hooks. PlaygroundScreen imports useConservatory() AND useConservatoryStore() in the same component. Both stores implement processVoiceInput with different codepaths (Zustand version lacks strategy/ambiguity handling). Both implement enrichEntity with different Firestore write patterns. Both implement commitAction/commitPendingAction with different business logic. This split-brain creates inconsistent behavior: voice commands go through different code depending on which store the caller uses. There is no single source of truth.",
+    "affected_paths": [
+      "App.tsx",
+      "services/store/rootStore.ts",
+      "services/store/useConservatoryStore.ts",
+      "components/screens/PlaygroundScreen.tsx"
+    ],
+    "line": null
+  },
+  {
+    "id": "ISSUE-006",
+    "severity": "P1",
+    "category": "Architecture — CommonJS require() in ESM Module",
+    "status": "NEW — introduced by this pull",
+    "description": "services/store/rootStore.ts lines 130-132 use require() for dynamic imports inside an ESM module: const { entityRepo } = require('./repositories/EntityRepository') and const { eventRepo } = require('./repositories/EventRepository'). Vite's ESM build does not support CommonJS require() calls in source files. This is a latent runtime crash waiting to occur when initFirestoreSync() is called after a user logs in. The correct pattern for dynamic ESM imports is await import('./repositories/EntityRepository').",
+    "affected_paths": ["services/store/rootStore.ts"],
+    "line": 131
+  },
+  {
+    "id": "ISSUE-007",
+    "severity": "P1",
+    "category": "Architecture — Large File (God File partially addressed)",
+    "status": "PARTIALLY RESOLVED — rootStore reduced from 1538 to 1023 lines, still a god file",
+    "description": "services/store/rootStore.ts has been trimmed from 1538 lines to 1023 lines by extracting persistence logic (storeState.ts) and the commit use case (ActionCommittalUseCase.ts). However, rootStore.ts still co-locates: ConservatoryStore class with auth lifecycle, Firestore subscription management, voice intent processing, deep research pipeline orchestration (170+ lines), entity CRUD, chat messages, blueprint management, growth analytics, ecosystem snapshot generation, and the useConservatory hook. The original concern (single-responsibility violation) is only partially addressed. geminiService.ts remains at 740 lines with no decomposition.",
+    "affected_paths": ["services/store/rootStore.ts", "services/geminiService.ts"],
+    "line": null
+  },
+  {
+    "id": "ISSUE-008",
+    "severity": "P1",
+    "category": "Security — Hardcoded Credentials in Source",
+    "status": "UNRESOLVED — persists from previous audit",
+    "description": "services/firebase.ts lines 48-54 still contain hardcoded Firebase project credentials as fallback string literals for all config fields (apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId, measurementId). Additionally, line 57 logs the full firebaseConfig object (including the API key) to the browser console: console.log('Using Firebase Config:', firebaseConfig). This occurs in every production load.",
+    "affected_paths": ["services/firebase.ts"],
+    "line": 48
+  },
+  {
+    "id": "ISSUE-009",
+    "severity": "P1",
+    "category": "Security — Overly Permissive Firestore Rules",
+    "status": "UNRESOLVED — persists from previous audit, now compounded by auth bypass",
+    "description": "firestore.rules grants read/write on entities, events, groups, and feeder_pic_database to any authenticated user with no ownership enforcement. Combined with ISSUE-004 (auth bypass in App.tsx), the current state in production would be: anyone who visits the deployed URL has write access to the Firestore database because the application code treats them as authenticated without checking Firebase Auth.",
+    "affected_paths": ["firestore.rules", "App.tsx"],
+    "line": 23
+  },
+  {
+    "id": "ISSUE-010",
+    "severity": "P1",
+    "category": "Build & CI — Tests Not Run in CI",
+    "status": "UNRESOLVED — persists from previous audit",
+    "description": "The only CI workflow (.github/workflows/android_build.yml) still does not execute any tests. Regressions from the 82-file pull were not caught automatically. The dual-store conflict (ISSUE-005) and require() usage (ISSUE-006) are examples of issues that CI test coverage would have flagged.",
+    "affected_paths": [".github/workflows/android_build.yml"],
+    "line": null
+  },
+  {
+    "id": "ISSUE-011",
+    "severity": "P1",
+    "category": "Test Coverage — Core Logic Untested",
+    "status": "PARTIALLY IMPROVED — 1 new E2E spec added, unit test gap unchanged",
+    "description": "The new store modules introduced by this pull (useConservatoryStore.ts, rootStore.ts, repositories, ActionCommittalUseCase) have zero unit tests. The dual processVoiceInput implementations cannot be regression-tested without unit tests. One new E2E spec (living_placard.spec.ts) was added, which is a positive signal, but unit coverage of core business logic remains critically low.",
+    "affected_paths": [
+      "services/store/rootStore.ts",
+      "services/store/useConservatoryStore.ts",
+      "services/store/repositories/EntityRepository.ts",
+      "services/store/useCases/ActionCommittalUseCase.ts",
+      "services/geminiService.ts"
+    ],
+    "line": null
+  },
+  {
+    "id": "ISSUE-012",
+    "severity": "P2",
+    "category": "Architecture — Stub Services Committed to Main",
+    "status": "NEW — introduced by this pull",
+    "description": "Three new services are functional stubs committed to the main branch: (1) EchoEngine.ts — returns random picsum.photos URLs and uses console.log. The actual Recraft API integration is mocked with a Gemini prompt that says 'Imagine you are the Recraft API'. (2) BlueprintService.ts — returns a hardcoded 3-element array of fixed coordinates and uses console.log. Actual Vision API call is simulated. (3) ArtifactGenerator.tsx — calls EchoEngine (which is stubbed), uses renderToString + html2canvas pattern which has known limitations with CSS-in-JS. None of these are marked as experimental or behind feature flags. BlueprintScreen auto-invokes blueprintService.scanRack() on mount with a hardcoded 'base64-encoded-image-data' string.",
+    "affected_paths": [
+      "services/EchoEngine.ts",
+      "services/BlueprintService.ts",
+      "services/ArtifactGenerator.tsx",
+      "components/screens/BlueprintScreen.tsx"
+    ],
+    "line": null
+  },
+  {
+    "id": "ISSUE-013",
+    "severity": "P2",
+    "category": "Code Organization — Split Source Roots",
+    "status": "PARTIALLY IMPROVED — DiscoveryHighlight, HabitatNarrative, PlantAutocomplete migrated; src/ split persists",
+    "description": "The src/components/ directory has been partially emptied (three components moved to root components/). However the split-root structure (root, src/, utils/) is still present. src/constants.ts, src/schemas.ts, src/utils/storage.ts still live in src/. The @/ import alias still points to root, not src/.",
+    "affected_paths": ["src/", "utils/", "components/", "src/components/"],
+    "line": null
+  },
+  {
+    "id": "ISSUE-014",
+    "severity": "P2",
+    "category": "Dependency Health — Misplaced Dependency",
+    "status": "UNRESOLVED — persists from previous audit",
+    "description": "firebase-admin (v13.6.1) is still listed as a production dependency in the root package.json. It is a Node.js-only server SDK that must not be included in a browser/Capacitor bundle.",
+    "affected_paths": ["package.json"],
+    "line": 29
+  },
+  {
+    "id": "ISSUE-015",
+    "severity": "P2",
+    "category": "Dependency Health — Stale/Orphaned Dev Dependencies",
+    "status": "UNRESOLVED — persists from previous audit",
+    "description": "@types/axios and axios are still in devDependencies with no usage in non-script source code.",
+    "affected_paths": ["package.json"],
+    "line": null
+  },
+  {
+    "id": "ISSUE-016",
+    "severity": "P2",
+    "category": "Dependency Health — Dual Gemini SDK",
+    "status": "UNRESOLVED — persists from previous audit",
+    "description": "@google/genai (root) and @google/generative-ai (functions/package.json) — two different packages for the same Gemini API family.",
+    "affected_paths": ["package.json", "functions/package.json"],
+    "line": null
+  },
+  {
+    "id": "ISSUE-017",
+    "severity": "P2",
+    "category": "TypeScript — @ts-ignore Suppression",
+    "status": "UNCHANGED — persists, new occurrences in rootStore.ts",
+    "description": "rootStore.ts adds multiple new @ts-ignore suppressions (lines 36, 51, 55, 92, 593) for window globals and test mode flags. Total @ts-ignore count across the codebase has increased with this pull.",
+    "affected_paths": [
+      "services/store/rootStore.ts",
+      "App.tsx",
+      "components/ConfirmationCard.tsx",
+      "tests/workflow.spec.ts",
+      "tests/vision_accession.spec.ts",
+      "tests/e2e/backend-verification.spec.ts"
+    ],
+    "line": null
+  },
+  {
+    "id": "ISSUE-018",
+    "severity": "P2",
+    "category": "Build & CI — No Lint or Type-Check Scripts",
+    "status": "UNRESOLVED — persists from previous audit",
+    "description": "CLAUDE.md references npm run lint and npm run type-check but neither script exists in package.json. The require() usage in rootStore.ts (a TypeScript type error in strict ESM) would have been caught by a type-check step.",
+    "affected_paths": ["package.json", "CLAUDE.md"],
+    "line": null
+  },
+  {
+    "id": "ISSUE-019",
+    "severity": "P3",
+    "category": "Hygiene — Debug Assets in Public Directory",
+    "status": "UNRESOLVED — persists from previous audit",
+    "description": "public/assets/debug/ still contains AI-generated development images committed to the repository.",
+    "affected_paths": ["public/assets/debug/"],
+    "line": null
+  },
+  {
+    "id": "ISSUE-020",
+    "severity": "P3",
+    "category": "Hygiene — Non-Standard Build Output Directory",
+    "status": "UNRESOLVED — persists from previous audit",
+    "description": "vite.config.ts sets build.outDir to 'build_output' — not excluded from .gitignore.",
+    "affected_paths": ["vite.config.ts", ".gitignore"],
+    "line": 27
+  },
+  {
+    "id": "ISSUE-021",
+    "severity": "P3",
+    "category": "Hygiene — Executable in Repository Root",
+    "status": "UNRESOLVED — persists from previous audit",
+    "description": "'Claude Setup.exe' is still committed to the project root.",
+    "affected_paths": ["Claude Setup.exe"],
+    "line": null
+  },
+  {
+    "id": "ISSUE-022",
+    "severity": "P3",
+    "category": "Hygiene — console.log in firebase.ts",
+    "status": "UNRESOLVED — persists from previous audit",
+    "description": "services/firebase.ts line 57 still logs the full Firebase config object to the browser console in production builds.",
+    "affected_paths": ["services/firebase.ts"],
+    "line": 57
+  },
+  {
+    "id": "ISSUE-023",
+    "severity": "P3",
+    "category": "Hygiene — console.log in New Services",
+    "status": "NEW — introduced by this pull",
+    "description": "EchoEngine.ts and BlueprintService.ts both contain console.log() calls (console.log('SIMULATED ECHO ENGINE: API Response:', response) and console.log('SIMULATED BLUEPRINT SERVICE: API Response:', response)) that will appear in production builds.",
+    "affected_paths": ["services/EchoEngine.ts", "services/BlueprintService.ts"],
+    "line": null
+  },
+  {
+    "id": "ISSUE-024",
+    "severity": "P3",
+    "category": "Documentation — CLAUDE.md Out of Date",
+    "status": "NEW — introduced by this pull",
+    "description": "CLAUDE.md still describes the project as being in Phase 4 complete / Phase 5 Verification Testing. The 82-file pull represents a de-facto Phase 5 implementation covering: store decomposition, TanStack Query, Radix UI primitives, Blueprint feature, Echo Engine, Curator's Card / Artifact Generator, Playground screen. The evolution gate documentation, key file reference table, and phase roadmap in CLAUDE.md do not reflect this work.",
+    "affected_paths": ["CLAUDE.md"],
+    "line": null
+  }
+]

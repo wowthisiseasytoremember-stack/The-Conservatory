@@ -1,0 +1,31 @@
+[
+  {
+    "issue_id": "SEC-001",
+    "fix": "Move the Firebase API key and other configuration parameters to environment variables (`.env`) and access them via `import.meta.env`.",
+    "code_snippet": "// In services/firebase.ts
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  // ...
+};"
+  },
+  {
+    "issue_id": "SEC-002",
+    "fix": "Update Firestore documents to include an `ownerId` field (populated with `request.auth.uid`) and enforce ownership in rules.",
+    "code_snippet": "// In firestore.rules
+match /entities/{entityId} {
+  allow read, write: if request.auth != null && resource.data.ownerId == request.auth.uid;
+  allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+}"
+  },
+  {
+    "issue_id": "ARCH-001",
+    "fix": "Decompose the monolithic store into logical slices (e.g., `habitatSlice`, `entitySlice`, `eventSlice`) or separate stores.",
+    "code_snippet": "// Example: createHabitatStore.ts
+export const useHabitatStore = create<HabitatState>((set) => ({
+  activeHabitatId: null,
+  setActiveHabitat: (id) => set({ activeHabitatId: id }),
+  // ...
+}));"
+  }
+]

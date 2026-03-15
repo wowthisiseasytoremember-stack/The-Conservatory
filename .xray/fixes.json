@@ -1,0 +1,86 @@
+[
+  {
+    "issue_id": "ISSUE-001",
+    "severity": "P0",
+    "immediate": "Revoke the compromised service account key IMMEDIATELY in the GCP Console: IAM & Admin > Service Accounts > conservatory-admin@the-conservatory-d858b.iam.gserviceaccount.com > Keys > Delete key. This must happen before any other action. The key has been in the git history since at least the last audit. After revocation, add the filename to .gitignore and remove from git history.",
+    "command": "# 1. Add pattern to .gitignore (do this BEFORE removing from history)\necho 'conservatory-admin-key.json' >> .gitignore\necho '*-admin-key.json' >> .gitignore\necho '*-firebase-adminsdk-*.json' >> .gitignore\n\n# 2. Remove from git tracking (does NOT delete the file locally)\ngit rm --cached conservatory-admin-key.json\ngit commit -m 'security: stop tracking service account key'\n\n# 3. If repo is private and exposure is limited, git history purge may be deferred.\n# If public or shared, purge with BFG: bfg --delete-files conservatory-admin-key.json",
+    "prevention": "Never generate service account keys that touch the local filesystem. Use Application Default Credentials (ADC) or Workload Identity Federation for CI/CD. Add gitleaks or pre-commit to block secret patterns."
+  },
+  {
+    "issue_id": "ISSUE-002",
+    "severity": "P0",
+    "immediate": "Rotate GEMINI_API_KEY and review VITE_FIREBASE_API_KEY scope in Google Cloud Console. Stop tracking .env immediately.",
+    "command": "# Stop tracking the .env file\ngit rm --cached .env\ngit commit -m 'security: stop tracking .env'\n\n# Verify .gitignore is working\ngit status  # .env should appear as 'untracked', not 'modified'\n\n# Create .env.example with placeholder values\necho 'VITE_FIREBASE_API_KEY=your-firebase-api-key' >> .env.example\necho 'GEMINI_API_KEY=your-gemini-api-key' >> .env.example\ngit add .env.example && git commit -m 'chore: add .env.example template'",
+    "prevention": "Add a pre-commit hook using detect-secrets or gitleaks. Ensure .env is in .gitignore BEFORE creating the file. Use .env.example as the committed reference."
+  },
+  {
+    "issue_id": "ISSUE-003",
+    "severity": "P0",
+    "immediate": "Revoke the API key AIzaSyAO_E6wI_YhrD60b4Y0Y9zobg4FcXnN9L8 immediately in Google Cloud Console (APIs & Services > Credentials). Replace the hardcoded value with process.env.GEMINI_API_KEY.",
+    "command": "# In scripts/run_enrichment.ts, replace line 45:\n# BEFORE: const apiKey = \"AIzaSyAO_E6wI_YhrD60b4Y0Y9zobg4FcXnN9L8\";\n# AFTER:\n# import 'dotenv/config';\n# const apiKey = process.env.GEMINI_API_KEY;\n# if (!apiKey) throw new Error('GEMINI_API_KEY environment variable required');\n\n# Run script with:\n# GEMINI_API_KEY=<new-rotated-key> npx ts-node scripts/run_enrichment.ts",
+    "prevention": "Add a pre-commit grep rule: git diff --cached | grep -E 'AIzaSy[A-Za-z0-9_-]{33}' and abort if found."
+  },
+  {
+    "issue_id": "ISSUE-004",
+    "severity": "P0",
+    "immediate": "Remove the hardcoded dev user from App.tsx and restore real Firebase Auth. Replace line 41 with a null initial state and wire the auth listener. This was likely meant as a dev convenience but was committed to main.",
+    "command": "# In App.tsx:\n# REMOVE line 41: const [user, setUser] = useState<any>({ uid: 'dev-user' });\n# REPLACE WITH:\n# const [user, setUser] = useState<any>(null);\n#\n# Add useEffect to subscribe to Firebase Auth:\n# import { auth } from './services/firebase';\n# import { onAuthStateChanged } from 'firebase/auth';\n# useEffect(() => {\n#   return onAuthStateChanged(auth, (u) => setUser(u));\n# }, []);\n\n# OR: delegate to the rootStore which already implements initAuth() and getUser()",
+    "prevention": "Add a code review rule: any PR touching App.tsx or authentication code must be reviewed for auth bypass patterns. Add a lint rule forbidding 'dev-user' string literals."
+  },
+  {
+    "issue_id": "ISSUE-005",
+    "severity": "P1",
+    "immediate": "Resolve the dual-store split-brain by designating ONE canonical data-fetching pattern and migrating App.tsx to use it exclusively. The recommended path: make useConservatoryStore the single UI/action store and use TanStack Query (queryHooks.ts) as the exclusive server-state layer. Decommission the rootStore's Firestore subscription (initFirestoreSync) in favor of queryHooks subscriptions.",
+    "command": "# Migration plan:\n# 1. App.tsx: Use ONLY useConservatoryStore + useEntities/useEvents hooks\n#    Remove: import { useConservatory } from './services/store/rootStore'\n#    Keep: import { useConservatoryStore } from './services/store/useConservatoryStore'\n#    Keep: import { useEntities, useEvents } from './services/store/queryHooks'\n#\n# 2. Merge processVoiceInput from rootStore into useConservatoryStore\n#    The rootStore version has richer strategy/ambiguity handling — migrate it\n#\n# 3. Remove the manual Firestore subscription from rootStore.initFirestoreSync()\n#    This is now handled by useEntities/useEvents queryHooks\n#\n# 4. Retire ConservatoryStore class from rootStore.ts once all callers migrate",
+    "prevention": "Document the single canonical state pattern in CLAUDE.md. Add an ESLint rule banning imports of useConservatory from rootStore once the migration is complete."
+  },
+  {
+    "issue_id": "ISSUE-006",
+    "severity": "P1",
+    "immediate": "Replace require() calls in rootStore.ts with ESM dynamic imports to prevent runtime failures in the Vite build.",
+    "command": "# In services/store/rootStore.ts, replace lines 130-132:\n# BEFORE:\n# const { entityRepo } = require('./repositories/EntityRepository');\n# const { eventRepo } = require('./repositories/EventRepository');\n#\n# AFTER:\n# const { entityRepo } = await import('./repositories/EntityRepository');\n# const { eventRepo } = await import('./repositories/EventRepository');\n#\n# Note: initFirestoreSync() must be made async:\n# private async initFirestoreSync() { ... }",
+    "prevention": "Add npm run type-check to CI. TypeScript strict mode will flag require() calls in ESM modules. Add eslint rule: no-var-requires."
+  },
+  {
+    "issue_id": "ISSUE-007",
+    "severity": "P1",
+    "immediate": "Continue decomposing rootStore.ts. The deep research pipeline (lines 712-944, ~230 lines) should be extracted to a dedicated DeepResearchOrchestrator service. The chat/messaging methods can move to chatService.ts. Growth analytics methods can move to a growthService.ts.",
+    "command": "# Extraction targets from rootStore.ts:\n# services/store/orchestrators/DeepResearchOrchestrator.ts  <- deepResearch, deepResearchHabitat, deepResearchAll, enrichEntity\n# services/chatService.ts  <- sendMessage, clearMessages\n# services/growthService.ts  <- calculateGrowthRate, getGrowthTimeline\n# services/habitatAnalyticsService.ts  <- getHabitatHealth, getEcosystemFacts, computeHabitatSynergies, getFeaturedSpecimen\n\n# This would reduce rootStore.ts to ~400 lines (auth + Firestore sync + coordination)",
+    "prevention": "Set max-lines ESLint rule to 400 for files in services/. Enforce in CI."
+  },
+  {
+    "issue_id": "ISSUE-008",
+    "severity": "P1",
+    "immediate": "Remove the hardcoded Firebase credential fallback strings in services/firebase.ts and add startup validation. Also remove the console.log that exposes the config object.",
+    "command": "# In services/firebase.ts:\n# 1. Remove all || 'hardcoded-string' fallbacks from firebaseConfig object\n# 2. Add validation before initializeApp:\n#    const required = ['VITE_FIREBASE_API_KEY', 'VITE_FIREBASE_PROJECT_ID', 'VITE_FIREBASE_APP_ID'];\n#    for (const key of required) {\n#      if (!import.meta.env[key]) throw new Error(`Missing required env var: ${key}`);\n#    }\n# 3. Remove line 57: console.log('Using Firebase Config:', firebaseConfig);\n# 4. Remove line 73: console.log('Initializing Firestore...');",
+    "prevention": "Create a validateEnv.ts module imported at module top that throws descriptively for missing required vars. Run type-check in CI to catch missing env typing."
+  },
+  {
+    "issue_id": "ISSUE-009",
+    "severity": "P1",
+    "immediate": "Enforce Firestore ownership rules by applying the existing isOwner() helper to all entity write operations. Add ownerId field to all entity creation calls.",
+    "command": "# In firestore.rules — update entities, events, groups:\n# match /entities/{entityId} {\n#   allow read: if isAuthenticated();\n#   allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;\n#   allow update, delete: if isOwner(resource.data);\n# }\n\n# In ActionCommittalUseCase.ts and useConservatoryStore.ts:\n# Add ownerId: auth.currentUser?.uid to all batch.set() entity writes",
+    "prevention": "Add Firebase Rules unit tests using @firebase/rules-unit-testing. Run in CI. Require isOwner check to be present for any collection write in code review."
+  },
+  {
+    "issue_id": "ISSUE-010",
+    "severity": "P1",
+    "immediate": "Add vitest unit test execution to the CI workflow as a required step before the Android build.",
+    "command": "# In .github/workflows/android_build.yml, add before the build job:\n# jobs:\n#   unit-test:\n#     runs-on: ubuntu-latest\n#     steps:\n#       - uses: actions/checkout@v4\n#       - uses: actions/setup-node@v4\n#         with: { node-version: '20', cache: 'npm' }\n#       - run: npm ci\n#       - run: npm test\n#   build:\n#     needs: unit-test\n#     runs-on: ubuntu-latest\n#     ... (existing build steps)",
+    "prevention": "Require CI to pass on all PRs targeting main. Enable branch protection rules on GitHub."
+  },
+  {
+    "issue_id": "ISSUE-011",
+    "severity": "P1",
+    "immediate": "Add unit tests for the new store modules introduced in this pull. The highest priority is testing the dual processVoiceInput paths to detect divergence, and ActionCommittalUseCase.execute() to verify the batch write logic.",
+    "command": "# Create these test files (use existing costTracker.test.ts as pattern):\n# services/store/useConservatoryStore.test.ts\n#   - test processVoiceInput sets pendingAction correctly\n#   - test commitAction calls writeBatch and invalidates query cache\n#   - test enrichEntity updates enrichment_status lifecycle\n#\n# services/store/useCases/ActionCommittalUseCase.test.ts\n#   - mock db, writeBatch\n#   - test ACCESSION_ENTITY creates entity docs in batch\n#   - test MODIFY_HABITAT creates habitat docs in batch\n#   - test image upload failure is handled gracefully",
+    "prevention": "Add coverage threshold to vitest.config.ts: coverage.thresholds.lines = 60. Block CI if coverage drops."
+  },
+  {
+    "issue_id": "ISSUE-012",
+    "severity": "P2",
+    "immediate": "Either implement EchoEngine and BlueprintService properly behind a real API, or gate them behind feature flags so they do not run in production builds. At minimum, remove the console.log statements and the auto-scan-on-mount in BlueprintScreen.",
+    "command": "# Option A — Feature flag (recommended for now):\n# In BlueprintScreen.tsx, wrap auto-scan in a flag:\n# if (import.meta.env.VITE_ENABLE_BLUEPRINT === 'true') { scan(); }\n#\n# Option B — Remove auto-scan on mount:\n# Replace useEffect scan() with a manual 'Scan Now' button\n#\n# Remove console.log from EchoEngine.ts and BlueprintService.ts\n# Replace with logger.debug() calls using the existing Pino logger",
+    "prevention": "Establish a convention that any service file with 'SIMULATED' or 'placeholder' in comments must be behind a VITE_FEATURE_* env flag. Add to CLAUDE.md."
+  }
+]
