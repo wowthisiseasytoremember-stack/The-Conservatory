@@ -75,7 +75,9 @@ async function main() {
                       await cookieBtn.click();
                       await new Promise(r => setTimeout(r, 1000));
                   }
-              } catch (e) { /* create no noise */ }
+              } catch (e) {
+                  console.debug("  Cookie banner not found or already dismissed.");
+              }
 
               // Try to find total count for progress logging
               let totalItems = 0;
@@ -86,7 +88,9 @@ async function main() {
                       if (match) totalItems = parseInt(match[1]);
                       console.log(`  Category reports ${totalItems} total items.`);
                   }
-              } catch (e) { }
+              } catch (e) {
+                  console.debug("  Could not extract total product count.");
+              }
 
               let moreButtonExists = true;
               while (moreButtonExists) {

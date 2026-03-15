@@ -17,6 +17,7 @@
 - Backend: Production-ready with observability, cost tracking, memory management
 - UI: Foundation complete, but ARCHITECTURE NEEDS REFACTORING before visual design
 - Design: Options documented, waiting for architecture to be solid before committing
+- **Mobile**: Capacitor-based Android project ready for testing.
 
 **Strategic Pivot**:
 Build the ARCHITECTURE first (routing, component structure, data flow), then drop in visuals.
@@ -32,12 +33,16 @@ This lets you work design-agnostic for 1-2 weeks while design decisions are fina
 5. 🟠 **HIGH**: Implement deep linking
 6. 🟡 **MEDIUM**: Refactor overlays (modal stack management)
 
-**Design Decision Gate**: After Phase 5 architecture is solid, you MUST decide:
-- Split-screen vs. color-only illustration style?
-- Which animation library (Framer Motion, Canvas, Lottie)?
-- Featured habitat selection logic?
-- Parameter drill-down behavior?
-(See `docs/plans/2026-02-15-design-inspiration-possibilities.md` for options)
+---
+
+## 📱 EMULATOR & MOBILE TESTING CHECKLIST
+
+**Before your first run, check these:**
+
+- [ ] **Capacitor Sync**: Run `npx cap sync android` to ensure the latest web build is copied to the Android project.
+- [ ] **Min SDK**: Ensure your emulator is running **Android 7.0 (API 24)** or higher.
+- [ ] **Permissions**: If using the camera, verify `AndroidManifest.xml` has the necessary permissions (added below).
+- [ ] **Firebase**: If you see "Push Notifications won't work" in the logs, it's because `google-services.json` is missing from `android/app/`.
 
 ---
 
@@ -643,7 +648,7 @@ This lets you work design-agnostic for 1-2 weeks while design decisions are fina
   - [ ] Taxonomy ribbon styled (small caps, elegant dots)
   - [ ] Discovery secrets section (emoji headers, serif body)
   - [ ] Traits dashboard styled (visual grid, color coding)
-  - [ ] Timeline styled (vertical flow, alternating cards)
+  - [ ] Timeline section styled (vertical flow, alternating cards)
   - [ ] Organism illustration integrated
 
 - [ ] **ParameterDetail**

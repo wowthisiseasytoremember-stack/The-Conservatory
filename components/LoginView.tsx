@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { Leaf, LogIn } from 'lucide-react';
+import { Leaf, LogIn, UserPlus } from 'lucide-react';
 
 interface LoginViewProps {
-  onLogin: () => void;
+  onLogin: (asGuest?: boolean) => void;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
@@ -24,16 +24,26 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           A voice-first aquaculture and plant tracking system with Gemini-powered intelligence.
         </div>
 
-        <button 
-          onClick={onLogin}
-          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl shadow-emerald-900/20 group"
-        >
-          <LogIn className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          Sign in with Google
-        </button>
+        <div className="space-y-4">
+          <button
+            onClick={() => onLogin(false)}
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl shadow-emerald-900/20 group"
+          >
+            <LogIn className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            Sign in with Google
+          </button>
+
+          <button
+            onClick={() => onLogin(true)}
+            className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all group border border-slate-700"
+          >
+            <UserPlus className="w-5 h-5" />
+            Continue as Guest (Skip Login)
+          </button>
+        </div>
 
         <p className="text-[10px] text-slate-600 uppercase tracking-widest font-bold">
-          Private Access • Event Sourced Integrity
+          Private Access • Event Sourced Integrity • 2026 Ready
         </p>
       </div>
     </div>

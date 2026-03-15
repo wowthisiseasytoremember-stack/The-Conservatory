@@ -18,6 +18,11 @@ const config: CapacitorConfig = {
       androidScaleType: "CENTER_CROP",
       showSpinner: false,
     },
+    GoogleAuth: {
+      scopes: ["profile", "email"],
+      serverClientId: "814637797090-nkkhv6shv0kvvqr8kbqcbbklshvhpsqv.apps.googleusercontent.com",
+      forceCodeForRefreshToken: true,
+    },
   },
 };
 
