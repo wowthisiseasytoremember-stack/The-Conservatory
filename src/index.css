@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700&family=La+Belle+Aurore&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700&display=swap');
+
 @import "tailwindcss";
 
 @plugin "tailwindcss-animate";
@@ -8,108 +9,56 @@
 @theme {
   --font-display: 'Playfair Display', Georgia, serif;
   --font-body: 'Source Sans 3', system-ui, sans-serif;
-  --font-script: 'La Belle Aurore', cursive;
-  
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
 
-  --color-gold: hsl(var(--gold));
-  --color-gold-muted: hsl(var(--gold-muted));
-  --color-botanical: hsl(var(--botanical));
-  --color-botanical-light: hsl(var(--botanical-light));
-  --color-botanical-subtle: hsl(var(--botanical-subtle));
-  --color-earth: hsl(var(--earth));
-  --color-earth-light: hsl(var(--earth-light));
-  --color-ivory: hsl(var(--ivory));
-  --color-specimen: hsl(var(--surface-specimen));
-  
-  --shadow-placard: 0 1px 3px rgba(0,0,0,0.05), 0 8px 24px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,215,0,0.1);
-  --shadow-gold: 0 0 20px rgba(255,215,0,0.15);
+  --color-background: hsl(40 30% 96%);
+  --color-foreground: hsl(150 25% 12%);
+
+  --color-card: hsl(40 25% 93%);
+  --color-card-foreground: hsl(150 25% 12%);
+
+  --color-popover: hsl(40 30% 96%);
+  --color-popover-foreground: hsl(150 25% 12%);
+
+  --color-primary: hsl(152 45% 22%);
+  --color-primary-foreground: hsl(40 30% 96%);
+
+  --color-secondary: hsl(38 28% 88%);
+  --color-secondary-foreground: hsl(150 25% 15%);
+
+  --color-muted: hsl(38 20% 90%);
+  --color-muted-foreground: hsl(150 10% 42%);
+
+  --color-accent: hsl(38 65% 52%);
+  --color-accent-foreground: hsl(150 25% 10%);
+
+  --color-destructive: hsl(0 72% 51%);
+  --color-destructive-foreground: hsl(40 30% 96%);
+
+  --color-border: hsl(38 18% 82%);
+  --color-input: hsl(38 18% 82%);
+  --color-ring: hsl(152 45% 22%);
+
+  --radius-lg: 0.5rem;
+  --radius-md: calc(0.5rem - 2px);
+  --radius-sm: calc(0.5rem - 4px);
+
+  --color-gold: hsl(38 65% 52%);
+  --color-gold-muted: hsl(38 40% 72%);
+  --color-botanical: hsl(152 45% 22%);
+  --color-botanical-light: hsl(152 30% 35%);
+  --color-botanical-subtle: hsl(152 20% 85%);
+  --color-earth: hsl(25 30% 30%);
+  --color-earth-light: hsl(25 20% 55%);
+  --color-ivory: hsl(40 30% 96%);
 }
 
 @layer base {
-  :root {
-    --background: 40 30% 96%;
-    --foreground: 150 25% 12%;
-    --card: 40 25% 93%;
-    --card-foreground: 150 25% 12%;
-    --popover: 40 30% 96%;
-    --popover-foreground: 150 25% 12%;
-    --primary: 152 45% 22%;
-    --primary-foreground: 40 30% 96%;
-    --secondary: 38 28% 88%;
-    --secondary-foreground: 150 25% 15%;
-    --muted: 38 20% 90%;
-    --muted-foreground: 150 10% 42%;
-    --accent: 38 65% 52%;
-    --accent-foreground: 150 25% 10%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 40 30% 96%;
-    --border: 38 18% 82%;
-    --input: 38 18% 82%;
-    --ring: 152 45% 22%;
-    --radius: 0.5rem;
-    --surface-specimen: 40 22% 90%;
-    --gold: 38 65% 52%;
-    --gold-muted: 38 40% 72%;
-    --botanical: 152 45% 22%;
-    --botanical-light: 152 30% 35%;
-    --botanical-subtle: 152 20% 85%;
-    --earth: 25 30% 30%;
-    --earth-light: 25 20% 55%;
-    --ivory: 40 30% 96%;
-  }
-
-  .dark {
-    --background: 150 25% 7%;
-    --foreground: 40 25% 90%;
-    --card: 150 20% 10%;
-    --card-foreground: 40 25% 90%;
-    --popover: 150 20% 10%;
-    --popover-foreground: 40 25% 90%;
-    --primary: 152 40% 40%;
-    --primary-foreground: 40 30% 96%;
-    --secondary: 150 15% 15%;
-    --secondary-foreground: 40 25% 85%;
-    --muted: 150 12% 18%;
-    --muted-foreground: 40 15% 55%;
-    --accent: 38 55% 50%;
-    --accent-foreground: 150 25% 10%;
-    --destructive: 0 62% 35%;
-    --destructive-foreground: 40 30% 96%;
-    --border: 150 12% 18%;
-    --input: 150 12% 18%;
-    --ring: 152 40% 40%;
-    --surface-specimen: 150 15% 12%;
-    --gold: 38 55% 50%;
-    --gold-muted: 38 30% 40%;
-    --botanical: 152 40% 40%;
-    --botanical-light: 152 30% 50%;
-    --botanical-subtle: 152 15% 18%;
-    --earth: 25 20% 50%;
-    --earth-light: 25 15% 35%;
-    --ivory: 40 20% 12%;
+  * {
+    @apply border-border;
   }
 
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    @apply bg-background text-foreground;
     font-family: var(--font-body);
   }
 
@@ -118,30 +67,28 @@
   }
 }
 
-/* Hide scrollbar */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+@layer utilities {
+  .gradient-placard {
+    background: linear-gradient(
+      180deg,
+      hsl(40 25% 93%) 0%,
+      hsl(40 22% 90%) 100%
+    );
+  }
 
-/* Custom Atlas Utilities */
-.gradient-placard {
-  background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--surface-specimen)) 100%);
-}
+  .gradient-hero {
+    background: linear-gradient(
+      135deg,
+      hsl(152 45% 22%) 0%,
+      hsl(152 30% 35%) 50%,
+      hsl(25 30% 30%) 100%
+    );
+  }
 
-.gradient-hero {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--botanical-light)) 50%, hsl(var(--earth)) 100%);
-}
-
-/* Archival Specimen Filter */
-.archival-plate-img {
-  filter: sepia(0.2) contrast(1.1) brightness(0.95) saturate(0.8);
-  mix-blend-mode: multiply;
-}
-
-.paper-texture {
-  background-color: #f8f5f0;
-  background-image: url("https://www.transparenttextures.com/patterns/felt.png");
-}
-
-.font-script {
-  font-family: var(--font-script);
+  .shadow-placard {
+    box-shadow: 
+      0 1px 3px rgba(0, 0, 0, 0.05),
+      0 8px 24px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 215, 0, 0.1);
+  }
 }

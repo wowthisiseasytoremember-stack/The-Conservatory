@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
 import { Leaf, Loader2, AlertCircle } from 'lucide-react';
 import type { Entity } from '../types';
-import { SpecimenPlate } from './SpecimenPlate';
 
 interface PlacardCardProps {
   entity: Entity;
@@ -16,30 +15,20 @@ export const PlacardCard = ({ entity, onClick }: PlacardCardProps) => {
       whileHover={{ y: -4, scale: 1.01 }}
       whileTap={{ scale: 0.99 }}
       onClick={onClick}
-      className="cursor-pointer gradient-placard border border-border rounded-lg shadow-placard overflow-hidden transition-shadow hover:shadow-gold flex flex-col"
+      className="cursor-pointer gradient-placard border border-border rounded-lg shadow-placard overflow-hidden transition-shadow hover:shadow-gold"
     >
       {/* Gold top accent */}
       <div className="h-1 w-full bg-gradient-to-r from-gold-muted via-gold to-gold-muted" />
 
-      {/* Field Journal Plate - The Hero of the Card */}
-      <div className="p-3">
-        <SpecimenPlate 
-          src={entity.currentEchoUrl || "https://images.unsplash.com/photo-1516550135131-fe3dcb0bedc7?auto=format&fit=crop&q=80&w=800"} 
-          scientificName={entity.scientificName || entity.name}
-          catalogId={entity.id}
-          className="shadow-md"
-        />
-      </div>
-
-      <div className="p-4 pt-0 space-y-3">
+      <div className="p-5 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <h3 className="font-display text-lg font-semibold text-foreground truncate italic">
               {entity.scientificName || entity.name}
             </h3>
-            {entity.scientificName && entity.name !== entity.scientificName && (
-               <p className="text-xs text-muted-foreground font-body mt-0.5 opacity-60">
-                {entity.name}
+            {enriched?.taxonomy?.commonNames?.[0] && (
+              <p className="text-sm text-muted-foreground font-body mt-0.5 opacity-60">
+                {enriched.taxonomy.commonNames[0]}
               </p>
             )}
           </div>
@@ -47,22 +36,28 @@ export const PlacardCard = ({ entity, onClick }: PlacardCardProps) => {
         </div>
 
         {enriched && (
-          <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-body pt-1 border-t border-border/30">
-            <span className="flex items-center gap-1">
-              <Leaf className="w-3 h-3 text-botanical" />
-              {entity.traits.find(t => t.type === 'PHOTOSYNTHETIC')?.type === 'PHOTOSYNTHETIC' ? 'Photosynthetic' : 'Specimen'}
-            </span>
-            <span className="truncate">{enriched.taxonomy?.family || 'Biological Specimen'}</span>
-            <span className="ml-auto text-gold font-bold">
-              {Math.round(entity.confidence * 100)}%
-            </span>
-          </div>
+          <>
+            <p className="text-sm text-foreground/80 font-body leading-relaxed line-clamp-2">
+              {enriched.description}
+            </p>
+
+            <div className="flex items-center gap-4 text-xs text-muted-foreground font-body pt-1">
+              <span className="flex items-center gap-1">
+                <Leaf className="w-3 h-3 text-botanical" />
+                {enriched.careGuide.difficulty}
+              </span>
+              <span className="truncate">{enriched.taxonomy.family}</span>
+              <span className="ml-auto text-gold font-bold">
+                {Math.round(enriched.confidence * 100)}%
+              </span>
+            </div>
+          </>
         )}
 
         {entity.enrichment_status === 'pending' && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Loader2 className="w-3 h-3 animate-spin" />
-            <span className="font-body uppercase tracking-widest text-[10px]">Researching archive…</span>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <span className="font-body uppercase tracking-widest text-[10px]">Consulting archives…</span>
           </div>
         )}
       </div>
@@ -74,7 +69,7 @@ function StatusBadge({ status }: { status: Entity['enrichment_status'] }) {
   const config = {
     none: { label: 'Library', className: 'bg-muted text-muted-foreground' },
     queued: { label: 'Queued', className: 'bg-muted text-muted-foreground' },
-    pending: { label: 'Researching', className: 'bg-botanical-subtle text-botanical' },
+    pending: { label: 'Enriching', className: 'bg-botanical-subtle text-botanical' },
     complete: { label: 'Enriched', className: 'bg-primary/10 text-primary' },
     failed: { label: 'Error', className: 'bg-destructive/10 text-destructive' },
   };

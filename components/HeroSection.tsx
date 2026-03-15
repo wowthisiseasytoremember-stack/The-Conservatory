@@ -3,7 +3,7 @@ import { Microscope, Sparkles, BookOpen } from 'lucide-react';
 
 export const HeroSection = () => {
   return (
-    <section className="relative overflow-hidden gradient-hero py-24 px-6 rounded-3xl mb-12">
+    <section className="relative overflow-hidden gradient-hero py-24 px-6 rounded-b-[3rem] mb-12">
       {/* Decorative botanical pattern overlay */}
       <div className="absolute inset-0 opacity-[0.04]" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5c0 13.807-11.193 25-25 25S-20 43.807-20 30 30 5 30 5z' fill='%23fff' fill-opacity='1'/%3E%3C/svg%3E")`,
@@ -19,7 +19,7 @@ export const HeroSection = () => {
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary-foreground/20 bg-primary-foreground/5 text-primary-foreground/80 text-sm font-body">
             <Sparkles className="w-3.5 h-3.5" />
-            AI-Powered Research & Stewardship
+            Digital Cabinet of Curiosities
           </div>
 
           <h1 className="font-display text-5xl md:text-6xl lg:text-7xl font-bold text-primary-foreground leading-[1.1] tracking-tight">
@@ -29,8 +29,8 @@ export const HeroSection = () => {
           </h1>
 
           <p className="text-lg md:text-xl text-primary-foreground/75 font-body max-w-2xl mx-auto leading-relaxed">
-            A high-fidelity archive for aquatic enthusiasts. 
-            Curate your collection, document biological wonders, and bridge the gap to the ancestral wild.
+            A high-fidelity archive for the serious steward. 
+            Protect life, document wonder, and bridge the ancestral gap.
           </p>
 
           <div className="flex flex-wrap justify-center gap-8 pt-4 text-primary-foreground/60 text-sm font-body">
