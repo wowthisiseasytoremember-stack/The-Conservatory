@@ -119,7 +119,7 @@ export const enrichEntity = onRequest({ cors: true, secrets: ["GEMINI_API_KEY"] 
     // Step 2: AI Synthesis
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash",
+            model: "gemini-2.5-flash",
       generationConfig: { responseMimeType: "application/json" }
     });
 
