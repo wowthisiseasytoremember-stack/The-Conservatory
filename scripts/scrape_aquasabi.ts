@@ -41,7 +41,7 @@ const CATEGORIES = [
 
 async function main() {
   console.log("Script starting...");
-  const browser = await chromium.launch({ headless: true }); // Headless by default
+  const browser = await chromium.launch({ headless: true, executablePath: '/home/ichabod/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome' });
   const page = await browser.newPage();
 
   // --- Step 1: Collect URLs ---

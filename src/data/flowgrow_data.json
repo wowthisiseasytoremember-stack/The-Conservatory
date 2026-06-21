@@ -1,0 +1,885 @@
+[
+  {
+    "id": "aciotis-acuminifolia",
+    "name": "Aciotis acuminifolia",
+    "scientificName": "Aciotis acuminifolia",
+    "url": "https://www.flowgrow.de/db/aquaticplants/aciotis-acuminifolia",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "high",
+      "Temperature tolerance": "18 to 30 °C",
+      "Carbonate hardness": "0 to 7 °dKH",
+      "pH value": "5 to 7",
+      "Carbon dioxide (CO2)": "20 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "slow",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "acmella-repens",
+    "name": "Acmella repens",
+    "scientificName": "Acmella repens",
+    "url": "https://www.flowgrow.de/db/aquaticplants/acmella-repens",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Temperature tolerance": "18 to 30 °C",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "medium",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "unknown"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "acorus-gramineus",
+    "name": "Acorus gramineus",
+    "scientificName": "Acorus gramineus",
+    "url": "https://www.flowgrow.de/db/aquaticplants/acorus-gramineus",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Temperature tolerance": "4 to 28 °C",
+      "Optimum temperature": "18 to 23 °C",
+      "Carbonate hardness": "0 to 14 °dKH",
+      "pH value": "5 to 7.5",
+      "Carbon dioxide (CO2)": "10 to 40 mg/l",
+      "Growth": "very slow",
+      "Propagation": "Splitting, cutting off daughter plants",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "yes",
+      "Winter hardiness": "half-hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "acorus-gramineus-pusillus",
+    "name": "Acorus gramineus 'Pusillus'",
+    "scientificName": "Acorus gramineus 'Pusillus'",
+    "url": "https://www.flowgrow.de/db/aquaticplants/acorus-gramineus-pusillus",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "low to high",
+      "Temperature tolerance": "4 to 28 °C",
+      "Optimum temperature": "18 to 23 °C",
+      "Growth": "very slow",
+      "Propagation": "Rhizomteilung, Splitting, cutting off daughter plants",
+      "Suited for outdoor cultivation / ponds": "yes",
+      "Winter hardiness": "half-hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "aegagropila-linnaei",
+    "name": "Aegagropila linnaei",
+    "scientificName": "Aegagropila linnaei",
+    "url": "https://www.flowgrow.de/db/aquaticplants/aegagropila-linnaei",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "low to high",
+      "Temperature tolerance": "4 to 28 °C",
+      "Optimum temperature": "15 to 24 °C",
+      "Carbonate hardness": "2 to 18 °dKH",
+      "pH value": "6 to 8.5",
+      "Carbon dioxide (CO2)": "5 to 40 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "very slow",
+      "Propagation": "Splitting, cutting off daughter plants",
+      "Can grow emersed?": "no",
+      "Suited for outdoor cultivation / ponds": "yes",
+      "Winter hardiness": "unknown"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "aeschynomene-fluitans",
+    "name": "Aeschynomene fluitans",
+    "scientificName": "Aeschynomene fluitans",
+    "url": "https://www.flowgrow.de/db/aquaticplants/aeschynomene-fluitans",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "high",
+      "Temperature tolerance": "4 to 32 °C",
+      "Optimum temperature": "22 to 28 °C",
+      "Growth": "fast",
+      "Propagation": "Cuttings, Splitting, cutting off daughter plants",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "yes",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "aldrovanda-vesiculosa",
+    "name": "Aldrovanda vesiculosa",
+    "scientificName": "Aldrovanda vesiculosa",
+    "url": "https://www.flowgrow.de/db/aquaticplants/aldrovanda-vesiculosa",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Temperature tolerance": "4 to 30 °C",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Propagation": "Fragmentation, Splitting, cutting off daughter plants",
+      "Can grow emersed?": "no",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "alternanthera-aquatica",
+    "name": "Alternanthera aquatica",
+    "scientificName": "Alternanthera aquatica",
+    "url": "https://www.flowgrow.de/db/aquaticplants/alternanthera-aquatica",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Temperature tolerance": "18 to 30 °C",
+      "Carbonate hardness": "0 to 21 °dKH",
+      "pH value": "5 to 8",
+      "Carbon dioxide (CO2)": "0 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "fast",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "yes",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "alternanthera-reineckii-grun-green",
+    "name": "Alternanthera reineckii 'Grün' ('Green')",
+    "scientificName": "Alternanthera reineckii 'Grün' ('Green')",
+    "url": "https://www.flowgrow.de/db/aquaticplants/alternanthera-reineckii-grun-green",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Temperature tolerance": "4 to 30 °C",
+      "Optimum temperature": "17 to 25 °C",
+      "Carbonate hardness": "0 to 14 °dKH",
+      "pH value": "5 to 7",
+      "Carbon dioxide (CO2)": "10 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "medium",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "alternanthera-reineckii-kleines-papageienblatt",
+    "name": "Alternanthera reineckii \"Kleines Papageienblatt\"",
+    "scientificName": "Alternanthera reineckii \"Kleines Papageienblatt\"",
+    "url": "https://www.flowgrow.de/db/aquaticplants/alternanthera-reineckii-kleines-papageienblatt",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Temperature tolerance": "4 to 30 °C",
+      "Optimum temperature": "17 to 25 °C",
+      "Carbonate hardness": "0 to 14 °dKH",
+      "pH value": "5 to 7",
+      "Carbon dioxide (CO2)": "10 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "medium",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "alternanthera-reineckii-lilacina",
+    "name": "Alternanthera reineckii \"Lilacina\"",
+    "scientificName": "Alternanthera reineckii \"Lilacina\"",
+    "url": "https://www.flowgrow.de/db/aquaticplants/alternanthera-reineckii-lilacina",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Temperature tolerance": "4 to 30 °C",
+      "Optimum temperature": "17 to 25 °C",
+      "Carbonate hardness": "0 to 14 °dKH",
+      "pH value": "5 to 7",
+      "Carbon dioxide (CO2)": "10 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "medium",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "alternanthera-reineckii-mini",
+    "name": "Alternanthera reineckii 'Mini'",
+    "scientificName": "Alternanthera reineckii 'Mini'",
+    "url": "https://www.flowgrow.de/db/aquaticplants/alternanthera-reineckii-mini",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Temperature tolerance": "4 to 30 °C",
+      "Optimum temperature": "17 to 25 °C",
+      "Carbonate hardness": "0 to 14 °dKH",
+      "pH value": "5 to 7",
+      "Carbon dioxide (CO2)": "10 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "medium",
+      "Propagation": "Cuttings, Splitting, cutting off daughter plants",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "alternanthera-reineckii-rosaefolia",
+    "name": "Alternanthera reineckii \"Rosaefolia\"",
+    "scientificName": "Alternanthera reineckii \"Rosaefolia\"",
+    "url": "https://www.flowgrow.de/db/aquaticplants/alternanthera-reineckii-rosaefolia",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Temperature tolerance": "4 to 30 °C",
+      "Optimum temperature": "17 to 25 °C",
+      "Carbonate hardness": "0 to 14 °dKH",
+      "pH value": "5 to 7",
+      "Carbon dioxide (CO2)": "10 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "medium",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "alternanthera-reineckii-rosanervig",
+    "name": "Alternanthera reineckii 'Rosanervig'",
+    "scientificName": "Alternanthera reineckii 'Rosanervig'",
+    "url": "https://www.flowgrow.de/db/aquaticplants/alternanthera-reineckii-rosanervig",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Temperature tolerance": "4 to 30 °C",
+      "Optimum temperature": "17 to 25 °C",
+      "Carbonate hardness": "0 to 14 °dKH",
+      "pH value": "5 to 7",
+      "Carbon dioxide (CO2)": "20 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "medium",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "alternanthera-reineckii-rot-red",
+    "name": "Alternanthera reineckii 'Rot' ('Red')",
+    "scientificName": "Alternanthera reineckii 'Rot' ('Red')",
+    "url": "https://www.flowgrow.de/db/aquaticplants/alternanthera-reineckii-rot-red",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Temperature tolerance": "4 to 30 °C",
+      "Optimum temperature": "17 to 25 °C",
+      "Carbonate hardness": "0 to 14 °dKH",
+      "pH value": "5 to 7",
+      "Carbon dioxide (CO2)": "10 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "medium",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "alternanthera-sessilis",
+    "name": "Alternanthera sessilis",
+    "scientificName": "Alternanthera sessilis",
+    "url": "https://www.flowgrow.de/db/aquaticplants/alternanthera-sessilis",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "amblystegium-serpens",
+    "name": "Amblystegium serpens",
+    "scientificName": "Amblystegium serpens",
+    "url": "https://www.flowgrow.de/db/aquaticplants/amblystegium-serpens",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "low to high",
+      "Temperature tolerance": "4 to 26 °C",
+      "Carbonate hardness": "0 to 21 °dKH",
+      "pH value": "5 to 7",
+      "Carbon dioxide (CO2)": "10 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "slow",
+      "Propagation": "Splitting, cutting off daughter plants",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "ammannia-capitellata",
+    "name": "Ammannia capitellata",
+    "scientificName": "Ammannia capitellata",
+    "url": "https://www.flowgrow.de/db/aquaticplants/ammannia-capitellata",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Temperature tolerance": "18 to 32 °C",
+      "Optimum temperature": "24 to 30 °C",
+      "Carbonate hardness": "2 to 14 °dKH",
+      "pH value": "5 to 8",
+      "Carbon dioxide (CO2)": "10 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "medium",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "ammannia-crassicaulis",
+    "name": "Ammannia crassicaulis",
+    "scientificName": "Ammannia crassicaulis",
+    "url": "https://www.flowgrow.de/db/aquaticplants/ammannia-crassicaulis",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "high",
+      "Temperature tolerance": "15 to 31 °C",
+      "Optimum temperature": "22 to 28 °C",
+      "Carbonate hardness": "0 to 9 °dKH",
+      "pH value": "5 to 7",
+      "Carbon dioxide (CO2)": "20 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "fast",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "ammannia-gracilis",
+    "name": "Ammannia gracilis",
+    "scientificName": "Ammannia gracilis",
+    "url": "https://www.flowgrow.de/db/aquaticplants/ammannia-gracilis",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Temperature tolerance": "12 to 32 °C",
+      "Optimum temperature": "22 to 28 °C",
+      "Carbonate hardness": "0 to 14 °dKH",
+      "pH value": "5 to 7.5",
+      "Carbon dioxide (CO2)": "10 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "fast",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "ammannia-latifolia",
+    "name": "Ammannia latifolia",
+    "scientificName": "Ammannia latifolia",
+    "url": "https://www.flowgrow.de/db/aquaticplants/ammannia-latifolia",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Carbonate hardness": "0 to 14 °dKH",
+      "pH value": "5 to 7.5",
+      "Carbon dioxide (CO2)": "20 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "slow",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "unknown"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "ammannia-pedicellata",
+    "name": "Ammannia pedicellata",
+    "scientificName": "Ammannia pedicellata",
+    "url": "https://www.flowgrow.de/db/aquaticplants/ammannia-pedicellata",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Temperature tolerance": "15 to 31 °C",
+      "Optimum temperature": "22 to 28 °C",
+      "Carbonate hardness": "2 to 12 °dKH",
+      "pH value": "5 to 7",
+      "Carbon dioxide (CO2)": "20 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "medium",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "ammannia-praetermissa",
+    "name": "Ammannia praetermissa",
+    "scientificName": "Ammannia praetermissa",
+    "url": "https://www.flowgrow.de/db/aquaticplants/ammannia-praetermissa",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "high",
+      "Temperature tolerance": "15 to 31 °C",
+      "Optimum temperature": "22 to 28 °C",
+      "Carbonate hardness": "0 to 7 °dKH",
+      "pH value": "4.5 to 7",
+      "Carbon dioxide (CO2)": "25 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "medium",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "ammannia-senegalensis",
+    "name": "Ammannia senegalensis",
+    "scientificName": "Ammannia senegalensis",
+    "url": "https://www.flowgrow.de/db/aquaticplants/ammannia-senegalensis",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "medium to high",
+      "Temperature tolerance": "12 to 32 °C",
+      "Optimum temperature": "22 to 28 °C",
+      "Carbonate hardness": "0 to 14 °dKH",
+      "pH value": "5 to 7.5",
+      "Carbon dioxide (CO2)": "10 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "fast",
+      "Propagation": "Cuttings",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "unknown",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "anubias-afzelii",
+    "name": "Anubias afzelii",
+    "scientificName": "Anubias afzelii",
+    "url": "https://www.flowgrow.de/db/aquaticplants/anubias-afzelii",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "low to high",
+      "Temperature tolerance": "12 to 30 °C",
+      "Optimum temperature": "22 to 26 °C",
+      "Carbonate hardness": "0 to 15 °dKH",
+      "pH value": "6 to 8.5",
+      "Carbon dioxide (CO2)": "5 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "slow",
+      "Propagation": "Rhizomteilung, Splitting, cutting off daughter plants",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "no",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "anubias-barteri-var-angustifolia",
+    "name": "Anubias barteri var. angustifolia",
+    "scientificName": "Anubias barteri var. angustifolia",
+    "url": "https://www.flowgrow.de/db/aquaticplants/anubias-barteri-var-angustifolia",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "low to high",
+      "Temperature tolerance": "12 to 30 °C",
+      "Optimum temperature": "22 to 26 °C",
+      "Carbonate hardness": "0 to 15 °dKH",
+      "pH value": "5 to 8",
+      "Carbon dioxide (CO2)": "5 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "slow",
+      "Propagation": "Rhizomteilung, Splitting, cutting off daughter plants",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "no",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "anubias-barteri-var-barteri",
+    "name": "Anubias barteri var. barteri",
+    "scientificName": "Anubias barteri var. barteri",
+    "url": "https://www.flowgrow.de/db/aquaticplants/anubias-barteri-var-barteri",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "low to high",
+      "Temperature tolerance": "12 to 30 °C",
+      "Optimum temperature": "22 to 26 °C",
+      "Carbonate hardness": "0 to 15 °dKH",
+      "pH value": "5 to 8",
+      "Carbon dioxide (CO2)": "5 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "slow",
+      "Propagation": "Rhizomteilung, Splitting, cutting off daughter plants",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "no",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "anubias-barteri-var-caladiifolia",
+    "name": "Anubias barteri var. caladiifolia",
+    "scientificName": "Anubias barteri var. caladiifolia",
+    "url": "https://www.flowgrow.de/db/aquaticplants/anubias-barteri-var-caladiifolia",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "low to high",
+      "Temperature tolerance": "12 to 30 °C",
+      "Optimum temperature": "22 to 26 °C",
+      "Carbonate hardness": "0 to 15 °dKH",
+      "pH value": "5 to 8",
+      "Carbon dioxide (CO2)": "5 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "slow",
+      "Propagation": "Rhizomteilung, Splitting, cutting off daughter plants",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "no",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "anubias-barteri-var-coffeifolia",
+    "name": "Anubias barteri var. coffeifolia",
+    "scientificName": "Anubias barteri var. coffeifolia",
+    "url": "https://www.flowgrow.de/db/aquaticplants/anubias-barteri-var-coffeifolia",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "low to high",
+      "Temperature tolerance": "12 to 30 °C",
+      "Optimum temperature": "22 to 26 °C",
+      "Carbonate hardness": "0 to 15 °dKH",
+      "pH value": "5 to 8",
+      "Carbon dioxide (CO2)": "5 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "very slow",
+      "Propagation": "Rhizomteilung, Splitting, cutting off daughter plants",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "no",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "anubias-barteri-var-glabra",
+    "name": "Anubias barteri var. glabra",
+    "scientificName": "Anubias barteri var. glabra",
+    "url": "https://www.flowgrow.de/db/aquaticplants/anubias-barteri-var-glabra",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "low to high",
+      "Temperature tolerance": "12 to 30 °C",
+      "Optimum temperature": "22 to 26 °C",
+      "Carbonate hardness": "0 to 15 °dKH",
+      "pH value": "5 to 8",
+      "Carbon dioxide (CO2)": "5 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "very slow",
+      "Propagation": "Rhizomteilung, Splitting, cutting off daughter plants",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "no",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  },
+  {
+    "id": "anubias-barteri-var-nana",
+    "name": "Anubias barteri var. nana",
+    "scientificName": "Anubias barteri var. nana",
+    "url": "https://www.flowgrow.de/db/aquaticplants/anubias-barteri-var-nana",
+    "images": [],
+    "details": {
+      "description": "",
+      "notes": "",
+      "maintenance": ""
+    },
+    "traits": {
+      "Light": "low to high",
+      "Temperature tolerance": "12 to 30 °C",
+      "Optimum temperature": "22 to 26 °C",
+      "Carbonate hardness": "0 to 21 °dKH",
+      "pH value": "5 to 8",
+      "Carbon dioxide (CO2)": "5 to 40 mg/l",
+      "Nitrate (NO3-)": "10 to 50 mg/l",
+      "Phosphate (PO43-)": "0.1 to 3 mg/l",
+      "Potassium (K+)": "5 to 30 mg/l",
+      "Iron (Fe)": "0.01 to 0.5 mg/l",
+      "Growth": "slow",
+      "Propagation": "Rhizomteilung, Splitting, cutting off daughter plants",
+      "Can grow emersed?": "yes",
+      "Suited for outdoor cultivation / ponds": "no",
+      "Winter hardiness": "not hardy in Germany"
+    },
+    "listingType": "flowgrow"
+  }
+]
