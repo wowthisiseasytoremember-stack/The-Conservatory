@@ -469,9 +469,7 @@ test.describe('Growth Tracking', () => {
     await page.evaluate(() => {
       try {
         localStorage.clear();
-      } catch (e) {
-        console.debug('localStorage.clear failed (possibly already empty or cross-origin restrictions):', e);
-      }
+      } catch (e) {}
     });
     await setupTestEnvironment(page);
     await page.waitForFunction(() => {
@@ -694,9 +692,7 @@ test.describe('Synergy Computation', () => {
     await page.evaluate(() => {
       try {
         localStorage.clear();
-      } catch (e) {
-        console.debug('localStorage.clear failed (possibly already empty or cross-origin restrictions):', e);
-      }
+      } catch (e) {}
     });
     await setupTestEnvironment(page);
     await page.waitForFunction(() => {
@@ -840,9 +836,7 @@ test.describe('Voice Observation Logging', () => {
     await page.evaluate(() => {
       try {
         localStorage.clear();
-      } catch (e) {
-        console.debug('localStorage.clear failed (possibly already empty or cross-origin restrictions):', e);
-      }
+      } catch (e) {}
     });
     await setupTestEnvironment(page);
     await page.waitForFunction(() => {
@@ -973,9 +967,7 @@ test.describe('Feature Manifest Backend', () => {
     await page.evaluate(() => {
       try {
         localStorage.clear();
-      } catch (e) {
-        console.debug('localStorage.clear failed (possibly already empty or cross-origin restrictions):', e);
-      }
+      } catch (e) {}
     });
     await setupTestEnvironment(page);
     await page.waitForFunction(() => {
@@ -1160,9 +1152,7 @@ test.describe('Core CUJs', () => {
     await page.evaluate(() => {
       try {
         localStorage.clear();
-      } catch (e) {
-        console.debug('localStorage.clear failed (possibly already empty or cross-origin restrictions):', e);
-      }
+      } catch (e) {}
     });
     await setupTestEnvironment(page);
     await page.waitForFunction(() => {

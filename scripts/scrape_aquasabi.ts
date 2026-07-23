@@ -41,7 +41,7 @@ const CATEGORIES = [
 
 async function main() {
   console.log("Script starting...");
-  const browser = await chromium.launch({ headless: true, executablePath: '/home/ichabod/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome' });
+  const browser = await chromium.launch({ headless: true }); // Headless by default
   const page = await browser.newPage();
 
   // --- Step 1: Collect URLs ---
@@ -75,9 +75,7 @@ async function main() {
                       await cookieBtn.click();
                       await new Promise(r => setTimeout(r, 1000));
                   }
-              } catch (e) {
-                  console.debug("  Cookie banner not found or already dismissed.");
-              }
+              } catch (e) { /* create no noise */ }
 
               // Try to find total count for progress logging
               let totalItems = 0;
@@ -88,9 +86,7 @@ async function main() {
                       if (match) totalItems = parseInt(match[1]);
                       console.log(`  Category reports ${totalItems} total items.`);
                   }
-              } catch (e) {
-                  console.debug("  Could not extract total product count.");
-              }
+              } catch (e) { }
 
               let moreButtonExists = true;
               while (moreButtonExists) {

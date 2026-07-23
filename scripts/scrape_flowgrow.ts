@@ -1,12 +1,10 @@
+
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import * as fs from 'fs';
 import * as path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
+// Types for our scraped data
 interface PlantData {
   id: string;
   name: string;
@@ -16,75 +14,68 @@ interface PlantData {
   details: {
     description?: string;
     notes?: string;
-    maintenance?: string;
+    maintainance?: string;
   };
   traits: Record<string, string>;
-  listingType: 'flowgrow';
+  listingType: 'aquasabi' | 'flowgrow';
 }
 
 const BASE_URL = 'https://www.flowgrow.de';
 const DB_URL = 'https://www.flowgrow.de/db/aquaticplants';
-const FG_OUTPUT = path.join(__dirname, '../src/data/flowgrow_data.json');
-const AQ_OUTPUT = path.join(__dirname, '../src/data/plant_library.json');
-const ENRICHED_OUTPUT = path.join(__dirname, '../src/data/plant_library_enriched.json');
-const DELAY_MS = 500;
+const OUTPUT_FILE = path.join(__dirname, '../src/data/plant_library.json');
+const DELAY_MS = 1000; // Be polite
 
+// Helper for delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function fetchUrl(url: string, postData?: URLSearchParams): Promise<string | null> {
+async function fetchUrl(url: string): Promise<string | null> {
   try {
-    if (postData) {
-      const { data } = await axios.post(url, postData.toString(), {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        timeout: 20000
-      });
-      return typeof data === 'string' ? data : JSON.stringify(data);
-    }
     const { data } = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      },
-      timeout: 20000
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
     });
     return data;
-  } catch (e: any) {
+  } catch (e) {
     console.error(`Error fetching ${url}:`, e.message);
     return null;
   }
 }
 
 async function getPlantUrls(): Promise<string[]> {
-  const urls: Set<string> = new Set();
+  const urls: string[] = [];
+  let page = 1;
+  let hasMore = true;
 
-  console.log("Crawling plant URLs...");
+  console.log("Starting Crawl of Plant URLs...");
 
-  for (let page = 1; page <= 23; page++) {
-    const postData = new URLSearchParams();
-    postData.append('entityTypeId', '1');
-    postData.append('page', page.toString());
-    postData.append('displayMode', 'list');
-    postData.append('searchCharacter', '');
-
-    console.log(`  Posting to page ${page}...`);
-    const html = await fetchUrl(`https://www.flowgrow.de/db/ajax/search`, postData);
+  while (hasMore) {
+    const listUrl = `${DB_URL}?page=${page}`;
+    console.log(`Scanning page ${page}...`);
+    const html = await fetchUrl(listUrl);
+    
     if (!html) break;
-
-    const responseJson = JSON.parse(html);
-    const searchResultsHtml = responseJson.searchResults;
-    const $ = cheerio.load(searchResultsHtml);
-    const plantLinks = $('a.s360__listingproduct--wrapper');
-
-    plantLinks.each((_, el) => {
-      const href = $(el).attr('href');
-      if (href) urls.add(href.startsWith('http') ? href : `${BASE_URL}${href}`);
-    });
+    
+    const $ = cheerio.load(html);
+    const plantLinks = $('.s360__listingproduct--wrapper a.s360-product--link');
+    
+    if (plantLinks.length === 0) {
+      hasMore = false;
+    } else {
+      plantLinks.each((_, el) => {
+        const href = $(el).attr('href');
+        if (href) urls.push(href.startsWith('http') ? href : `${BASE_URL}${href}`);
+      });
+      page++;
+      await delay(DELAY_MS);
+    }
+    
+    // Safety break for testing (remove for full run)
+    if (page > 3) break; 
   }
 
-  console.log(`Found ${urls.size} unique plant URLs.`);
-  return Array.from(urls);
+  console.log(`Found ${urls.length} plants.`);
+  return [...new Set(urls)];
 }
 
 async function scrapePlantDetails(url: string): Promise<PlantData | null> {
@@ -92,50 +83,43 @@ async function scrapePlantDetails(url: string): Promise<PlantData | null> {
   if (!html) return null;
 
   const $ = cheerio.load(html);
-
+  
+  // 1. Basic Info
   const name = $('h1').first().text().trim();
   const scientificName = $('.scientific-name').text().trim() || name;
+  
+  // 2. Rich Text
+  // Aquasabi / Flowgrow specific selectors
+  const description = $('#description-1 p').text().trim() || $('#flowgrow p').first().text().trim();
+  const notes = $('#flowgrow p').text().trim();
+  const general = $('#general p').text().trim();
 
-  const description = $('.s360__product--tab--content.tab-pane.fade.active p').first().text().trim()
-    || $('#description-1 p').text().trim();
-
-  const general = '';
-
+  // 3. Traits
   const traits: Record<string, string> = {};
-  $('#view-group-culture table tr').each((_, row) => {
-    const cells = $(row).find('td');
-    if (cells.length >= 2) {
-      const key = $(cells[0]).text().trim().replace(/:$/, '');
-      const val = $(cells[1]).text().trim().replace(/&thinsp;/g, ' ');
-      if (key && val && key.length < 60) traits[key] = val;
-    }
+  
+  // Flowgrow "Steckbrief"
+  $('#view-group-culture tr, #large-flowgrow-table tr, #small-flowgrow-table tr').each((_, el) => {
+    const key = $(el).find('th, td.bold').text().trim();
+    const val = $(el).find('td:not(.bold)').text().trim();
+    if (key && val) traits[key] = val;
   });
 
-  const seenDivKeys = new Set<string>();
-  $('#view-group-culture div').each((_, div) => {
-    const html = $(div).html() || '';
-    const strongMatch = html.match(/<strong>([^<]+)<\/strong>\s*(?:&nbsp;)?\s*([^<\n]+)/);
-    if (strongMatch) {
-      const key = strongMatch[1].trim().replace(/:$/, '');
-      const val = strongMatch[2].trim();
-      if (key && val && key.length < 60 && key !== val && !seenDivKeys.has(key)) {
-        seenDivKeys.add(key);
-        traits[key] = val;
-      }
-    }
+  $('#view-group-general .row').each((_, el) => {
+    const key = $(el).find('.label').text().trim();
+    const val = $(el).find('.value').text().trim();
+    if (key && val) traits[key] = val;
   });
 
-  if (url.includes('epiphyte')) traits['placement'] = 'epiphyte';
-  else if (url.includes('foreground') || url.includes('ground-cover')) traits['placement'] = 'foreground';
-  else if (url.includes('middleground')) traits['placement'] = 'midground';
-  else if (url.includes('background')) traits['placement'] = 'background';
-  else if (url.includes('floating')) traits['placement'] = 'floating';
-  else if (url.includes('mosses')) traits['placement'] = 'epiphyte';
+  // 4. Icons / Heuristics
+  if ($('img[src*="foreground"]').length) traits['placement'] = 'foreground';
+  if ($('img[src*="middleground"]').length) traits['placement'] = 'midground';
+  if ($('img[src*="background"]').length) traits['placement'] = 'background';
 
+  // 5. Images
   const images: string[] = [];
-  $('.s360-product--image-main img, .product-detail-image img').each((_, el) => {
-    const src = $(el).attr('src');
-    if (src) images.push(src.startsWith('http') ? src : `https://www.flowgrow.de${src}`);
+  $('.s360-product--image-main img').each((_, el) => {
+      const src = $(el).attr('src');
+      if (src) images.push(src);
   });
 
   return {
@@ -144,32 +128,35 @@ async function scrapePlantDetails(url: string): Promise<PlantData | null> {
     scientificName,
     url,
     images,
-    details: { description, notes: '', maintenance: general },
+    details: {
+      description,
+      notes,
+      maintainance: general
+    },
     traits,
-    listingType: 'flowgrow'
+    listingType: url.includes('aquasabi') ? 'aquasabi' : 'flowgrow'
   };
 }
 
 async function main() {
+  // Step 1: Get Links
   const urls = await getPlantUrls();
-  if (urls.length === 0) {
-    console.log('No plants found. Check selectors.');
-    return;
-  }
-
+  
+  // Step 2: Scrape Each
   const library: PlantData[] = [];
-  console.log(`Scraping ${urls.length} plants...`);
+  console.log(`Starting scrape of ${urls.length} plants...`);
 
   for (let i = 0; i < urls.length; i++) {
-    console.log(`[${i + 1}/${urls.length}] ${urls[i].split('/').pop()}...`);
+    console.log(`[${i+1}/${urls.length}] Scraping ${urls[i]}...`);
     const data = await scrapePlantDetails(urls[i]);
     if (data) library.push(data);
     await delay(DELAY_MS);
   }
 
-  fs.mkdirSync(path.dirname(FG_OUTPUT), { recursive: true });
-  fs.writeFileSync(FG_OUTPUT, JSON.stringify(library, null, 2));
-  console.log(`Saved ${library.length} plants to ${FG_OUTPUT}`);
+  // Step 3: Save
+  fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
+  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(library, null, 2));
+  console.log(`Saved ${library.length} plants to ${OUTPUT_FILE}`);
 }
 
 main().catch(console.error);

@@ -1,0 +1,114 @@
+/* ==========================================================================
+   Biomic UI Themes – The Conservatory
+   CSS custom properties that shift the entire color palette based on habitat.
+   Apply a theme class to the top-level container to activate.
+   ========================================================================== */
+
+/* Default / Neutral */
+:root,
+.theme-default {
+  --bio-bg-primary: #0c120c;
+  --bio-bg-secondary: #111811;
+  --bio-accent: #10b981;       /* emerald */
+  --bio-accent-muted: rgba(16, 185, 129, 0.1);
+  --bio-accent-border: rgba(16, 185, 129, 0.2);
+  --bio-header-gradient-from: #111811;
+  --bio-header-gradient-to: transparent;
+  --bio-card-border: #1e293b;
+  --bio-card-bg: rgba(30, 41, 59, 0.5);
+  --bio-text-primary: #e2e8f0;
+  --bio-text-muted: #94a3b8;
+  --bio-glow: 0 0 30px rgba(16, 185, 129, 0.08);
+}
+
+/* Blackwater – Tannic ambers, dark earth tones  */
+.theme-blackwater {
+  --bio-bg-primary: #120e08;
+  --bio-bg-secondary: #1a1409;
+  --bio-accent: #d97706;       /* amber-600 */
+  --bio-accent-muted: rgba(217, 119, 6, 0.1);
+  --bio-accent-border: rgba(217, 119, 6, 0.2);
+  --bio-header-gradient-from: #1a1409;
+  --bio-header-gradient-to: transparent;
+  --bio-card-border: #44381e;
+  --bio-card-bg: rgba(68, 56, 30, 0.35);
+  --bio-text-primary: #fde68a;
+  --bio-text-muted: #a3875a;
+  --bio-glow: 0 0 30px rgba(217, 119, 6, 0.08);
+}
+
+/* Tanganyika – Clear blues, rocky greys */
+.theme-tanganyika {
+  --bio-bg-primary: #0a0e14;
+  --bio-bg-secondary: #0f1520;
+  --bio-accent: #38bdf8;       /* sky-400 */
+  --bio-accent-muted: rgba(56, 189, 248, 0.1);
+  --bio-accent-border: rgba(56, 189, 248, 0.2);
+  --bio-header-gradient-from: #0f1520;
+  --bio-header-gradient-to: transparent;
+  --bio-card-border: #1e3a5f;
+  --bio-card-bg: rgba(30, 58, 95, 0.35);
+  --bio-text-primary: #bae6fd;
+  --bio-text-muted: #64748b;
+  --bio-glow: 0 0 30px rgba(56, 189, 248, 0.08);
+}
+
+/* Paludarium – Mist greys, jungle greens, humid feel */
+.theme-paludarium {
+  --bio-bg-primary: #0b100d;
+  --bio-bg-secondary: #121a14;
+  --bio-accent: #4ade80;       /* green-400 */
+  --bio-accent-muted: rgba(74, 222, 128, 0.1);
+  --bio-accent-border: rgba(74, 222, 128, 0.2);
+  --bio-header-gradient-from: #121a14;
+  --bio-header-gradient-to: transparent;
+  --bio-card-border: #1a3a2a;
+  --bio-card-bg: rgba(26, 58, 42, 0.35);
+  --bio-text-primary: #bbf7d0;
+  --bio-text-muted: #6b8f7a;
+  --bio-glow: 0 0 30px rgba(74, 222, 128, 0.08);
+}
+
+/* Marine / Reef – Deep blues and coral pinks */
+.theme-marine {
+  --bio-bg-primary: #070b14;
+  --bio-bg-secondary: #0c1220;
+  --bio-accent: #818cf8;       /* indigo-400 */
+  --bio-accent-muted: rgba(129, 140, 248, 0.1);
+  --bio-accent-border: rgba(129, 140, 248, 0.2);
+  --bio-header-gradient-from: #0c1220;
+  --bio-header-gradient-to: transparent;
+  --bio-card-border: #1e1b4b;
+  --bio-card-bg: rgba(30, 27, 75, 0.35);
+  --bio-text-primary: #c7d2fe;
+  --bio-text-muted: #6366f1;
+  --bio-glow: 0 0 30px rgba(129, 140, 248, 0.08);
+}
+
+/* ==========================================================================
+   Themed Component Overrides
+   These selectors apply CSS variables to existing Tailwind-styled components.
+   ========================================================================== */
+
+[data-biome] {
+  background-color: var(--bio-bg-primary);
+  color: var(--bio-text-primary);
+  transition: background-color 0.6s ease, color 0.4s ease;
+}
+
+[data-biome] header {
+  background: linear-gradient(to bottom, var(--bio-header-gradient-from), var(--bio-header-gradient-to));
+}
+
+/* Accent color overrides for the nav pill */
+[data-biome] .bio-accent-text {
+  color: var(--bio-accent);
+}
+[data-biome] .bio-accent-bg {
+  background-color: var(--bio-accent);
+}
+[data-biome] .bio-card {
+  background: var(--bio-card-bg);
+  border-color: var(--bio-card-border);
+  box-shadow: var(--bio-glow);
+}

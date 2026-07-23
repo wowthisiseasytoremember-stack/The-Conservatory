@@ -42,8 +42,7 @@ async function callProxy(config: {
   systemInstruction?: string;
   generationConfig?: any;
 }) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY not found in environment variables");
+  const apiKey = "AIzaSyAO_E6wI_YhrD60b4Y0Y9zobg4FcXnN9L8";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${apiKey}`;
 
   const requestBody = {

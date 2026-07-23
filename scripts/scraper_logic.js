@@ -35,28 +35,18 @@ function scrapeProduct(url) {
         if (img && img.src) { distributionMap = img.src; break; }
     }
 
-    // 4. Profile Icons (Aquasabi unique — Light, CO2, water hardness, etc.)
+    // 4. Traits
     const traits = {};
-    document.querySelectorAll('.steckbrief .custom-control').forEach(item => {
-        const keyEl = item.querySelector('.item-variation-name');
-        const valEl = item.querySelector('.price-display');
-        if (keyEl && valEl) {
-            const key = keyEl.textContent.trim();
-            const val = valEl.textContent.trim();
-            if (key && val && key.length < 50 && key !== val) traits[key] = val;
-        }
-    });
-
-    // Aquasabi / flowgrow table traits — only the spec table
-    const tableRows = document.querySelectorAll('#large-flowgrow-table tbody tr');
+    
+    // Aquasabi / flowgrow tables
+    const tableRows = document.querySelectorAll('#large-flowgrow-table tr, #small-flowgrow-table tr, #view-group-culture tr, table.table tr');
     tableRows.forEach(row => {
-       const keyEl = row.querySelector('td.bold, th');
-       const valEl = row.querySelector('td:not(.bold)');
+       const keyEl = row.querySelector('th, td.bold, td:first-child');
+       const valEl = row.querySelector('td:not(.bold):not(:first-child), td:last-child');
        if (keyEl && valEl) {
            const key = keyEl.textContent.trim().replace(/:$/, '');
            const val = valEl.textContent.trim();
-           // Don't overwrite profile icon values or allow key===value artifacts
-           if (key && val && key.length < 50 && key !== val) traits[key] = val;
+           if (key && val && key.length < 50) traits[key] = val;
        }
     });
 

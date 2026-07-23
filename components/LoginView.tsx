@@ -1,49 +1,40 @@
+
 import React from 'react';
-import { Leaf, LogIn, UserPlus } from 'lucide-react';
+import { Leaf, LogIn } from 'lucide-react';
 
 interface LoginViewProps {
-  onLogin: (asGuest?: boolean) => void;
+  onLogin: () => void;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   return (
-    <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center p-6 paper-texture">
-      <div className="text-center space-y-12 animate-in fade-in zoom-in duration-1000 max-w-lg">
-        <div className="flex flex-col items-center gap-6">
-           <div className="w-32 h-32 bg-botanical/5 rounded-full flex items-center justify-center border border-botanical/10 shadow-2xl shadow-botanical/10 relative">
-              <div className="absolute inset-0 bg-gradient-to-tr from-gold/10 to-transparent rounded-full animate-pulse" />
-              <Leaf className="w-16 h-16 text-botanical" />
+    <div className="min-h-screen bg-[#0c120c] flex flex-col items-center justify-center p-6 max-w-2xl mx-auto">
+      <div className="text-center space-y-8 animate-in fade-in zoom-in duration-700">
+        <div className="flex flex-col items-center gap-4">
+           <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20 shadow-2xl shadow-emerald-500/10">
+              <Leaf className="w-12 h-12 text-emerald-500" />
            </div>
-           <div className="space-y-2">
-              <h1 className="text-5xl md:text-6xl font-display font-bold text-foreground leading-tight italic">
-                The <span className="text-gold">Conservatory</span>
-              </h1>
-              <p className="text-botanical/60 uppercase tracking-[0.5em] text-[10px] font-bold">
-                Digital Cabinet of Curiosities
-              </p>
+           <div>
+              <h1 className="text-4xl font-serif font-bold text-white tracking-tight">The Conservatory</h1>
+              <p className="text-emerald-500/60 uppercase tracking-[0.4em] text-[10px] font-bold mt-2">Digital Twin Management</p>
            </div>
         </div>
 
-        <div className="max-w-xs mx-auto text-muted-foreground font-body text-base leading-relaxed italic">
-          An AI-powered archive for the serious steward. 
-          Protect life, document wonder, and bridge the ancestral gap.
+        <div className="max-w-xs mx-auto text-slate-400 text-sm leading-relaxed">
+          A voice-first aquaculture and plant tracking system with Gemini-powered intelligence.
         </div>
 
         <button 
           onClick={onLogin}
-          className="w-full bg-botanical hover:bg-botanical-light text-primary-foreground py-5 rounded-2xl font-bold flex items-center justify-center gap-4 transition-all shadow-2xl shadow-botanical/20 group relative overflow-hidden"
+          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl shadow-emerald-900/20 group"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-gold/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <LogIn className="w-6 h-6 group-hover:translate-x-1 transition-transform relative z-10" />
-          <span className="relative z-10 text-lg">Enter the Archives</span>
+          <LogIn className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          Sign in with Google
         </button>
 
-        <div className="pt-8 flex flex-col items-center gap-4 opacity-40">
-          <div className="h-px w-12 bg-border" />
-          <p className="text-[9px] text-muted-foreground uppercase tracking-[0.3em] font-bold">
-            Private Access • Established 2026
-          </p>
-        </div>
+        <p className="text-[10px] text-slate-600 uppercase tracking-widest font-bold">
+          Private Access • Event Sourced Integrity
+        </p>
       </div>
     </div>
   );

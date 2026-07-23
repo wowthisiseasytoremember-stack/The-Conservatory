@@ -1,13 +1,3 @@
-// Create dummy cordova variables file if it doesn't exist to prevent Capacitor build errors
-def cordovaDir = new File(rootProject.projectDir, "capacitor-cordova-android-plugins")
-if (!cordovaDir.exists()) {
-    cordovaDir.mkdirs()
-}
-def cordovaFile = new File(cordovaDir, "cordova.variables.gradle")
-if (!cordovaFile.exists()) {
-    cordovaFile.text = "// Dummy file\next {\n}"
-}
-
 include ':app'
 include ':capacitor-cordova-android-plugins'
 project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
