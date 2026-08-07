@@ -1,3 +1,38 @@
+---
+schema: agents-md/v1
+
+project: the-conservatory
+
+what: >-
+  An aquarium and vivarium management app that treats livestock as museum
+  specimens rather than inventory. Each habitat tracks water parameters over
+  time with a computed ecosystem-health score, and every organism gets a
+  "Living Placard" — taxonomy, native range, care requirements and provenance —
+  built by a research engine that scrapes four authoritative aquatics sources
+  in parallel and synthesizes them with Gemini instead of asking a model to
+  guess. Offline-first, with a Capacitor build for Android and iOS.
+
+stack: [typescript, react, vite, firebase, capacitor, gemini, tailwind]
+
+modules:
+  - name: App shell
+    path: App.tsx
+    does: Root component and routing for the habitat, specimen and journal views.
+  - name: Research engine
+    path: functions
+    does: Cloud Functions including /api/enrich — multi-source scrape plus Gemini synthesis into a species dossier.
+  - name: Domain services
+    path: services
+    does: Firestore access, health scoring, voice-command parsing and enrichment clients.
+  - name: Specimen placards
+    path: components/PlacardCard.tsx
+    does: Renders the museum-style species placard.
+  - name: Habitat view
+    path: components/HabitatPlacard.tsx
+    does: Habitat diorama with ecosystem narrative and inhabitant roster.
+
+updated: 2026-08-07 05:45 UTC
+---
 > ⚠️ STOP. Before reading further:
 > 1. Use the Brain MCP tool to read: claude-portable/ORIENTATION.md
 > 2. Familiarize yourself with the full system — who Justin is, what's running, core rules, key paths.
