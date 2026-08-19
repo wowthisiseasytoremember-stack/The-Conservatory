@@ -28,6 +28,7 @@ const FG_OUTPUT = path.join(__dirname, '../src/data/flowgrow_data.json');
 const AQ_OUTPUT = path.join(__dirname, '../src/data/plant_library.json');
 const ENRICHED_OUTPUT = path.join(__dirname, '../src/data/plant_library_enriched.json');
 const DELAY_MS = 500;
+const MAX_PLANTS = 0; // 0 = no limit
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -161,6 +162,10 @@ async function main() {
   console.log(`Scraping ${urls.length} plants...`);
 
   for (let i = 0; i < urls.length; i++) {
+    if (MAX_PLANTS > 0 && library.length >= MAX_PLANTS) {
+      console.log(`Reached MAX_PLANTS (${MAX_PLANTS}). Stopping.`);
+      break;
+    }
     console.log(`[${i + 1}/${urls.length}] ${urls[i].split('/').pop()}...`);
     const data = await scrapePlantDetails(urls[i]);
     if (data) library.push(data);

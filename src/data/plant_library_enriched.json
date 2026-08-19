@@ -482,10 +482,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "gering bis hoch",
       "Temperatur-Toleranz": "12 bis 30 °C",
       "Temperatur-Optimum": "24 bis 28 °C",
@@ -500,8 +497,7 @@
       "Vermehrung": "Rhizomteilung, Teilung, Abtrennen von Tochterpflanzen",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/anubias-nangi",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Anubias-afzelii-congensis",
@@ -717,10 +713,7 @@
       "distributionMap": ""
     },
     "traits": {
-      "placement": "foreground"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "placement": "foreground",
       "Licht": "gering bis hoch",
       "Temperatur-Toleranz": "12 bis 30 °C",
       "Temperatur-Optimum": "22 bis 26 °C",
@@ -733,10 +726,10 @@
       "Eisen (Fe)": "0,01 bis 0,5 mg/l",
       "Wachstum": "sehr langsam",
       "Vermehrung": "Rhizomteilung, Teilung, Abtrennen von Tochterpflanzen",
-      "Kann emers wachsen?": "ja"
+      "Kann emers wachsen?": "ja",
+      "Source": "Flowgrow"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/anubias-barteri-var-glabra",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Anubias-barteri-var-glabra-Minima",
@@ -1699,10 +1692,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "18 bis 28 °C",
@@ -1717,8 +1707,7 @@
       "Vermehrung": "Stecklinge",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/bacopa-monnieri-compact",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Bacopa-salzmannii-Purple",
@@ -2233,10 +2222,7 @@
       "Propagation": "Rhizomteilung, Splitting, cutting off daughter plants",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "gering bis hoch",
       "Temperatur-Toleranz": "20 bis 26 °C",
       "Temperatur-Optimum": "20 bis 26 °C",
@@ -2250,8 +2236,7 @@
       "Wachstum": "langsam",
       "Vermehrung": "Rhizomteilung, Teilung, Abtrennen von Tochterpflanzen"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/bucephalandra-sp-kedagang",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Bucephalandra-sp-Lamandau-Mini-Red",
@@ -3772,10 +3757,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "gering bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "22 bis 26 °C",
@@ -3790,8 +3772,7 @@
       "Vermehrung": "Ausläufer, Rhizomteilung, Teilung, Abtrennen von Tochterpflanzen",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/cryptocoryne-wendtii-green-gecko",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Cryptocoryne-wendtii-Kompakt",
@@ -4186,10 +4167,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "20 bis 28 °C",
@@ -4203,8 +4181,7 @@
       "Vermehrung": "Jungpflanzen am Blütenstand, Rhizomteilung",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/echinodorus-aflame",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Echinodorus-Aquartica",
@@ -4238,10 +4215,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "20 bis 28 °C",
@@ -4256,8 +4230,7 @@
       "Vermehrung": "Jungpflanzen am Blütenstand, Rhizomteilung",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/echinodorus-aquartica",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Echinodorus-Hadi-Red-Pearl",
@@ -4313,10 +4286,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "20 bis 28 °C",
@@ -4331,8 +4301,7 @@
       "Vermehrung": "Jungpflanzen am Blütenstand, Rhizomteilung",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/echinodorus-hot-pepper",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Echinodorus-Ozelot",
@@ -4366,10 +4335,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "20 bis 28 °C",
@@ -4384,8 +4350,7 @@
       "Vermehrung": "Jungpflanzen am Blütenstand, Rhizomteilung",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/echinodorus-ozelot",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Echinodorus-Ozelot-Green",
@@ -4455,10 +4420,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "20 bis 28 °C",
@@ -4472,8 +4434,7 @@
       "Vermehrung": "Jungpflanzen am Blütenstand, Rhizomteilung",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/echinodorus-rainers-felix",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Echinodorus-Rainers-Kitty",
@@ -4508,10 +4469,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "20 bis 28 °C",
@@ -4525,8 +4483,7 @@
       "Vermehrung": "Jungpflanzen am Blütenstand, Rhizomteilung",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/echinodorus-rainers-kitty",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Echinodorus-Red-Chili",
@@ -4586,10 +4543,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "20 bis 28 °C",
@@ -4604,8 +4558,7 @@
       "Vermehrung": "Jungpflanzen am Blütenstand, Rhizomteilung",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/echinodorus-red-diamond",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Echinodorus-Red-Flame",
@@ -4640,10 +4593,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "20 bis 28 °C",
@@ -4658,8 +4608,7 @@
       "Vermehrung": "Jungpflanzen am Blütenstand, Rhizomteilung",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/echinodorus-red-flame",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Echinodorus-Reni",
@@ -4694,10 +4643,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "20 bis 28 °C",
@@ -4711,8 +4657,7 @@
       "Vermehrung": "Jungpflanzen am Blütenstand, Rhizomteilung",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/echinodorus-reni",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Echinodorus-Rose",
@@ -4746,10 +4691,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "20 bis 28 °C",
@@ -4764,8 +4706,7 @@
       "Vermehrung": "Jungpflanzen am Blütenstand, Rhizomteilung",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/echinodorus-rose",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Echinodorus-Rubin",
@@ -4799,10 +4740,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "20 bis 28 °C",
@@ -4817,8 +4755,7 @@
       "Vermehrung": "Jungpflanzen am Blütenstand, Rhizomteilung",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/echinodorus-rubin",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Echinodorus-Rubin-Narrow-Leaf",
@@ -4853,10 +4790,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "20 bis 28 °C",
@@ -4871,8 +4805,7 @@
       "Vermehrung": "Jungpflanzen am Blütenstand, Rhizomteilung",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/echinodorus-rubin-narrow-leaf",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Echinodorus-Tricolor",
@@ -4906,10 +4839,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "20 bis 28 °C",
@@ -4924,8 +4854,7 @@
       "Vermehrung": "Jungpflanzen am Blütenstand, Rhizomteilung",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/echinodorus-tricolor",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Echinodorus-cordifolius-Fluitans",
@@ -5505,16 +5434,12 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Wachstum": "mittel",
       "Vermehrung": "Ausläufer, Teilung, Abtrennen von Tochterpflanzen",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/eleocharis-sp-montevidensis",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Eleocharis-vivipara",
@@ -5599,10 +5524,7 @@
       "Water hardness maximum": "Soft",
       "Recommended care height": "1-10 cm",
       "CO2": "Yes",
-      "placement": "foreground"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "placement": "foreground",
       "Licht": "hoch",
       "Temperatur-Toleranz": "18 bis 30 °C",
       "Karbonathärte": "0 bis 7 °dKH",
@@ -5614,10 +5536,10 @@
       "Eisen (Fe)": "0,01 bis 0,5 mg/l",
       "Wachstum": "langsam",
       "Vermehrung": "Samen, Teilung, Abtrennen von Tochterpflanzen",
-      "Kann emers wachsen?": "ja"
+      "Kann emers wachsen?": "ja",
+      "Source": "Flowgrow"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/eriocaulon-cinereum",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Eriocaulon-setaceum",
@@ -5639,10 +5561,7 @@
       "Water hardness maximum": "Soft",
       "Recommended care height": "10-30 cm",
       "CO2": "Yes",
-      "placement": "foreground"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "placement": "foreground",
       "Licht": "hoch",
       "Temperatur-Toleranz": "20 bis 30 °C",
       "Karbonathärte": "0 bis 7 °dKH",
@@ -5654,10 +5573,10 @@
       "Eisen (Fe)": "0,01 bis 0,5 mg/l",
       "Wachstum": "mittel",
       "Vermehrung": "Stecklinge",
-      "Kann emers wachsen?": "nein"
+      "Kann emers wachsen?": "nein",
+      "Source": "Flowgrow"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/eriocaulon-setaceum",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Eriocaulon-sp-Feather-Duster",
@@ -5717,10 +5636,7 @@
       "Can grow emersed?": "unknown",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "21 bis 26 °C",
       "Karbonathärte": "0 bis 12 °dKH",
@@ -5734,8 +5650,7 @@
       "Vermehrung": "Jungpflanzen am Blütenstand, Teilung, Abtrennen von Tochterpflanzen",
       "Kann emers wachsen?": "unbekannt"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/eriocaulon-sp-japan-needle-leaf",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Eriocaulon-sp-Polaris",
@@ -5872,10 +5787,7 @@
       "Water hardness maximum": "Medium",
       "Recommended care height": "1-5 cm",
       "CO2": "Yes",
-      "placement": "foreground"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "placement": "foreground",
       "Licht": "gering bis hoch",
       "Temperatur-Toleranz": "18 bis 26 °C",
       "Karbonathärte": "0 bis 10 °dKH",
@@ -5887,10 +5799,10 @@
       "Eisen (Fe)": "0,01 bis 0,5 mg/l",
       "Wachstum": "sehr langsam",
       "Vermehrung": "Teilung, Abtrennen von Tochterpflanzen",
-      "Kann emers wachsen?": "ja"
+      "Kann emers wachsen?": "ja",
+      "Source": "Flowgrow"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/fissidens-nobilis",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Fissidens-sp-Mallorca",
@@ -5997,10 +5909,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "18 bis 30 °C",
       "Temperatur-Optimum": "22 bis 26 °C",
@@ -6015,8 +5924,7 @@
       "Vermehrung": "Stecklinge",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/floscopa-cf-scandens",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Fontinalis-antipyretica-var-gigantea",
@@ -7108,10 +7016,7 @@
       "CO2": "Yes",
       "Discus suitable": "Yes",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "18 bis 30 °C",
       "Temperatur-Optimum": "24 bis 28 °C",
@@ -7124,10 +7029,10 @@
       "Eisen (Fe)": "0,01 bis 0,5 mg/l",
       "Wachstum": "langsam",
       "Vermehrung": "Stecklinge",
-      "Kann emers wachsen?": "ja"
+      "Kann emers wachsen?": "ja",
+      "Source": "Flowgrow"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/hygrophila-odora",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Hygrophila-pinnatifida",
@@ -8060,10 +7965,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "22 bis 27 °C",
@@ -8078,8 +7980,7 @@
       "Vermehrung": "Stecklinge",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/limnophila-cf-hippuridoides-mini",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Limnophila-hippuridoides",
@@ -8487,10 +8388,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "gering bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "22 bis 28 °C",
@@ -8505,8 +8403,7 @@
       "Vermehrung": "Teilung, Abtrennen von Tochterpflanzen",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/lomariopsis-cf-lineata",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Ludwigia-Rubin",
@@ -8544,10 +8441,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "6 bis 32 °C",
       "Temperatur-Optimum": "18 bis 28 °C",
@@ -8562,8 +8456,7 @@
       "Vermehrung": "Stecklinge",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/ludwigia-rubin",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Ludwigia-arcuata",
@@ -9343,16 +9236,12 @@
       "Can grow emersed?": "unknown",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Vermehrung": "Stecklinge",
       "Kann emers wachsen?": "unbekannt"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/mayaca-sp-santarem-red",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Micranthemum-tweediei-Montecarlo-3",
@@ -10204,10 +10093,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "4 bis 28 °C",
       "Temperatur-Optimum": "15 bis 25 °C",
@@ -10222,8 +10108,7 @@
       "Vermehrung": "Stecklinge",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/myriophyllum-sp-roraima",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Myriophyllum-tuberculatum",
@@ -10349,15 +10234,12 @@
       "CO2": "No",
       "Discus suitable": "Yes",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "mittel bis hoch",
-      "Wachstum": "schnell"
+      "Wachstum": "schnell",
+      "Source": "Flowgrow"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/nymphaea-rubra",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Nymphoides-flaccida",
@@ -10472,10 +10354,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "18 bis 30 °C",
       "Temperatur-Optimum": "23 bis 27 °C",
@@ -10490,8 +10369,7 @@
       "Vermehrung": "Stecklinge",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/persicaria-sp-kawagoeanum",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Persicaria-sp-Pak-Chong",
@@ -10553,10 +10431,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "18 bis 30 °C",
       "Temperatur-Optimum": "23 bis 27 °C",
@@ -10571,8 +10446,7 @@
       "Vermehrung": "Stecklinge",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/persicaria-sp-sao-paulo",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Phyllanthus-fluitans",
@@ -10709,17 +10583,13 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Wachstum": "sehr langsam",
       "Vermehrung": "Teilung, Abtrennen von Tochterpflanzen",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/plagiomnium-cf-affine",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Pogostemon-cf-deccanensis",
@@ -11231,10 +11101,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "20 bis 27 °C",
@@ -11249,8 +11116,7 @@
       "Vermehrung": "Auseinanderbrechen (von selbst), Teilung, Abtrennen von Tochterpflanzen",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/riccia-sp-dwarf",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Ricciocarpos-natans",
@@ -11370,16 +11236,13 @@
       "Water hardness maximum": "Medium",
       "Recommended care height": "10-30 cm",
       "CO2": "Yes",
-      "placement": "foreground"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "placement": "foreground",
       "Licht": "mittel bis hoch",
       "Vermehrung": "Stecklinge",
-      "Kann emers wachsen?": "ja"
+      "Kann emers wachsen?": "ja",
+      "Source": "Flowgrow"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/rotala-macrandra-butterfly",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Rotala-macrandra-Green-Wavy",
@@ -12071,17 +11934,13 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Wachstum": "schnell",
       "Vermehrung": "Stecklinge",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/rotala-sp-long-leaf",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Rotala-sp-Nanjenshan",
@@ -12150,10 +12009,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Temperatur-Optimum": "22 bis 28 °C",
@@ -12168,8 +12024,7 @@
       "Vermehrung": "Stecklinge",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/rotala-sp-vietnam",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Rotala-sp-Wayanad",
@@ -12712,10 +12567,7 @@
       "Recommended care height": "1-3 cm",
       "CO2": "No",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "4 bis 35 °C",
       "Temperatur-Optimum": "28 bis 30 °C",
@@ -12728,10 +12580,10 @@
       "Eisen (Fe)": "0,01 bis 0,5 mg/l",
       "Wachstum": "schnell",
       "Vermehrung": "Auseinanderbrechen (von selbst)",
-      "Kann emers wachsen?": "ja"
+      "Kann emers wachsen?": "ja",
+      "Source": "Flowgrow"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/spirodela-polyrhiza",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Staurogyne-repens",
@@ -12806,10 +12658,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "mittel bis hoch",
       "Temperatur-Toleranz": "20 bis 30 °C",
       "Temperatur-Optimum": "22 bis 28 °C",
@@ -12824,8 +12673,7 @@
       "Vermehrung": "Ausläufer, Stecklinge, Teilung, Abtrennen von Tochterpflanzen",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/staurogyne-sp-porto-velho",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Taxiphyllum-alternans-Taiwan-Moss",
@@ -12938,10 +12786,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "gering bis hoch",
       "Temperatur-Toleranz": "12 bis 30 °C",
       "Temperatur-Optimum": "12 bis 34 °C",
@@ -12956,8 +12801,7 @@
       "Vermehrung": "Teilung, Abtrennen von Tochterpflanzen",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/taxiphyllum-sp-flame-moss",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Taxiphyllum-sp-Giant",
@@ -13017,10 +12861,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "easy"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "easy",
       "Licht": "gering bis hoch",
       "Temperatur-Toleranz": "12 bis 34 °C",
       "Temperatur-Optimum": "20 bis 28 °C",
@@ -13035,8 +12876,7 @@
       "Vermehrung": "Teilung, Abtrennen von Tochterpflanzen",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/taxiphyllum-sp-spiky-moss",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Tonina-fluviatilis",
@@ -13377,10 +13217,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "gering bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Karbonathärte": "0 bis 21 °dKH",
@@ -13394,8 +13231,7 @@
       "Vermehrung": "Teilung, Abtrennen von Tochterpflanzen",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/vesicularia-cf-montagnei-krabi",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Vesicularia-ferriei-Weeping-Moss",
@@ -13466,10 +13302,7 @@
       "Can grow emersed?": "yes",
       "Source": "Flowgrow",
       "placement": "foreground",
-      "difficulty": "medium"
-    },
-    "listingType": "aquasabi",
-    "flowgrowTraits": {
+      "difficulty": "medium",
       "Licht": "gering bis hoch",
       "Temperatur-Toleranz": "15 bis 30 °C",
       "Karbonathärte": "0 bis 14 °dKH",
@@ -13483,8 +13316,7 @@
       "Vermehrung": "Teilung, Abtrennen von Tochterpflanzen",
       "Kann emers wachsen?": "ja"
     },
-    "flowgrowUrl": "https://www.flowgrow.de/db/wasserpflanzen/vesicularia-sp-mini-christmas-moss",
-    "flowgrowImages": []
+    "listingType": "aquasabi"
   },
   {
     "id": "Vesicularia-sp-Tortoise",

@@ -1,110 +1,53 @@
 ---
 schema: agents-md/v1
-
 project: the-conservatory
-
+initiative: monetization
+family: apps
 what: >-
-  An aquarium and vivarium management app that treats livestock as museum
-  specimens rather than inventory. Each habitat tracks water parameters over
-  time with a computed ecosystem-health score, and every organism gets a
-  "Living Placard" — taxonomy, native range, care requirements and provenance —
-  built by a research engine that scrapes four authoritative aquatics sources
-  in parallel and synthesizes them with Gemini instead of asking a model to
-  guess. Offline-first, with a Capacitor build for Android and iOS.
-
-stack: [typescript, react, vite, firebase, capacitor, gemini, tailwind]
+  Capacitor 8 + React 19 web/mobile aquarium and vivarium manager utilizing a museum stewardship aesthetic,
+  parallel 4-source web scraper (Wikipedia, Aquasabi, Flowgrow, Tropica), Gemini synthesis, and multi-variable ecosystem health scoring.
+goal: >-
+  Maintain web/mobile prototype and port parallel 4-source scraper architecture & health scoring math to AquaTrack / FloraTrack.
+status: active
+stack: [react, typescript, vite, capacitor, firebase, tailwind]
+entrypoints:
+  - App.tsx
+  - functions/src/index.ts
 
 modules:
-  - name: App shell
-    path: App.tsx
-    does: Root component and routing for the habitat, specimen and journal views.
-  - name: Research engine
-    path: functions
-    does: Cloud Functions including /api/enrich — multi-source scrape plus Gemini synthesis into a species dossier.
-  - name: Domain services
-    path: services
-    does: Firestore access, health scoring, voice-command parsing and enrichment clients.
-  - name: Specimen placards
-    path: components/PlacardCard.tsx
-    does: Renders the museum-style species placard.
-  - name: Habitat view
-    path: components/HabitatPlacard.tsx
-    does: Habitat diorama with ecosystem narrative and inhabitant roster.
+  - name: Parallel 4-Source Research Scraper
+    path: functions/src/index.ts
+    does: Scrapes Wikipedia, Aquasabi, Flowgrow, and Tropica in parallel and synthesizes via Gemini 2.5 Flash.
+    status: shipped
+  - name: Museum Living Placard UI & Curator Cards
+    path: src/components/
+    does: Museum-style species cards, care criteria display, and exportable Curator Cards via Capacitor Share.
+    status: shipped
+  - name: Ecosystem Health Scoring Engine
+    path: src/services/healthScore.ts
+    does: Multi-variable mathematical model calculating biodiversity index, parameter stability, and cross-species overlap.
+    status: shipped
+  - name: Voice Command NLP & Photo AI ID
+    path: src/services/ai.ts
+    does: Voice intent parsing and Gemini photo species identification with confidence scoring.
+    status: shipped
 
-updated: 2026-08-07 05:45 UTC
----
-> ⚠️ STOP. Before reading further:
-> 1. Use the Brain MCP tool to read: claude-portable/ORIENTATION.md
-> 2. Familiarize yourself with the full system — who Justin is, what's running, core rules, key paths.
-> 3. Then return here and continue reading.
->
-> If no Brain MCP tool is available, note it as a gap and proceed — but flag it at the end of the session.
-> ⚠️ STOP. Before reading further:
-> 1. Use the Brain MCP tool to read: claude-portable/ORIENTATION.md
-> 2. Familiarize yourself with the full system — who Justin is, what's running, core rules, key paths.
-> 3. Then return here and continue reading.
->
-> If no Brain MCP tool is available, note it as a gap and proceed — but flag it at the end of the session.
-# CLAUDE.md - The Digital Conservatory
-
-> **Purpose**: A high-fidelity, digital archive for aquatic curators.
-> **Philosophy**: Stewardship over Maintenance. Artifacts over Assets. Awe over Utility.
-
+depends_on: []
+feeds: [AquaTrack, FloraTrack, BioTrackCore]
+updated: 2026-08-10 11:18 UTC
 ---
 
-## 🎨 Design System: "The Modern Museum"
-*   **Typography**: `Playfair Display` (Headings/Specimen Names) & `Source Sans 3` (Body/Data).
-*   **Palette**: "Museum Ivory" (`--background: 40 30% 96%`) and "Botanical Green" (`--primary: 152 45% 22%`).
-*   **Interaction**: Fluid transitions via `framer-motion`. High-fidelity "Living Placards" for every specimen.
+# the-conservatory — AGENTS.md
 
-## 🧬 Core Architecture: "Muscle + Soul"
-*   **Soul**: Research synthesis engine using multi-source scraping (Wikipedia, Aquasabi, Flowgrow, Tropica).
-*   **Muscle**: Firebase Firestore (Offline-first persistence), Capacitor 8 (Cross-platform native), and Gemini 2.0 Flash (AI orchestration).
+**Initiative:** `monetization` — see ~/plans/initiatives.yml
+**Project Root:** `/home/ichabod/Projects/the-conservatory/`
+**State:** Functional Web & Mobile Prototype App (Vite 6, React 19, Capacitor 8, Firebase Functions v2)
 
----
+## Role & Relationship to BioTrack Ecosystem
 
-## 🛠️ Development Commands
+`the-conservatory` is the web and Capacitor mobile prototype for aquarium and vivarium stewardship. It serves as a **shared primitive and reference architecture** for the native iOS apps (`AquaTrack` and `FloraTrack`).
 
-```bash
-# Development
-npm run dev                 # Start Vite dev server
-
-# Firebase Functions
-cd functions
-npm run build               # Build functions
-firebase emulators:start    # Local testing
-npm run deploy              # Deploy to production
-
-# Native Builds
-npm run build:android       # Sync web build to Capacitor Android
-```
-
----
-
-## 📜 Coding Standards
-
-### 1. The "Unveiling" Workflow
-*   Never use generic AI photo IDs for identification.
-*   Prioritize user-provided cultivar strings (e.g., "Anubias nana Pinto").
-*   Trigger the `/api/enrich` function for deep research synthesis.
-
-### 2. Stewardship Documentation
-*   Every observation logged must be eligible for a "Curator's Note" enrichment.
-*   The `EntityDetailModal` is the primary "Placard" and should never be broken into sterile forms.
-
-### 3. State Management
-*   Use the modularized Zustand store (`useConservatoryStore.ts`).
-*   Use TanStack Query for server-side fetching and background enrichment polling.
-
-### 4. Style Protocols
-*   Use `Playfair Display` italic for scientific names.
-*   Use `Source Sans 3` for all technical and descriptive prose.
-*   Maintain the "Museum Ivory" theme even in dark mode variants.
-
----
-
-## 📂 Primary Documentation
-*   `VISION_MANDATE.md`: The North Star for all UX decisions.
-*   `TECHNICAL_BLUEPRINT.md`: The technical map of the unified infrastructure.
-*   `README.md`: The project entry point and high-level feature list.
-*   `docs/ARCHIVE/`: Legacy materials.
+### Reusable Tools & Features Supplied to AquaTrack / FloraTrack:
+1. **Parallel 4-Source Web Scraper:** Cloud Function scraping Wikipedia, Aquasabi, Flowgrow, and Tropica simultaneously to generate structured species dossiers without LLM hallucination.
+2. **Ecosystem Health Scoring Formula:** Mathematical formula evaluating biodiversity, temperature/pH stability, observation recency, and cross-species parameter compatibility.
+3. **Museum "Living Placard" Aesthetic:** Design layout and card architecture treating organisms as specimens rather than inventory.
