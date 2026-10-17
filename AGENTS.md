@@ -1,15 +1,17 @@
-> ⚠️ STOP. Before reading further:
-> 1. Use the Brain MCP tool to read: claude-portable/ORIENTATION.md
-> 2. Familiarize yourself with the full system — who Justin is, what's running, core rules, key paths.
-> 3. Then return here and continue reading.
->
-> If no Brain MCP tool is available, note it as a gap and proceed — but flag it at the end of the session.
-> ⚠️ STOP. Before reading further:
-> 1. Use the Brain MCP tool to read: claude-portable/ORIENTATION.md
-> 2. Familiarize yourself with the full system — who Justin is, what's running, core rules, key paths.
-> 3. Then return here and continue reading.
->
-> If no Brain MCP tool is available, note it as a gap and proceed — but flag it at the end of the session.
+---
+schema: agents-md/v1
+project: the-conservatory
+initiative: monetization
+family: apps
+what: >-
+  Digital archive and visual placard interface for aquatic curators, featuring
+  a Modern Museum design system, Firebase persistence, and Capacitor native shell.
+  Marked for closeout/pause in favor of soul-conservatory.
+status: paused
+stack: [typescript, react, vite, capacitor, firebase]
+updated: '2026-10-17 06:00 UTC'
+---
+
 # CLAUDE.md - The Digital Conservatory
 
 > **Purpose**: A high-fidelity, digital archive for aquatic curators.
