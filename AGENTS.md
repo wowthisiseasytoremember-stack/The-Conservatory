@@ -1,6 +1,6 @@
 ---
 schema: agents-md/v1
-project: the-conservatory
+project: The-Conservatory
 initiative: monetization
 family: apps
 what: >-

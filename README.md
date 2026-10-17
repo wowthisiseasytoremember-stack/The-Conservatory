@@ -3,9 +3,9 @@
 </div>
 
 > [!WARNING]
-> **THIS REPOSITORY IS DEPRECATED**
+> **THIS REPOSITORY IS DEPRECATED & ARCHIVED**
 > 
-> The most updated version of this project has been moved. Please refer to the new codebase at `../soul-conservatory` for all the newest features, bug fixes, and development updates.
+> The active canonical successor is [soul-conservatory](https://github.com/wowthisiseasytoremember-stack/soul-conservatory) (located locally at `/home/ichabod/Projects/soul-conservatory`), featuring the Modern Museum visual design system, Expo 54 shell, Firebase hosting, and AI waterfall intent parsing. All active development occurs there.
 
 # Run and deploy your AI Studio app
 
